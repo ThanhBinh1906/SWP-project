@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: #0B0E14;
+  --accent: #F26F21;
+  --font-display: 'Montserrat', sans-serif;
+  --font-body: 'Inter', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg-primary);
+  font-family: var(--font-body);
+  color: #e2e8f0;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+}
+
+/* Neon glow utilities */
+.glow-orange {
+  box-shadow: 0 0 20px rgba(242, 111, 33, 0.5), 0 0 60px rgba(242, 111, 33, 0.2);
+}
+.glow-orange-text {
+  text-shadow: 0 0 20px rgba(242, 111, 33, 0.8), 0 0 40px rgba(242, 111, 33, 0.4);
+}
+.glow-blue {
+  box-shadow: 0 0 20px rgba(56, 182, 255, 0.4), 0 0 60px rgba(56, 182, 255, 0.15);
+}
+
+/* Glassmorphism */
+.glass {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Circuit grid background */
+.circuit-bg {
+  background-color: #0B0E14;
+  background-image:
+    linear-gradient(rgba(242, 111, 33, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(242, 111, 33, 0.04) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* Animated neon line */
+@keyframes neonPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+.neon-line {
+  animation: neonPulse 2.5s ease-in-out infinite;
+}
+
+/* Float animation */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-12px); }
+}
+.float-anim {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* Fade-in up */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-in-up {
+  animation: fadeInUp 0.7s ease-out forwards;
+}
+
+/* Scan line */
+@keyframes scanline {
+  0% { top: -5%; }
+  100% { top: 105%; }
+}
+
+/* Gradient border */
+.gradient-border {
+  position: relative;
+}
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, #F26F21, #38b6ff, #F26F21);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #0B0E14; }
+::-webkit-scrollbar-thumb { background: #F26F21; border-radius: 3px; }
