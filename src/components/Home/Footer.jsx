@@ -1,14 +1,6 @@
-import React from 'react';
-import { Zap, Github, Facebook, Linkedin, Twitter, Mail, MapPin, Phone } from 'lucide-react';
+import React from "react";
 
-const quickLinks = ['Home', 'Timeline', 'Prizes', 'FAQ', 'Sponsors'];
-const socialLinks = [
-  { icon: Facebook, href: '#', label: 'Facebook' },
-  { icon: Linkedin, href: '#', label: 'LinkedIn' },
-  { icon: Github, href: '#', label: 'GitHub' },
-  { icon: Twitter, href: '#', label: 'Twitter' },
-];
-
+const quickLinks = ["Home", "Timeline", "Prizes", "FAQ", "Sponsors"];
 export default function Footer() {
   return (
     <footer className="relative bg-[#070A0F] border-t border-[#F26F21]/15">
@@ -25,28 +17,31 @@ export default function Footer() {
               </div>
               <span
                 className="text-white font-black text-base tracking-widest uppercase"
-                style={{ fontFamily: 'Montserrat, sans-serif' }}
+                style={{ fontFamily: "Montserrat, sans-serif" }}
               >
                 FPTU <span className="text-[#F26F21]">Hackathon</span>
               </span>
             </div>
             <p className="text-slate-500 text-sm leading-relaxed mb-4">
-              The most electrifying 48-hour coding competition at FPT University, Vietnam.
+              The most electrifying 48-hour coding competition at FPT
+              University, Vietnam.
             </p>
             <p
               className="text-xs font-black tracking-widest uppercase text-[#F26F21]"
-              style={{ fontFamily: 'Montserrat, sans-serif' }}
+              style={{ fontFamily: "Montserrat, sans-serif" }}
             >
               FPT University
             </p>
-            <p className="text-xs text-slate-600 mt-1">Ho Chi Minh City Campus</p>
+            <p className="text-xs text-slate-600 mt-1">
+              Ho Chi Minh City Campus
+            </p>
           </div>
 
           {/* Quick links */}
           <div>
             <h4
               className="text-white font-bold uppercase tracking-widest text-xs mb-5"
-              style={{ fontFamily: 'Montserrat, sans-serif' }}
+              style={{ fontFamily: "Montserrat, sans-serif" }}
             >
               Quick Links
             </h4>
@@ -69,18 +64,23 @@ export default function Footer() {
           <div>
             <h4
               className="text-white font-bold uppercase tracking-widest text-xs mb-5"
-              style={{ fontFamily: 'Montserrat, sans-serif' }}
+              style={{ fontFamily: "Montserrat, sans-serif" }}
             >
               Contact
             </h4>
             <ul className="flex flex-col gap-4">
               <li className="flex items-start gap-3 text-sm text-slate-500">
                 <MapPin className="w-4 h-4 text-[#F26F21] flex-shrink-0 mt-0.5" />
-                <span>Lot E2a-7, D1 Street, Long Thanh My, Thu Duc, Ho Chi Minh City</span>
+                <span>
+                  Lot E2a-7, D1 Street, Long Thanh My, Thu Duc, Ho Chi Minh City
+                </span>
               </li>
               <li className="flex items-center gap-3 text-sm text-slate-500">
                 <Mail className="w-4 h-4 text-[#F26F21] flex-shrink-0" />
-                <a href="mailto:hackathon@fpt.edu.vn" className="hover:text-[#F26F21] transition-colors">
+                <a
+                  href="mailto:hackathon@fpt.edu.vn"
+                  className="hover:text-[#F26F21] transition-colors"
+                >
                   hackathon@fpt.edu.vn
                 </a>
               </li>
@@ -95,7 +95,7 @@ export default function Footer() {
           <div>
             <h4
               className="text-white font-bold uppercase tracking-widest text-xs mb-5"
-              style={{ fontFamily: 'Montserrat, sans-serif' }}
+              style={{ fontFamily: "Montserrat, sans-serif" }}
             >
               Follow Us
             </h4>
@@ -124,7 +124,8 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="border-t border-white/8 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-slate-600 text-xs">
-            &copy; 2026 FPTU Hackathon. Organized by FPT University Student Union. All rights reserved.
+            &copy; 2026 FPTU Hackathon. Organized by FPT University Student
+            Union. All rights reserved.
           </p>
           <p className="text-slate-700 text-xs font-mono tracking-widest">
             CODE &middot; CREATE &middot; CONQUER

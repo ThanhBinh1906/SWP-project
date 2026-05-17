@@ -1,13 +1,13 @@
-import React from 'react';
-import './index.css';
-import Navbar from './components/Navbar';
-import Hero from './components/Hero';
-import About from './components/About';
-import Timeline from './components/Timeline';
-import Prizes from './components/Prizes';
-import Sponsors from './components/Sponsors';
-import FAQ from './components/FAQ';
-import Footer from './components/Footer';
+import React from "react";
+import "./index.css";
+import Navbar from "./components/Home/Navbar";
+import Hero from "./components/Home/Hero";
+import About from "./components/Home/About";
+import Timeline from "./components/Home/Timeline";
+import Prizes from "./components/Home/Prizes";
+import Sponsors from "./components/Home/Sponsors";
+import FAQ from "./components/Home/FAQ";
+import Footer from "./components/Home/Footer";
 
 export default function App() {
   return (
@@ -21,7 +21,7 @@ export default function App() {
         <Sponsors />
         <FAQ />
       </main>
-      <Footer />
+      {/* <Footer /> */}
     </div>
   );
 }
