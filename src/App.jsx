@@ -3,11 +3,16 @@ import "./index.css";
 import Home from "./page/Home";
 import { createBrowserRouter } from "react-router";
 import { RouterProvider } from "react-router/dom";
+import UserDashboard from "./page/UserDashboard";
 
 const router = createBrowserRouter([
   {
     path: "/",
     element: <Home />,
+  },
+  {
+    path: "/dashboard",
+    element: <UserDashboard />,
   },
 ]);
 
