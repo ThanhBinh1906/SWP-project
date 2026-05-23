@@ -8,9 +8,9 @@ const otherChallenges = [
 ];
 
 const difficultyColor = {
-  Hard: '#f87171',
-  Medium: '#fbbf24',
-  Easy: '#34d399',
+  Hard: '#DC2626',
+  Medium: '#D97706',
+  Easy: '#059669',
 };
 
 export function ChallengesView() {
@@ -28,33 +28,34 @@ export function ChallengesView() {
       {/* Other challenges */}
       <div>
         <div className="flex items-center gap-2 mb-3">
-          <Award className="w-4 h-4 text-slate-400" />
-          <h2 className="text-sm font-bold uppercase tracking-widest text-slate-400">Other Tracks</h2>
+          <Award className="w-4 h-4 text-slate-500" />
+          <h2 className="text-sm font-bold uppercase tracking-widest text-slate-500">Other Tracks</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {otherChallenges.map(ch => (
             <div key={ch.id}
               className="rounded-xl p-4 transition-all duration-200 cursor-pointer"
               style={{
-                background: ch.locked ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.07)',
-                opacity: ch.locked ? 0.5 : 1,
+                background: ch.locked ? '#F3F4F6' : '#FFFFFF',
+                border: '1px solid #E5E7EB',
+                boxShadow: ch.locked ? 'none' : '0 4px 16px rgba(0,0,0,0.02)',
+                opacity: ch.locked ? 0.6 : 1,
               }}
-              onMouseEnter={e => { if (!ch.locked) e.currentTarget.style.borderColor = 'rgba(242,111,33,0.25)'; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; }}
+              onMouseEnter={e => { if (!ch.locked) e.currentTarget.style.borderColor = '#F26F21'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = '#E5E7EB'; }}
             >
               <div className="flex items-start justify-between mb-2">
-                <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">{ch.id}</span>
+                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{ch.id}</span>
                 {ch.locked
-                  ? <Lock className="w-3.5 h-3.5 text-slate-600" />
+                  ? <Lock className="w-3.5 h-3.5 text-slate-400" />
                   : <span className="text-[10px] font-bold" style={{ color: difficultyColor[ch.difficulty] }}>{ch.difficulty}</span>
                 }
               </div>
-              <p className="text-sm font-semibold text-white mb-1 leading-snug">{ch.title}</p>
+              <p className="text-sm font-semibold text-[#111827] mb-1 leading-snug">{ch.title}</p>
               <p className="text-[11px] text-slate-500">{ch.track}</p>
               <div className="mt-3 pt-3 border-t flex items-center justify-between"
-                style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
-                <span className="text-xs text-slate-400">{ch.points.toLocaleString()} pts</span>
+                style={{ borderColor: '#F3F4F6' }}>
+                <span className="text-xs text-slate-600 font-medium">{ch.points.toLocaleString()} pts</span>
                 {!ch.locked && (
                   <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#F26F21' }}>View</span>
                 )}

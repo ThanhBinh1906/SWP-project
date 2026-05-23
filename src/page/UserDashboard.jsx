@@ -27,7 +27,7 @@ export default function UserDashboard() {
     <div
       className="min-h-screen"
       style={{
-        background: "#0D1117",
+        background: "#F9FAFB",
         fontFamily:
           "'Montserrat', 'Inter', ui-sans-serif, system-ui, sans-serif",
       }}
@@ -38,7 +38,7 @@ export default function UserDashboard() {
         aria-hidden="true"
         style={{
           backgroundImage:
-            "linear-gradient(rgba(242,111,33,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(242,111,33,0.03) 1px, transparent 1px)",
+            "linear-gradient(rgba(242,111,33,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(242,111,33,0.02) 1px, transparent 1px)",
           backgroundSize: "48px 48px",
         }}
       />
@@ -48,7 +48,7 @@ export default function UserDashboard() {
         aria-hidden="true"
         style={{
           background:
-            "radial-gradient(ellipse 60% 40% at 50% 0%, rgba(242,111,33,0.06) 0%, transparent 100%)",
+            "radial-gradient(ellipse 60% 40% at 50% 0%, rgba(242,111,33,0.03) 0%, transparent 100%)",
         }}
       />
 
@@ -61,12 +61,12 @@ export default function UserDashboard() {
         {/* Page title strip */}
         <div
           className="px-8 py-5 border-b"
-          style={{ borderColor: "rgba(255,255,255,0.05)" }}
+          style={{ borderColor: "#E5E7EB" }}
         >
           <div className="flex items-end gap-3">
             <div>
               <h2
-                className="text-2xl font-black tracking-tight text-white"
+                className="text-2xl font-black tracking-tight text-[#111827]"
                 style={{ fontFamily: "'Montserrat', sans-serif" }}
               >
                 {viewTitles[activeNav].title}
@@ -96,10 +96,10 @@ export default function UserDashboard() {
         {/* Footer */}
         <footer
           className="px-8 py-4 border-t flex items-center justify-between text-[11px]"
-          style={{ borderColor: "rgba(255,255,255,0.05)", color: "#374151" }}
+          style={{ borderColor: "#E5E7EB", color: "#4B5563" }}
         >
           <span>FPT Hackathon 2026 &mdash; All rights reserved.</span>
-          <span className="font-mono" style={{ color: "rgba(242,111,33,0.4)" }}>
+          <span className="font-semibold" style={{ color: "#F26F21" }}>
             Team Alpha &bull; CH-001
           </span>
         </footer>

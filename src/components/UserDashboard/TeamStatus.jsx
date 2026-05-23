@@ -8,9 +8,9 @@ const members = [
 ];
 
 const roleColors = {
-  Leader: { bg: 'rgba(242,111,33,0.15)', border: 'rgba(242,111,33,0.3)', text: '#F26F21' },
-  Developer: { bg: 'rgba(99,102,241,0.15)', border: 'rgba(99,102,241,0.3)', text: '#818cf8' },
-  Designer: { bg: 'rgba(6,182,212,0.15)', border: 'rgba(6,182,212,0.3)', text: '#22d3ee' },
+  Leader: { bg: '#FFF6F0', border: '#FFD0B5', text: '#F26F21' },
+  Developer: { bg: '#EEF2FF', border: '#C7D2FE', text: '#4F46E5' },
+  Designer: { bg: '#ECFEFF', border: '#A5F3FC', text: '#0891B2' },
 };
 
 const activityLog = [
@@ -24,19 +24,19 @@ export function TeamStatus() {
   return (
     <div className="rounded-2xl p-6 transition-all duration-300"
       style={{
-        background: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)',
+        background: '#FFFFFF',
+        border: '1px solid #E5E7EB',
+        boxShadow: '0 10px 30px rgba(0,0,0,0.02)',
       }}>
       <div className="flex items-center gap-3 mb-5">
         <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-          style={{ background: 'rgba(242,111,33,0.15)', border: '1px solid rgba(242,111,33,0.3)' }}>
+          style={{ background: 'rgba(242,111,33,0.1)', border: '1px solid rgba(242,111,33,0.2)' }}>
           <Users className="w-4 h-4" style={{ color: '#F26F21' }} />
         </div>
         <div>
-          <h3 className="text-sm font-bold text-white">Team Status</h3>
+          <h3 className="text-sm font-bold text-[#111827]">Team Status</h3>
           <p className="text-[11px] text-slate-500">
-            <span className="text-emerald-400 font-semibold">{members.filter(m => m.online).length}</span> of {members.length} online
+            <span className="text-emerald-600 font-semibold">{members.filter(m => m.online).length}</span> of {members.length} online
           </p>
         </div>
       </div>
@@ -47,20 +47,20 @@ export function TeamStatus() {
           const rc = roleColors[m.role] || roleColors['Developer'];
           return (
             <div key={m.name} className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200"
-              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
+              style={{ background: '#F9FAFB', border: '1px solid #E5E7EB' }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#F3F4F6'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#F9FAFB'; }}
             >
               {/* Avatar */}
               <div className="relative w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
                 style={{ background: m.color }}>
                 {m.initials}
-                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-[#0d1117]"
-                  style={{ background: m.online ? '#22c55e' : '#4b5563' }} />
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white"
+                  style={{ background: m.online ? '#22c55e' : '#9ca3af' }} />
               </div>
               {/* Info */}
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-white truncate">{m.name}</p>
+                <p className="text-xs font-semibold text-[#111827] truncate">{m.name}</p>
                 <p className="text-[10px] text-slate-500 truncate">{m.activity}</p>
               </div>
               {/* Role badge */}
@@ -74,19 +74,19 @@ export function TeamStatus() {
       </div>
 
       {/* Activity Log */}
-      <div className="border-t pt-4" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
+      <div className="border-t pt-4" style={{ borderColor: '#E5E7EB' }}>
         <div className="flex items-center gap-2 mb-3">
           <Activity className="w-3.5 h-3.5" style={{ color: '#F26F21' }} />
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">Activity Log</p>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-[#F26F21]">Activity Log</p>
         </div>
         <div className="space-y-2.5">
           {activityLog.map((entry, i) => (
             <div key={i} className="flex items-start gap-3">
-              <div className="w-1 h-1 rounded-full mt-1.5 flex-shrink-0" style={{ background: entry.accent, boxShadow: `0 0 4px ${entry.accent}` }} />
+              <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: entry.accent }} />
               <div className="flex-1">
-                <p className="text-xs text-slate-400 leading-snug">{entry.msg}</p>
+                <p className="text-xs text-slate-600 leading-snug">{entry.msg}</p>
               </div>
-              <p className="text-[10px] text-slate-600 flex-shrink-0 font-mono">{entry.time}</p>
+              <p className="text-[10px] text-slate-400 flex-shrink-0 font-mono">{entry.time}</p>
             </div>
           ))}
         </div>
