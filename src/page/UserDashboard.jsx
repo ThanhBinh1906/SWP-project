@@ -22,10 +22,11 @@ const viewTitles = {
 
 export default function UserDashboard() {
   const [activeNav, setActiveNav] = useState("challenges");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div
-      className="min-h-screen"
+      className="flex flex-col md:flex-row min-h-screen overflow-x-hidden"
       style={{
         background: "#F9FAFB",
         fontFamily:
@@ -52,17 +53,23 @@ export default function UserDashboard() {
         }}
       />
 
-      <Sidebar active={activeNav} onNav={setActiveNav} />
+      {/* Mobile Sidebar Drawer */}
+      <Sidebar
+        active={activeNav}
+        onNav={(id) => {
+          setActiveNav(id);
+          setSidebarOpen(false);
+        }}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
 
       {/* Main layout */}
-      <div className="ml-64 flex flex-col min-h-screen">
-        <Header />
+      <div className="flex-1 flex flex-col min-h-screen md:ml">
+        <Header onMenuClick={() => setSidebarOpen(true)} />
 
         {/* Page title strip */}
-        <div
-          className="px-8 py-5 border-b"
-          style={{ borderColor: "#E5E7EB" }}
-        >
+        <div className="px-8 py-5 border-b" style={{ borderColor: "#E5E7EB" }}>
           <div className="flex items-end gap-3">
             <div>
               <h2
