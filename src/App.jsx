@@ -4,6 +4,7 @@ import Home from "./page/Home";
 import { createBrowserRouter } from "react-router";
 import { RouterProvider } from "react-router/dom";
 import UserDashboard from "./page/UserDashboard";
+import CoordinatorDashboardUI from "./page/CoordinatorDashboardUI";
 
 const router = createBrowserRouter([
   {
@@ -13,6 +14,11 @@ const router = createBrowserRouter([
   {
     path: "/dashboard",
     element: <UserDashboard />,
+  },
+  ,
+  {
+    path: "/coordinator",
+    element: <CoordinatorDashboardUI />,
   },
 ]);
 
