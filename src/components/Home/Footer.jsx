@@ -1,7 +1,9 @@
 import React from "react";
+import { Zap } from "lucide-react";
+import { AuthButtons } from "./AuthButtons";
 
 const quickLinks = ["Home", "Timeline", "Prizes", "FAQ", "Sponsors"];
-export default function Footer() {
+export default function Footer({ onLoginClick, onRegisterClick }) {
   return (
     <footer className="relative bg-[#070A0F] border-t border-[#F26F21]/15">
       {/* Top neon line */}
@@ -112,12 +114,14 @@ export default function Footer() {
               ))}
             </div>
 
-            <a
-              href="#register"
-              className="block px-6 py-3 bg-[#F26F21] text-white text-sm font-bold tracking-wider uppercase rounded text-center glow-orange hover:bg-[#e05a10] transition-all duration-200"
-            >
-              Register Now
-            </a>
+            <AuthButtons
+              onLoginClick={onLoginClick}
+              onRegisterClick={onRegisterClick}
+              fullWidth
+              className="flex-col"
+              loginClassName="text-center"
+              registerClassName="text-center"
+            />
           </div>
         </div>
 

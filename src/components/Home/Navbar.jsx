@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, X, Zap } from 'lucide-react';
+import { AuthButtons } from './AuthButtons';
 
-export default function Navbar() {
+export default function Navbar({ onLoginClick, onRegisterClick }) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -12,6 +13,16 @@ export default function Navbar() {
   }, []);
 
   const links = ['Home', 'Timeline', 'Prizes', 'FAQ'];
+
+  const handleLogin = () => {
+    setMenuOpen(false);
+    onLoginClick?.();
+  };
+
+  const handleRegister = () => {
+    setMenuOpen(false);
+    onRegisterClick?.();
+  };
 
   return (
     <nav
@@ -45,12 +56,10 @@ export default function Navbar() {
               <span className="absolute -bottom-1 left-0 w-0 h-[1px] bg-[#F26F21] group-hover:w-full transition-all duration-300" />
             </a>
           ))}
-          <a
-            href="#register"
-            className="px-5 py-2 bg-[#F26F21] text-white text-sm font-bold tracking-wider uppercase rounded glow-orange hover:bg-[#e05a10] transition-all duration-200"
-          >
-            Register Now
-          </a>
+          <AuthButtons
+            onLoginClick={handleLogin}
+            onRegisterClick={handleRegister}
+          />
         </div>
 
         {/* Mobile toggle */}
@@ -76,13 +85,14 @@ export default function Navbar() {
               {link}
             </a>
           ))}
-          <a
-            href="#register"
-            onClick={() => setMenuOpen(false)}
-            className="px-5 py-2 bg-[#F26F21] text-white text-sm font-bold tracking-wider uppercase rounded text-center glow-orange"
-          >
-            Register Now
-          </a>
+          <AuthButtons
+            onLoginClick={handleLogin}
+            onRegisterClick={handleRegister}
+            fullWidth
+            className="flex-col"
+            loginClassName="text-center"
+            registerClassName="text-center"
+          />
         </div>
       )}
     </nav>

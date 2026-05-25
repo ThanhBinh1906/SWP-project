@@ -74,7 +74,7 @@ function CircuitSVG() {
   );
 }
 
-export default function Hero() {
+export default function Hero({ onRegisterClick }) {
   const TARGET_DATE = new Date('2026-03-15T08:00:00');
 
   const getTimeLeft = () => {
@@ -159,12 +159,13 @@ export default function Hero() {
 
           {/* CTAs */}
           <div className="flex flex-wrap gap-4">
-            <a
-              href="#register"
+            <button
+              type="button"
+              onClick={onRegisterClick}
               className="px-8 py-3 bg-[#F26F21] text-white font-bold tracking-wider uppercase rounded glow-orange hover:bg-[#e05a10] transition-all duration-200 text-sm"
             >
-              Join Now
-            </a>
+              Register
+            </button>
             <a
               href="#about"
               className="px-8 py-3 border border-[#38b6ff]/60 text-[#38b6ff] font-bold tracking-wider uppercase rounded hover:bg-[#38b6ff]/10 transition-all duration-200 text-sm"
