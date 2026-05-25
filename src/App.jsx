@@ -6,6 +6,7 @@ import { RouterProvider } from "react-router/dom";
 import UserDashboard from "./page/UserDashboard";
 import CoordinatorDashboardUI from "./page/CoordinatorDashboardUI";
 import { MentorDashboard } from "./components/Mentor";
+import { JudgeDashboard } from "./components/Judge";
 
 const router = createBrowserRouter([
   {
@@ -23,6 +24,10 @@ const router = createBrowserRouter([
   {
     path: "/mentor",
     element: <MentorDashboard />,
+  },
+  {
+    path: "/judge",
+    element: <JudgeDashboard />,
   },
 ]);
 
