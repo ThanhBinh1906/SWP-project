@@ -115,57 +115,42 @@ export function Sidebar({ active, onNav, isOpen, onClose }) {
             <button
               key={id}
               onClick={() => onNav(id)}
-              className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-all duration-200"
-              style={{
-                background: isActive ? "#FFFFFF" : "transparent",
-                border: isActive
-                  ? "1px solid rgba(255,255,255,0.6)"
-                  : "1px solid transparent",
-                boxShadow: isActive ? "0 4px 16px rgba(0,0,0,0.2)" : "none",
-              }}
-              onMouseEnter={(e) => {
-                if (!isActive)
-                  e.currentTarget.style.background = "rgba(255,255,255,0.1)";
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive) e.currentTarget.style.background = "transparent";
-              }}
+              className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-all duration-200 ${
+                isActive
+                  ? "bg-white border border-white/60 shadow-[0_4px_16px_rgba(0,0,0,0.15)] text-[#C2410C]"
+                  : "bg-transparent border border-transparent hover:bg-white/10 text-white active:scale-[0.98]"
+              }`}
             >
               <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-200"
-                style={{
-                  background: isActive
-                    ? "rgba(194,65,12,0.12)"
-                    : "rgba(255,255,255,0.15)",
-                }}
+                className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-200 ${
+                  isActive ? "bg-orange-700/10" : "bg-white/15"
+                }`}
               >
                 <Icon
-                  className="w-4 h-4 transition-colors duration-200"
-                  style={{ color: isActive ? "#C2410C" : "#FFFFFF" }}
+                  className={`w-4 h-4 transition-colors duration-200 ${
+                    isActive ? "text-[#C2410C]" : "text-white"
+                  }`}
                 />
               </div>
               <div>
                 <p
-                  className="text-sm font-semibold transition-colors duration-200"
-                  style={{ color: isActive ? "#C2410C" : "#FFFFFF" }}
+                  className={`text-sm font-semibold transition-colors duration-200 ${
+                    isActive ? "text-[#C2410C]" : "text-white"
+                  }`}
                 >
                   {label}
                 </p>
                 <p
-                  className="text-[10px] transition-colors duration-200"
-                  style={{
-                    color: isActive
-                      ? "rgba(194,65,12,0.7)"
-                      : "rgba(255,255,255,0.55)",
-                  }}
+                  className={`text-[10px] transition-colors duration-200 ${
+                    isActive ? "text-orange-700/75" : "text-white/60"
+                  }`}
                 >
                   {labelVi}
                 </p>
               </div>
               {isActive && (
                 <div
-                  className="ml-auto w-1.5 h-1.5 rounded-full flex-shrink-0"
-                  style={{ background: "#C2410C" }}
+                  className="ml-auto w-1.5 h-1.5 rounded-full flex-shrink-0 bg-[#C2410C]"
                 />
               )}
             </button>
@@ -209,24 +194,14 @@ export function Sidebar({ active, onNav, isOpen, onClose }) {
           </div>
         </div>
         <button
-          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
-          style={{
-            background: "rgba(255,255,255,0.12)",
-            border: "1px solid rgba(255,255,255,0.25)",
-            color: "#FFFFFF",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "rgba(255,255,255,0.22)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "rgba(255,255,255,0.12)";
-          }}
+          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold border border-white/20 bg-white/10 hover:bg-white/20 text-white transition-all duration-200 active:scale-[0.98]"
           onClick={handleLogout}
         >
           <LogOut className="w-4 h-4" />
           Logout
         </button>
       </div>
+
     </aside>
   );
 }

@@ -34,15 +34,11 @@ export function ChallengesView() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {otherChallenges.map(ch => (
             <div key={ch.id}
-              className="rounded-xl p-4 transition-all duration-200 cursor-pointer"
-              style={{
-                background: ch.locked ? '#F3F4F6' : '#FFFFFF',
-                border: '1px solid #E5E7EB',
-                boxShadow: ch.locked ? 'none' : '0 4px 16px rgba(0,0,0,0.02)',
-                opacity: ch.locked ? 0.6 : 1,
-              }}
-              onMouseEnter={e => { if (!ch.locked) e.currentTarget.style.borderColor = '#F26F21'; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = '#E5E7EB'; }}
+               className={`rounded-xl p-4 transition-all duration-250 cursor-pointer border ${
+                 ch.locked
+                   ? 'bg-[#F3F4F6] border-[#E5E7EB] opacity-60'
+                   : 'bg-white border-[#E5E7EB] shadow-[0_4px_16px_rgba(0,0,0,0.02)] hover:border-[#F26F21]/60 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(242,111,33,0.04)] active:scale-[0.99]'
+               }`}
             >
               <div className="flex items-start justify-between mb-2">
                 <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{ch.id}</span>

@@ -53,6 +53,14 @@ export default function UserDashboard() {
         }}
       />
 
+      {/* Mobile Sidebar Backdrop Overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-20 bg-slate-950/40 backdrop-blur-sm transition-all duration-300 md:hidden animate-fade-in"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Mobile Sidebar Drawer */}
       <Sidebar
         active={activeNav}
@@ -95,10 +103,13 @@ export default function UserDashboard() {
 
         {/* Content */}
         <main className="flex-1 px-8 py-7">
-          {activeNav === "challenges" && <ChallengesView />}
-          {activeNav === "submit" && <SubmitView />}
-          {activeNav === "team" && <TeamView />}
+          <div key={activeNav} className="animate-fade-in">
+            {activeNav === "challenges" && <ChallengesView />}
+            {activeNav === "submit" && <SubmitView />}
+            {activeNav === "team" && <TeamView />}
+          </div>
         </main>
+
 
         {/* Footer */}
         <footer

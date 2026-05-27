@@ -53,7 +53,7 @@ export function CoordinatorSidebar({ active, onNav, isOpen, onClose }) {
                 onNav(item.id);
                 onClose?.();
               }}
-              className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all"
+              className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all hover:bg-white/10 hover:scale-105"
               style={{ background: isActive ? "rgba(255,255,255,0.18)" : "transparent", color: "white", border: isActive ? "1px solid rgba(255,255,255,0.22)" : "1px solid transparent" }}
             >
               <Icon className="h-4 w-4 flex-shrink-0" />

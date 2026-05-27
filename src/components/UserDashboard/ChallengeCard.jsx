@@ -21,12 +21,7 @@ export function ChallengeCard() {
   const diff = difficultyMap[challenge.difficulty];
 
   return (
-    <div className="rounded-2xl p-6 transition-all duration-300 hover:translate-y-[-2px]"
-      style={{
-        background: '#FFFFFF',
-        border: '1px solid #FFD0B5',
-        boxShadow: '0 10px 30px rgba(242,111,33,0.04), 0 1px 3px rgba(0,0,0,0.01)',
-      }}>
+    <div className="rounded-2xl p-6 bg-white border border-[#FFD0B5] shadow-[0_10px_30px_rgba(242,111,33,0.04),0_1px_3px_rgba(0,0,0,0.01)] transition-all duration-300 hover:translate-y-[-2px] hover:shadow-[0_16px_40px_rgba(242,111,33,0.08)] hover:border-[#FFD0B5]/85">
       {/* Header row */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-2">
@@ -79,10 +74,7 @@ export function ChallengeCard() {
           </div>
         </div>
         <button
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200"
-          style={{ background: 'linear-gradient(135deg, #F26F21, #c9520e)', color: '#fff', boxShadow: '0 4px 14px rgba(242,111,33,0.25)' }}
-          onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 6px 20px rgba(242,111,33,0.4)'; e.currentTarget.style.transform = 'scale(1.02)'; }}
-          onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 4px 14px rgba(242,111,33,0.25)'; e.currentTarget.style.transform = 'scale(1)'; }}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-[#F26F21] to-[#c9520e] shadow-[0_4px_14px_rgba(242,111,33,0.25)] hover:shadow-[0_6px_20px_rgba(242,111,33,0.38)] hover:-translate-y-0.5 active:scale-[0.98] active:translate-y-0 transition-all duration-200"
         >
           View Details
           <ChevronRight className="w-3.5 h-3.5" />

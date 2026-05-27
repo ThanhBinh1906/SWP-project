@@ -107,7 +107,7 @@ export function CoordinatorActionButton({
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex items-center justify-center gap-2 rounded-xl border px-3.5 py-2 text-sm font-semibold transition-all ${variants[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-xl border px-3.5 py-2 text-sm font-semibold transition-all hover:scale-105 ${variants[variant]} ${className}`}
     >
       {Icon && <Icon className="h-4 w-4" />}
       {children}
@@ -117,10 +117,7 @@ export function CoordinatorActionButton({
 
 export function CoordinatorPanel({ title, subtitle, icon: Icon, actions, children, className = "" }) {
   return (
-    <section
-      className={`rounded-2xl border bg-white p-5 ${className}`}
-      style={{ borderColor: "#E5E7EB", boxShadow: "0 10px 30px rgba(0,0,0,0.02)" }}
-    >
+    <section className={`rounded-2xl border bg-white p-5 transition-transform hover:scale-105 animate-fade-in ${className}`} style={{ borderColor: "#E5E7EB", boxShadow: "0 10px 30px rgba(0,0,0,0.02)" }}>
       {(title || actions) && (
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3">
@@ -156,7 +153,7 @@ export function CoordinatorStatCard({ label, value, icon: Icon, tone = "orange",
   const [bg, border, color] = toneMap[tone] || toneMap.orange;
 
   return (
-    <div className="rounded-2xl border bg-white p-5" style={{ borderColor: "#E5E7EB", boxShadow: "0 10px 30px rgba(0,0,0,0.02)" }}>
+    <div className="rounded-2xl border bg-white p-5 transition-transform hover:scale-105" style={{ borderColor: "#E5E7EB", boxShadow: "0 10px 30px rgba(0,0,0,0.02)" }}>
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-sm font-semibold text-slate-500">{label}</p>
@@ -213,7 +210,7 @@ export function CoordinatorTable({ columns, rows, renderCell, emptyMessage = "No
         </thead>
         <tbody className="divide-y divide-slate-100 bg-white">
           {rows.map((row) => (
-            <tr key={row.id} className="hover:bg-orange-50/30">
+            <tr key={row.id} className="hover:bg-orange-50/30 transition-transform hover:scale-105" >
               {columns.map((column) => (
                 <td key={column.key} className="whitespace-nowrap px-4 py-3 text-slate-700">
                   {renderCell ? renderCell(row, column.key) : row[column.key]}
@@ -229,7 +226,7 @@ export function CoordinatorTable({ columns, rows, renderCell, emptyMessage = "No
 
 export function ModalShell({ title, children, onClose, actions }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 animate-fade-in">
       <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl">
         <div className="mb-5 flex items-start justify-between gap-4">
           <h3 className="text-lg font-bold text-slate-900">{title}</h3>

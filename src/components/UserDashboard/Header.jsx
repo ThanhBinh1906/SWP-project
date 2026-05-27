@@ -95,17 +95,8 @@ export function Header({ onMenuClick }) {
 
         {/* Bell */}
         <button
-          className="relative w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200"
-          style={{ background: "#F9FAFB", border: "1px solid #E5E7EB" }}
+          className="relative w-10 h-10 rounded-xl flex items-center justify-center bg-[#F9FAFB] border border-[#E5E7EB] hover:bg-[#FFF6F0] hover:border-[#FFD0B5] transition-all duration-200 active:scale-[0.95]"
           onClick={() => setHasNotif(false)}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "#FFF6F0";
-            e.currentTarget.style.borderColor = "#FFD0B5";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "#F9FAFB";
-            e.currentTarget.style.borderColor = "#E5E7EB";
-          }}
         >
           <Bell className="w-4 h-4" style={{ color: "#6B7280" }} />
           {hasNotif && (
@@ -115,6 +106,7 @@ export function Header({ onMenuClick }) {
             />
           )}
         </button>
+
       </div>
     </header>
   );
