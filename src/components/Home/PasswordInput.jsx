@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 
 const inputClass =
-  'w-full px-4 py-2.5 pr-11 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-[#F26F21]/60 focus:ring-1 focus:ring-[#F26F21]/30 transition-colors';
+  'w-full px-4 py-2 rounded-lg bg-white/[0.02] border border-white/[0.08] text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-[#F26F21]/50 focus:ring-1 focus:ring-[#F26F21]/20 hover:border-white/[0.15] transition-all';
 
 export const authLabelClass =
-  'block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5';
+  'block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5';
 
 export default function PasswordInput({
   id,

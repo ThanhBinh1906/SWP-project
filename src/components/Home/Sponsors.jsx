@@ -4,40 +4,37 @@ const tiers = [
   {
     tier: 'Platinum',
     color: '#e2e8f0',
-    glow: 'rgba(226,232,240,0.2)',
     sponsors: ['FPT Software', 'FPT Telecom'],
-    size: 'text-2xl',
+    size: 'text-xl md:text-2xl',
   },
   {
     tier: 'Gold',
     color: '#F26F21',
-    glow: 'rgba(242,111,33,0.2)',
     sponsors: ['VNG Corporation', 'Grab Vietnam', 'Momo'],
-    size: 'text-xl',
+    size: 'text-lg md:text-xl',
   },
   {
     tier: 'Silver',
     color: '#38b6ff',
-    glow: 'rgba(56,182,255,0.15)',
     sponsors: ['Axon Active', 'Rikkeisoft', 'TMA Solutions', 'KMS Technology'],
-    size: 'text-base',
+    size: 'text-sm md:text-base',
   },
 ];
 
 export default function Sponsors() {
   return (
-    <section id="sponsors" className="relative py-24 overflow-hidden">
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#38b6ff]/20 to-transparent" />
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] rounded-full bg-[#38b6ff]/4 blur-[120px] pointer-events-none" />
+    <section id="sponsors" className="relative py-28 overflow-hidden bg-[#080A0F]">
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] rounded-full bg-[#38b6ff]/[0.01] blur-[120px] pointer-events-none" />
 
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="max-w-7xl mx-auto px-6 relative z-10">
         {/* Header */}
-        <div className="text-center mb-16">
-          <p className="text-xs font-semibold tracking-widest uppercase text-[#38b6ff] mb-3">
-            Partners
+        <div className="text-center mb-20 space-y-4">
+          <p className="text-[10px] font-bold tracking-widest uppercase text-[#38b6ff]">
+            PARTNERS
           </p>
           <h2
-            className="text-3xl md:text-4xl font-black uppercase text-white"
+            className="text-3xl md:text-4xl font-extrabold text-white tracking-tight"
             style={{ fontFamily: 'Montserrat, sans-serif' }}
           >
             Our <span className="text-[#F26F21]">Sponsors</span>
@@ -45,36 +42,35 @@ export default function Sponsors() {
         </div>
 
         {/* Tiers */}
-        <div className="flex flex-col gap-12">
-          {tiers.map(({ tier, color, glow, sponsors, size }) => (
-            <div key={tier} className="text-center">
+        <div className="flex flex-col gap-16 max-w-5xl mx-auto">
+          {tiers.map(({ tier, color, sponsors, size }) => (
+            <div key={tier} className="text-center space-y-8">
               {/* Tier label */}
-              <div className="flex items-center gap-4 justify-center mb-6">
-                <div className="flex-1 max-w-[120px] h-px" style={{ background: `${color}40` }} />
+              <div className="flex items-center gap-6 justify-center">
+                <div className="flex-1 max-w-[100px] h-px bg-white/[0.08]" />
                 <span
-                  className="text-xs font-bold tracking-widest uppercase px-3 py-1 rounded-full"
+                  className="text-[10px] font-bold tracking-widest uppercase px-3.5 py-1 rounded-full border"
                   style={{
                     color,
-                    background: `${color}14`,
-                    border: `1px solid ${color}30`,
+                    borderColor: `${color}30`,
+                    background: `${color}06`,
                   }}
                 >
-                  {tier}
+                  {tier} Sponsor
                 </span>
-                <div className="flex-1 max-w-[120px] h-px" style={{ background: `${color}40` }} />
+                <div className="flex-1 max-w-[100px] h-px bg-white/[0.08]" />
               </div>
 
               {/* Logos */}
-              <div className="flex flex-wrap justify-center gap-5">
+              <div className="flex flex-wrap justify-center gap-4.5">
                 {sponsors.map((name) => (
                   <div
                     key={name}
-                    className="glass rounded-lg px-8 py-5 hover:scale-105 transition-transform duration-200 cursor-pointer"
-                    style={{ boxShadow: `0 0 16px ${glow}` }}
+                    className="bg-white/[0.01] border border-white/[0.05] rounded-xl px-8 py-5 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.03] hover:scale-[1.02] cursor-pointer group"
                   >
                     <span
-                      className={`font-black uppercase tracking-widest ${size}`}
-                      style={{ color, fontFamily: 'Montserrat, sans-serif' }}
+                      className={`font-black uppercase tracking-wider ${size} text-slate-400 group-hover:text-white transition-colors duration-300`}
+                      style={{ fontFamily: 'Montserrat, sans-serif' }}
                     >
                       {name}
                     </span>
@@ -86,21 +82,21 @@ export default function Sponsors() {
         </div>
 
         {/* Become a sponsor CTA */}
-        <div className="mt-16 text-center glass rounded-xl p-8 border border-[#F26F21]/20">
+        <div className="mt-24 text-center bg-white/[0.01] border border-white/[0.05] rounded-2xl p-10 max-w-3xl mx-auto">
           <p
-            className="text-xl font-bold uppercase text-white mb-3"
+            className="text-lg font-bold text-white mb-2"
             style={{ fontFamily: 'Montserrat, sans-serif' }}
           >
-            Want to be a Sponsor?
+            Want to join us as a Sponsor?
           </p>
-          <p className="text-slate-400 text-sm mb-6 max-w-lg mx-auto">
-            Reach 500+ top-tier CS students and emerging engineers at Vietnam's leading tech university.
+          <p className="text-slate-400 text-xs md:text-sm mb-8 max-w-md mx-auto leading-relaxed">
+            Reach 500+ top-tier computer science students and emerging developers at Vietnam's leading tech campus.
           </p>
           <a
             href="mailto:hackathon@fpt.edu.vn"
-            className="inline-flex items-center gap-2 px-8 py-3 border border-[#F26F21] text-[#F26F21] font-bold tracking-wider uppercase rounded hover:bg-[#F26F21]/10 transition-all duration-200 text-sm"
+            className="inline-flex items-center gap-2 px-6 py-2.5 border border-white/10 hover:border-white/20 text-slate-200 hover:text-white font-semibold tracking-wide rounded-lg hover:bg-white/5 transition-all duration-200 text-xs active:scale-[0.98]"
           >
-            Contact Us
+            Get Sponsorship Deck
           </a>
         </div>
       </div>

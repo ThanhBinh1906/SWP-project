@@ -32,7 +32,7 @@ function FAQItem({ q, a, index }) {
   const [open, setOpen] = useState(false);
   return (
     <div
-      className="border-b border-white/10 last:border-0"
+      className="border-b border-white/[0.05] last:border-0"
     >
       <button
         onClick={() => setOpen(!open)}
@@ -40,56 +40,62 @@ function FAQItem({ q, a, index }) {
         aria-expanded={open}
       >
         <span
-          className="font-semibold text-white group-hover:text-[#F26F21] transition-colors text-sm md:text-base"
+          className="font-bold text-white group-hover:text-[#F26F21] transition-colors text-sm md:text-base flex items-start"
           style={{ fontFamily: 'Montserrat, sans-serif' }}
         >
-          <span className="text-[#F26F21] mr-3 font-black">
-            {String(index + 1).padStart(2, '0')}.
+          <span className="text-[#F26F21]/80 mr-3.5 font-extrabold text-xs md:text-sm pt-0.5">
+            {String(index + 1).padStart(2, '0')}
           </span>
-          {q}
+          <span>{q}</span>
         </span>
         <ChevronDown
-          className={`w-5 h-5 flex-shrink-0 ml-4 transition-transform duration-300 ${open ? 'rotate-180 text-[#F26F21]' : 'text-slate-500'}`}
+          className={`w-4 h-4 flex-shrink-0 ml-4 transition-transform duration-300 ${open ? 'rotate-180 text-[#F26F21]' : 'text-slate-500 group-hover:text-slate-300'}`}
         />
       </button>
-      {open && (
-        <p className="pb-5 text-slate-400 text-sm leading-relaxed pr-8">
-          {a}
-        </p>
-      )}
+      <div
+        className={`grid transition-all duration-300 ease-in-out ${
+          open ? 'grid-rows-[1fr] opacity-100 pb-5' : 'grid-rows-[0fr] opacity-0 pointer-events-none'
+        }`}
+      >
+        <div className="overflow-hidden">
+          <p className="text-slate-400 text-xs md:text-sm leading-relaxed pl-7 pr-4">
+            {a}
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
 
 export default function FAQ() {
   return (
-    <section id="faq" className="relative py-24 overflow-hidden">
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#F26F21]/20 to-transparent" />
+    <section id="faq" className="relative py-28 overflow-hidden bg-[#080A0F]">
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/5 to-transparent" />
 
-      <div className="max-w-4xl mx-auto px-6">
+      <div className="max-w-4xl mx-auto px-6 relative z-10">
         {/* Header */}
-        <div className="text-center mb-16">
-          <p className="text-xs font-semibold tracking-widest uppercase text-[#F26F21] mb-3">
-            Got Questions?
+        <div className="text-center mb-20 space-y-4">
+          <p className="text-[10px] font-bold tracking-widest uppercase text-[#F26F21]">
+            QUESTIONS & ANSWERS
           </p>
           <h2
-            className="text-3xl md:text-4xl font-black uppercase text-white"
+            className="text-3xl md:text-4xl font-extrabold text-white tracking-tight"
             style={{ fontFamily: 'Montserrat, sans-serif' }}
           >
             FAQ
           </h2>
         </div>
 
-        <div className="glass rounded-xl p-6 md:p-10">
+        <div className="bg-white/[0.01] border border-white/[0.05] rounded-2xl p-6 md:p-10">
           {faqs.map((item, i) => (
             <FAQItem key={i} q={item.q} a={item.a} index={i} />
           ))}
         </div>
 
-        <p className="text-center text-slate-500 text-xs mt-8">
+        <p className="text-center text-slate-500 text-xs mt-10">
           Still have questions?{' '}
-          <a href="mailto:hackathon@fpt.edu.vn" className="text-[#F26F21] hover:underline">
-            Email us
+          <a href="mailto:hackathon@fpt.edu.vn" className="text-[#F26F21] hover:text-[#e05811] font-semibold underline underline-offset-4 transition-colors">
+            Email the organizing team
           </a>
         </p>
       </div>

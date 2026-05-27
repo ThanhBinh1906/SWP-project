@@ -4,9 +4,9 @@ import Modal from './Modal';
 import PasswordInput from './PasswordInput';
 
 const inputClass =
-  'w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-[#F26F21]/60 focus:ring-1 focus:ring-[#F26F21]/30 transition-colors';
+  'w-full px-4 py-2 rounded-lg bg-white/[0.02] border border-white/[0.08] text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-[#F26F21]/50 focus:ring-1 focus:ring-[#F26F21]/20 hover:border-white/[0.15] transition-all';
 
-const labelClass = 'block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5';
+const labelClass = 'block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5';
 
 const emptyMember = () => ({ name: '', email: '' });
 
@@ -69,14 +69,14 @@ export default function RegisterModal({ open, onClose }) {
     >
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Team leader */}
-        <section>
+        <section className="space-y-4">
           <h3
-            className="text-sm font-bold text-[#F26F21] uppercase tracking-widest mb-4 pb-2 border-b border-[#F26F21]/20"
+            className="text-xs font-bold text-[#F26F21] uppercase tracking-widest pb-1.5 border-b border-[#F26F21]/10"
             style={{ fontFamily: 'Montserrat, sans-serif' }}
           >
             Team Leader
           </h3>
-          <div className="space-y-3">
+          <div className="space-y-3.5">
             <div>
               <label htmlFor="leader-name" className={labelClass}>
                 Full Name
@@ -117,10 +117,10 @@ export default function RegisterModal({ open, onClose }) {
         </section>
 
         {/* Team members */}
-        <section>
-          <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/10">
+        <section className="space-y-4">
+          <div className="flex items-center justify-between pb-1.5 border-b border-white/[0.06]">
             <h3
-              className="text-sm font-bold text-[#38b6ff] uppercase tracking-widest"
+              className="text-xs font-bold text-[#38b6ff] uppercase tracking-widest"
               style={{ fontFamily: 'Montserrat, sans-serif' }}
             >
               Team Members
@@ -129,7 +129,7 @@ export default function RegisterModal({ open, onClose }) {
               <button
                 type="button"
                 onClick={addMember}
-                className="flex items-center gap-1.5 text-xs font-semibold text-[#38b6ff] hover:text-[#5cc4ff] transition-colors"
+                className="flex items-center gap-1 text-[10px] font-bold text-[#38b6ff] hover:text-[#5cc4ff] uppercase tracking-wider transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" />
                 Add Member
@@ -141,24 +141,24 @@ export default function RegisterModal({ open, onClose }) {
             {form.members.map((member, index) => (
               <div
                 key={index}
-                className="p-4 rounded-xl border border-white/10 bg-white/[0.02]"
+                className="p-4 rounded-xl border border-white/[0.06] bg-white/[0.01] space-y-3.5"
               >
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                     Member {index + 1}
                   </span>
                   {form.members.length > 1 && (
                     <button
                       type="button"
                       onClick={() => removeMember(index)}
-                      className="p-1.5 rounded text-slate-500 hover:text-red-400 hover:bg-red-400/10 transition-colors"
+                      className="p-1 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                       aria-label="Remove member"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-3.5">
                   <div>
                     <label
                       htmlFor={`member-name-${index}`}
@@ -201,16 +201,16 @@ export default function RegisterModal({ open, onClose }) {
               </div>
             ))}
           </div>
-          <p className="text-[11px] text-slate-500 mt-2">
+          <p className="text-[10px] text-slate-500">
             Up to 4 members (excluding team leader). Teams must have 2–5 people.
           </p>
         </section>
 
         <button
           type="submit"
-          className="w-full px-5 py-3 bg-[#F26F21] text-white text-sm font-bold tracking-wider uppercase rounded-lg glow-orange hover:bg-[#e05a10] transition-all duration-200"
+          className="w-full px-5 py-2.5 bg-[#F26F21] text-white text-sm font-semibold tracking-wide rounded-lg hover:bg-[#e05811] shadow-[0_1px_2px_rgba(0,0,0,0.1)] transition-all duration-200 active:scale-[0.98]"
         >
-          Register
+          Register Team
         </button>
       </form>
     </Modal>

@@ -9,8 +9,8 @@ const prizes = [
     currency: 'VND',
     perks: ['Internship Fast-Track', 'Mentor Sessions x3', 'Tech Swag Kit'],
     color: '#94a3b8',
-    glow: 'rgba(148,163,184,0.3)',
-    border: 'rgba(148,163,184,0.25)',
+    borderColor: 'border-slate-500/20',
+    hoverBorderColor: 'group-hover:border-slate-500/40',
     order: 'md:order-1',
     scale: '',
   },
@@ -21,10 +21,10 @@ const prizes = [
     currency: 'VND',
     perks: ['Full Internship Offer', 'Mentor Sessions x6', 'Hardware Bundle', 'Media Coverage'],
     color: '#F26F21',
-    glow: 'rgba(242,111,33,0.4)',
-    border: 'rgba(242,111,33,0.35)',
+    borderColor: 'border-[#F26F21]/30',
+    hoverBorderColor: 'group-hover:border-[#F26F21]/60',
     order: 'md:order-2',
-    scale: 'md:scale-110',
+    scale: 'md:scale-105',
     featured: true,
   },
   {
@@ -34,8 +34,8 @@ const prizes = [
     currency: 'VND',
     perks: ['Resume Boost Program', 'Mentor Session x1', 'Event Certificate'],
     color: '#c97c3a',
-    glow: 'rgba(201,124,58,0.3)',
-    border: 'rgba(201,124,58,0.25)',
+    borderColor: 'border-amber-700/20',
+    hoverBorderColor: 'group-hover:border-amber-700/40',
     order: 'md:order-3',
     scale: '',
   },
@@ -43,63 +43,59 @@ const prizes = [
 
 export default function Prizes() {
   return (
-    <section id="prizes" className="relative py-24 overflow-hidden">
-      {/* Background accent */}
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-[#F26F21]/5 blur-[120px] pointer-events-none" />
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#F26F21]/30 to-transparent" />
+    <section id="prizes" className="relative py-28 overflow-hidden bg-[#080A0F]">
+      {/* Background accents */}
+      <div className="absolute top-0 right-0 w-[400px] h-[400px] rounded-full bg-[#F26F21]/[0.01] blur-[120px] pointer-events-none" />
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/5 to-transparent" />
 
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="max-w-7xl mx-auto px-6 relative z-10">
         {/* Header */}
-        <div className="text-center mb-16">
-          <p className="text-xs font-semibold tracking-widest uppercase text-[#F26F21] mb-3">
-            Rewards
+        <div className="text-center mb-20 space-y-4">
+          <p className="text-[10px] font-bold tracking-widest uppercase text-[#F26F21]">
+            REWARDS
           </p>
           <h2
-            className="text-3xl md:text-4xl font-black uppercase text-white mb-4"
+            className="text-3xl md:text-4xl font-extrabold text-white tracking-tight"
             style={{ fontFamily: 'Montserrat, sans-serif' }}
           >
             Prize <span className="text-[#F26F21]">Pool</span>
           </h2>
-          <p className="text-slate-400 text-sm">
+          <p className="text-slate-400 text-sm md:text-base max-w-xl mx-auto leading-relaxed">
             Over{' '}
-            <span className="text-[#F26F21] font-bold">100,000,000 VND</span>{' '}
-            in total rewards, opportunities, and goodies
+            <span className="text-[#F26F21] font-semibold">100,000,000 VND</span>{' '}
+            in total rewards, tech packages, and career opportunities.
           </p>
         </div>
 
         {/* Cards */}
-        <div className="grid md:grid-cols-3 gap-6 items-end">
-          {prizes.map(({ rank, icon: Icon, amount, currency, perks, color, glow, border, order, scale, featured }) => (
+        <div className="grid md:grid-cols-3 gap-6 items-stretch max-w-5xl mx-auto">
+          {prizes.map(({ rank, icon: Icon, amount, currency, perks, color, borderColor, hoverBorderColor, order, scale, featured }) => (
             <div
               key={rank}
-              className={`relative rounded-xl p-8 flex flex-col items-center text-center transition-transform duration-300 hover:scale-[1.03] ${order} ${scale}`}
-              style={{
-                background: 'rgba(255,255,255,0.04)',
-                backdropFilter: 'blur(12px)',
-                border: `1px solid ${border}`,
-                boxShadow: featured ? `0 0 40px ${glow}, 0 0 80px rgba(242,111,33,0.1)` : `0 0 20px ${glow}`,
-              }}
+              className={`group relative rounded-2xl p-8 flex flex-col items-center text-center transition-all duration-300 hover:translate-y-[-4px] bg-white/[0.01] border ${borderColor} ${hoverBorderColor} ${order} ${scale} ${
+                featured ? 'bg-gradient-to-b from-[#F26F21]/[0.03] to-transparent' : ''
+              }`}
             >
               {featured && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-[#F26F21] text-white text-xs font-bold tracking-widest uppercase glow-orange">
-                  Top Prize
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-[#F26F21] text-white text-[9px] font-bold tracking-widest uppercase shadow-md">
+                  GRAND PRIZE
                 </div>
               )}
 
               {/* Icon */}
               <div
-                className="w-16 h-16 rounded-full flex items-center justify-center mb-5"
+                className="w-14 h-14 rounded-xl flex items-center justify-center mb-6"
                 style={{
-                  background: `${color}18`,
-                  boxShadow: `0 0 24px ${glow}`,
+                  background: `${color}08`,
+                  border: `1px solid ${color}20`,
                 }}
               >
-                <Icon className="w-8 h-8" style={{ color }} />
+                <Icon className="w-6 h-6" style={{ color }} />
               </div>
 
               {/* Rank */}
               <p
-                className="text-xs font-bold tracking-widest uppercase mb-3"
+                className="text-[10px] font-bold tracking-widest uppercase mb-2"
                 style={{ color }}
               >
                 {rank}
@@ -107,22 +103,22 @@ export default function Prizes() {
 
               {/* Amount */}
               <p
-                className="text-4xl font-black text-white mb-1"
-                style={{ fontFamily: 'Montserrat, sans-serif', textShadow: `0 0 20px ${color}80` }}
+                className="text-3xl md:text-4xl font-extrabold text-white mb-1"
+                style={{ fontFamily: 'Montserrat, sans-serif' }}
               >
                 {amount}
               </p>
-              <p className="text-sm font-semibold text-slate-400 mb-6">{currency}</p>
+              <p className="text-xs font-semibold text-slate-500 mb-6 uppercase tracking-wider">{currency}</p>
 
               {/* Divider */}
-              <div className="w-full h-px mb-6" style={{ background: `${color}30` }} />
+              <div className="w-full h-px mb-6 bg-white/[0.06]" />
 
               {/* Perks */}
-              <ul className="flex flex-col gap-2 w-full text-left">
+              <ul className="flex flex-col gap-3.5 w-full text-left flex-1 justify-center">
                 {perks.map((perk) => (
-                  <li key={perk} className="flex items-center gap-2 text-sm text-slate-400">
+                  <li key={perk} className="flex items-center gap-2.5 text-xs md:text-sm text-slate-400">
                     <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color }} />
-                    {perk}
+                    <span>{perk}</span>
                   </li>
                 ))}
               </ul>
@@ -131,8 +127,8 @@ export default function Prizes() {
         </div>
 
         {/* Special prizes note */}
-        <p className="text-center text-slate-500 text-xs mt-10 tracking-wide">
-          + Special category prizes, best UI/UX award, best social impact award, and more.
+        <p className="text-center text-slate-500 text-[11px] mt-12 tracking-wide font-medium">
+          + Special category prizes, best UI/UX award, best social impact award, and team certificate of participation.
         </p>
       </div>
     </section>

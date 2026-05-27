@@ -7,7 +7,7 @@ import authService from "../../services/authService";
 import { loginSuccess } from "../../store/authSlice";
 
 const inputClass =
-  "w-full px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-[#F26F21]/60 focus:ring-1 focus:ring-[#F26F21]/30 transition-colors";
+  "w-full px-4 py-2 rounded-lg bg-white/[0.02] border border-white/[0.08] text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-[#F26F21]/50 focus:ring-1 focus:ring-[#F26F21]/20 hover:border-white/[0.15] transition-all";
 
 const ROLE_ROUTES = {
   Coordinator: "/admin/dashboard",
@@ -64,8 +64,8 @@ export default function LoginModal({ open, onClose }) {
       title="Login"
       subtitle="Sign in with your Gmail and password"
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="space-y-1.5">
           <label htmlFor="login-email" className={authLabelClass}>
             Gmail
           </label>
@@ -88,12 +88,12 @@ export default function LoginModal({ open, onClose }) {
           autoComplete="current-password"
         />
 
-        {error && <p className="text-red-400 text-xs">{error}</p>}
+        {error && <p className="text-red-400 text-xs font-medium mt-1">{error}</p>}
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full mt-2 px-5 py-3 bg-[#F26F21] text-white text-sm font-bold tracking-wider uppercase rounded-lg glow-orange hover:bg-[#e05a10] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full mt-2 px-5 py-2.5 bg-[#F26F21] text-white text-sm font-semibold tracking-wide rounded-lg hover:bg-[#e05811] shadow-[0_1px_2px_rgba(0,0,0,0.1)] transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? "Đang đăng nhập..." : "Login"}
         </button>

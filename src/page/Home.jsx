@@ -6,6 +6,7 @@ import Timeline from '../components/Home/Timeline';
 import Prizes from '../components/Home/Prizes';
 import Sponsors from '../components/Home/Sponsors';
 import FAQ from '../components/Home/FAQ';
+import Footer from '../components/Home/Footer';
 import LoginModal from '../components/Home/LoginModal';
 import RegisterModal from '../components/Home/RegisterModal';
 
@@ -25,7 +26,7 @@ export default function Home() {
 
   return (
     <>
-      <div className="min-h-screen bg-[#0B0E14]">
+      <div className="min-h-screen bg-[#080A0F]">
         <Navbar onLoginClick={openLogin} onRegisterClick={openRegister} />
         <main>
           <Hero onRegisterClick={openRegister} />
@@ -35,7 +36,7 @@ export default function Home() {
           <Sponsors />
           <FAQ />
         </main>
-        {/* <Footer onLoginClick={openLogin} onRegisterClick={openRegister} /> */}
+        <Footer onLoginClick={openLogin} onRegisterClick={openRegister} />
       </div>
 
       <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />

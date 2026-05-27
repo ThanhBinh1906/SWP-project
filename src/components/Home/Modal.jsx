@@ -26,41 +26,40 @@ export default function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in-up"
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
     >
       <button
         type="button"
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-[#04060A]/80 backdrop-blur-md transition-opacity duration-300"
         onClick={onClose}
         aria-label="Close"
       />
       <div
-        className={`relative w-full ${maxWidth} max-h-[90vh] flex flex-col rounded-2xl overflow-hidden border border-white/10 shadow-[0_24px_80px_rgba(0,0,0,0.6),0_0_0_1px_rgba(242,111,33,0.15)]`}
-        style={{ background: 'rgba(15, 18, 28, 0.98)' }}
+        className={`relative w-full ${maxWidth} max-h-[90vh] flex flex-col rounded-2xl overflow-hidden border border-white/[0.08] bg-[#0A0C14] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)]`}
       >
-        <div className="flex-shrink-0 flex items-start justify-between gap-4 px-6 pt-6 pb-4 border-b border-white/10">
-          <div>
+        <div className="flex-shrink-0 flex items-start justify-between gap-4 px-6 pt-6 pb-4 border-b border-white/[0.06]">
+          <div className="space-y-1">
             <h2
               id="modal-title"
-              className="text-xl font-black text-white uppercase tracking-wide"
+              className="text-lg font-bold text-white tracking-wide"
               style={{ fontFamily: 'Montserrat, sans-serif' }}
             >
               {title}
             </h2>
             {subtitle && (
-              <p className="text-sm text-slate-400 mt-1">{subtitle}</p>
+              <p className="text-xs text-slate-400 leading-normal">{subtitle}</p>
             )}
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all duration-200"
             aria-label="Close"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
         <div className="flex-1 overflow-y-auto px-6 py-5">{children}</div>
