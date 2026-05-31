@@ -13,19 +13,11 @@ import CoordinatorDashboardUI from "./page/CoordinatorDashboardUI";
 import MentorDashboard from "./page/MentorDashboard";
 import JudgeDashboard from "./page/JudgeDashboard";
 
-// ---- Trang lỗi ----
-const Pending = () => (
-  <div className="text-white p-10">Tài khoản đang chờ duyệt.</div>
-);
-const Rejected = () => (
-  <div className="text-white p-10">Tài khoản bị từ chối.</div>
-);
-const NotFound = () => (
-  <div className="text-white p-10">404 - Không tìm thấy trang.</div>
-);
-const Forbidden = () => (
-  <div className="text-white p-10">403 - Không có quyền truy cập.</div>
-);
+// ---- Error pages ----
+import Pending from "./page/error/Pending";
+import Rejected from "./page/error/Decline";
+import NotFound from "./page/error/NotFoundPage";
+import Forbidden from "./page/error/NotPermissionPage";
 
 // ---- Protected Route ----
 function ProtectedRoute({ children, allowedRoles }) {
