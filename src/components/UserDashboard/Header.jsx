@@ -1,5 +1,6 @@
 import { Bell, Clock, ChevronDown, Menu } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 
 // Deadline: 48 hours from a fixed reference (demo)
 const DEADLINE = new Date(Date.now() + 48 * 60 * 60 * 1000);
@@ -31,7 +32,7 @@ function useCountdown(target) {
 export function Header({ onMenuClick }) {
   const { hours, minutes, seconds } = useCountdown(DEADLINE);
   const [hasNotif, setHasNotif] = useState(true);
-
+  const { user } = useSelector((s) => s.auth); // lấy user thật từ Redux
   return (
     <header
       className="flex items-center justify-between px-8 py-4 border-b"
@@ -46,7 +47,7 @@ export function Header({ onMenuClick }) {
         <Menu className="w-6 h-6" />
       </button>
       {/* Greeting */}
-      <div className="flex-1 ml-4">
+      <div className="flex-1 min-w-0 ml-4">
         <p
           className="text-xs font-semibold tracking-widest uppercase"
           style={{ color: "#6B7280" }}
@@ -54,14 +55,14 @@ export function Header({ onMenuClick }) {
           Welcome back
         </p>
         <h1
-          className="text-xl font-bold tracking-tight"
+          className="text-sm sm:text-xl font-bold tracking-tight truncate"
           style={{
             fontFamily: "'Montserrat', 'Inter', sans-serif",
             color: "#111827",
           }}
         >
-          Nguyen Van A{" "}
-          <span className="font-semibold" style={{ color: "#F26F21" }}>
+          {user.username}{" "}
+          <span className="font-semibold text-xs sm:text-sm" style={{ color: "#F26F21" }}>
             / Team Alpha
           </span>
         </h1>
@@ -71,7 +72,7 @@ export function Header({ onMenuClick }) {
       <div className="flex items-center gap-4">
         {/* Countdown */}
         <div
-          className="flex items-center gap-3 px-4 py-2.5 rounded-xl"
+          className="hidden sm:flex items-center gap-3 px-4 py-2.5 rounded-xl"
           style={{ background: "#FFF6F0", border: "1px solid #FFD0B5" }}
         >
           <Clock className="w-4 h-4" style={{ color: "#F26F21" }} />
@@ -106,7 +107,6 @@ export function Header({ onMenuClick }) {
             />
           )}
         </button>
-
       </div>
     </header>
   );

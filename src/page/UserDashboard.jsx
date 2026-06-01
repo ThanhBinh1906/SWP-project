@@ -26,7 +26,7 @@ export default function UserDashboard() {
 
   return (
     <div
-      className="flex flex-col md:flex-row min-h-screen overflow-x-hidden"
+      className="flex min-h-screen overflow-x-hidden"
       style={{
         background: "#F9FAFB",
         fontFamily:
@@ -73,7 +73,7 @@ export default function UserDashboard() {
       />
 
       {/* Main layout */}
-      <div className="flex-1 flex flex-col min-h-screen md:ml">
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
         {/* Page title strip */}

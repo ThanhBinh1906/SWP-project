@@ -1,1 +1,8 @@
-export { CoordinatorPanel, CoordinatorStatCard, CoordinatorBadge, CoordinatorActionButton, CoordinatorProgressBar, CoordinatorTable } from "./CoordinatorUI";
+export {
+  CoordinatorPanel,
+  CoordinatorStatCard,
+  CoordinatorBadge,
+  CoordinatorActionButton,
+  CoordinatorProgressBar,
+  CoordinatorTable,
+} from "./CoordinatorUI";

@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { MentorBadge } from "../../shared/MentorBadge";
 import { MentorProgressBar } from "../../shared/MentorProgressBar";
 import { mentorIcons } from "../../shared/mentorIcons";
@@ -11,8 +12,8 @@ export function TeamDetailModal({ team, onClose }) {
 
   if (!team) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4">
       <div className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
         <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b bg-white px-5 py-4" style={{ borderColor: "#E5E7EB" }}>
           <div>
@@ -54,6 +55,7 @@ export function TeamDetailModal({ team, onClose }) {
           <TopicSection topic={team.topic} />
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

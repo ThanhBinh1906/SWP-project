@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 export default function Modal({
@@ -24,9 +25,9 @@ export default function Modal({
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in-up"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 fade-in-up"
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
@@ -64,6 +65,7 @@ export default function Modal({
         </div>
         <div className="flex-1 overflow-y-auto px-6 py-5">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

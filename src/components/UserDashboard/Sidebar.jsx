@@ -149,9 +149,7 @@ export function Sidebar({ active, onNav, isOpen, onClose }) {
                 </p>
               </div>
               {isActive && (
-                <div
-                  className="ml-auto w-1.5 h-1.5 rounded-full flex-shrink-0 bg-[#C2410C]"
-                />
+                <div className="ml-auto w-1.5 h-1.5 rounded-full flex-shrink-0 bg-[#C2410C]" />
               )}
             </button>
           );
@@ -183,7 +181,7 @@ export function Sidebar({ active, onNav, isOpen, onClose }) {
           </div>
           <div className="min-w-0">
             <p className="text-xs font-semibold text-white truncate">
-              Nguyen Van A
+              {user.username}
             </p>
             <p
               className="text-[10px] truncate"
@@ -201,7 +199,6 @@ export function Sidebar({ active, onNav, isOpen, onClose }) {
           Logout
         </button>
       </div>
-
     </aside>
   );
 }

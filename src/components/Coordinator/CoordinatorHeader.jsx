@@ -31,27 +31,61 @@ export function CoordinatorHeader({ onMenuClick }) {
   const { Bell, Clock, Menu } = icons;
 
   return (
-    <header className="flex items-center justify-between gap-4 border-b px-4 py-4 sm:px-8" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
-      <button className="block text-gray-600 md:hidden" onClick={onMenuClick} aria-label="Open sidebar">
+    <header
+      className="flex items-center justify-between gap-4 border-b px-4 py-4 sm:px-8"
+      style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}
+    >
+      <button
+        className="block text-gray-600 md:hidden"
+        onClick={onMenuClick}
+        aria-label="Open sidebar"
+      >
         <Menu className="h-6 w-6" />
       </button>
 
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#6B7280" }}>
+        <p
+          className="text-xs font-semibold uppercase tracking-widest"
+          style={{ color: "#6B7280" }}
+        >
           Welcome back
         </p>
-        <h1 className="truncate text-lg font-bold tracking-tight sm:text-xl" style={{ fontFamily: "'Montserrat', 'Inter', sans-serif", color: "#111827" }}>
-          Coordinator Admin <span className="font-semibold" style={{ color: "#F26F21" }}>/ SEAL Hackathon</span>
+        <h1
+          className="truncate text-lg font-bold tracking-tight sm:text-xl"
+          style={{
+            fontFamily: "'Montserrat', 'Inter', sans-serif",
+            color: "#111827",
+          }}
+        >
+          Coordinator Admin{" "}
+          <span className="font-semibold" style={{ color: "#F26F21" }}>
+            / SEAL Hackathon
+          </span>
         </h1>
       </div>
 
       <div className="flex items-center gap-3">
-        <div className="hidden items-center gap-3 rounded-xl px-4 py-2.5 sm:flex" style={{ background: "#FFF6F0", border: "1px solid #FFD0B5" }}>
+        <div
+          className="hidden items-center gap-3 rounded-xl px-4 py-2.5 sm:flex"
+          style={{ background: "#FFF6F0", border: "1px solid #FFD0B5" }}
+        >
           <Clock className="h-4 w-4" style={{ color: "#F26F21" }} />
-          <div className="flex items-center gap-1 font-mono text-sm font-bold" style={{ color: "#111827" }}>
-            <span>{pad(hours)}</span><span style={{ color: "#F26F21" }}>:</span><span>{pad(minutes)}</span><span style={{ color: "#F26F21" }}>:</span><span>{pad(seconds)}</span>
+          <div
+            className="flex items-center gap-1 font-mono text-sm font-bold"
+            style={{ color: "#111827" }}
+          >
+            <span>{pad(hours)}</span>
+            <span style={{ color: "#F26F21" }}>:</span>
+            <span>{pad(minutes)}</span>
+            <span style={{ color: "#F26F21" }}>:</span>
+            <span>{pad(seconds)}</span>
           </div>
-          <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#F26F21" }}>Round closes</span>
+          <span
+            className="text-[10px] font-semibold uppercase tracking-widest"
+            style={{ color: "#F26F21" }}
+          >
+            Round closes
+          </span>
         </div>
 
         <button
@@ -60,7 +94,12 @@ export function CoordinatorHeader({ onMenuClick }) {
           onClick={() => setHasNotification(false)}
         >
           <Bell className="h-4 w-4 text-slate-500" />
-          {hasNotification && <span className="absolute right-2 top-2 h-2 w-2 rounded-full" style={{ background: "#F26F21" }} />}
+          {hasNotification && (
+            <span
+              className="absolute right-2 top-2 h-2 w-2 rounded-full"
+              style={{ background: "#F26F21" }}
+            />
+          )}
         </button>
       </div>
     </header>

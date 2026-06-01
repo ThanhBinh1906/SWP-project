@@ -76,7 +76,7 @@ export default function Navbar({ onLoginClick, onRegisterClick }) {
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div className="md:hidden bg-[#0A0D14]/98 backdrop-blur-lg border-t border-white/[0.06] px-6 py-6 flex flex-col gap-5 shadow-2xl animate-fade-in-up">
+        <div className="md:hidden bg-[#0A0D14]/98 backdrop-blur-lg border-t border-white/[0.06] px-6 py-6 flex flex-col gap-5 shadow-2xl fade-in-up">
           {links.map((link) => (
             <a
               key={link}
