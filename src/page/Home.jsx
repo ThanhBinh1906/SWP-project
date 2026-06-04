@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Home/Navbar';
 import Hero from '../components/Home/Hero';
 import About from '../components/Home/About';
@@ -10,18 +11,31 @@ import Footer from '../components/Home/Footer';
 import LoginModal from '../components/Home/LoginModal';
 import RegisterModal from '../components/Home/RegisterModal';
 
-export default function Home() {
-  const [loginOpen, setLoginOpen] = useState(false);
-  const [registerOpen, setRegisterOpen] = useState(false);
+export default function Home({ defaultLoginOpen = false, defaultRegisterOpen = false }) {
+  const navigate = useNavigate();
+  const [loginOpen, setLoginOpen] = useState(defaultLoginOpen);
+  const [registerOpen, setRegisterOpen] = useState(defaultRegisterOpen);
 
   const openLogin = () => {
     setRegisterOpen(false);
     setLoginOpen(true);
+    navigate('/login');
   };
 
   const openRegister = () => {
     setLoginOpen(false);
     setRegisterOpen(true);
+    navigate('/register');
+  };
+
+  const closeLogin = () => {
+    setLoginOpen(false);
+    navigate('/');
+  };
+
+  const closeRegister = () => {
+    setRegisterOpen(false);
+    navigate('/');
   };
 
   return (
@@ -39,10 +53,10 @@ export default function Home() {
         <Footer onLoginClick={openLogin} onRegisterClick={openRegister} />
       </div>
 
-      <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
+      <LoginModal open={loginOpen} onClose={closeLogin} />
       <RegisterModal
         open={registerOpen}
-        onClose={() => setRegisterOpen(false)}
+        onClose={closeRegister}
       />
     </>
   );

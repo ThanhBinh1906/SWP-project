@@ -114,7 +114,7 @@ export default function RegisterModal({ open, onClose }) {
         {error && <p className="text-red-400 text-xs">{error}</p>}
         {success ? (
           <div className="w-full px-5 py-3 rounded-lg bg-green-500/10 border border-green-500/30 text-green-400 text-sm text-center">
-            Đăng ký thành công! Vui lòng chờ Coordinator duyệt tài khoản.
+            Đăng ký thành công! Vui lòng mở Gmail để xác thực tài khoản.
           </div>
         ) : (
           <button
