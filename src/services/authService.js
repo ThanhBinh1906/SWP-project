@@ -1,17 +1,20 @@
 import api from "./axiosInstance";
 
 const authService = {
-  register: (data) => api.post("/Auth/register", data),
+  register: (data) => api.post("/api/auth/register", data),
 
-  login: (data) => api.post("/Auth/login", data),
+  login: (data) => api.post("/api/auth/login", data),
 
-  logout: () => api.post("/Auth/logout"),
+  verifyEmail: (token) =>
+    api.get("/api/auth/verify-email", { params: { token } }),
 
-  getPendingAccounts: () => api.get("/Auth/pending"),
+  logout: () => api.post("/api/auth/logout"),
 
-  approveAccount: (id) => api.put(`/Auth/${id}/approve`),
+  getPendingAccounts: () => api.get("/api/auth/pending"),
 
-  rejectAccount: (id, reason) => api.put(`/Auth/${id}/reject`, { reason }),
+  approveAccount: (id) => api.put(`/api/auth/${id}/approve`),
+
+  rejectAccount: (id, reason) => api.put(`/api/auth/${id}/reject`, { reason }),
 };
 
 export default authService;
