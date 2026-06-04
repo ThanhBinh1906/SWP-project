@@ -10,7 +10,7 @@ const inputClass =
   "w-full px-4 py-2 rounded-lg bg-white/[0.02] border border-white/[0.08] text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-[#F26F21]/50 focus:ring-1 focus:ring-[#F26F21]/20 hover:border-white/[0.15] transition-all";
 
 const ROLE_ROUTES = {
-  Coordinator: "/admin/dashboard",
+  Coordinator: "/coordinator/dashboard",
   Leader: "/dashboard",
   Mentor: "/mentor/dashboard",
   Judge: "/judge/dashboard",
@@ -88,7 +88,9 @@ export default function LoginModal({ open, onClose }) {
           autoComplete="current-password"
         />
 
-        {error && <p className="text-red-400 text-xs font-medium mt-1">{error}</p>}
+        {error && (
+          <p className="text-red-400 text-xs font-medium mt-1">{error}</p>
+        )}
 
         <button
           type="submit"

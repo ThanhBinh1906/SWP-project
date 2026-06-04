@@ -52,7 +52,7 @@ const router = createBrowserRouter([
     ),
   },
   {
-    path: "/admin/dashboard",
+    path: "/coordinator/dashboard",
     element: (
       <ProtectedRoute allowedRoles={["Coordinator"]}>
         <CoordinatorDashboardUI />
