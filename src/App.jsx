@@ -8,6 +8,7 @@ import {
 import { useSelector } from "react-redux";
 
 import Home from "./page/Home";
+import VerifyEmail from "./page/VerifyEmail";
 import UserDashboard from "./page/UserDashboard";
 import CoordinatorDashboardUI from "./page/CoordinatorDashboardUI";
 import MentorDashboard from "./page/MentorDashboard";
@@ -38,6 +39,9 @@ function ProtectedRoute({ children, allowedRoles }) {
 // ---- Routes ----
 const router = createBrowserRouter([
   { path: "/", element: <Home /> },
+  { path: "/login", element: <Home defaultLoginOpen /> },
+  { path: "/register", element: <Home defaultRegisterOpen /> },
+  { path: "/verify-email", element: <VerifyEmail /> },
   { path: "/pending", element: <Pending /> },
   { path: "/rejected", element: <Rejected /> },
   { path: "/403", element: <Forbidden /> },

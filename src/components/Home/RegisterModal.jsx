@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
 import Modal from "./Modal";
 import PasswordInput from "./PasswordInput";
 import authService from "../../services/authService";
@@ -10,13 +9,10 @@ const inputClass =
 const labelClass =
   "block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5";
 
-const emptyMember = () => ({ name: "", email: "" });
-
 const initialState = () => ({
   leaderName: "",
   leaderEmail: "",
   leaderPassword: "",
-  members: [emptyMember()],
 });
 
 export default function RegisterModal({ open, onClose }) {
@@ -32,31 +28,6 @@ export default function RegisterModal({ open, onClose }) {
 
   const updateLeader = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const updateMember = (index, field, value) => {
-    setForm((prev) => ({
-      ...prev,
-      members: prev.members.map((m, i) =>
-        i === index ? { ...m, [field]: value } : m,
-      ),
-    }));
-  };
-
-  const addMember = () => {
-    if (form.members.length >= 4) return;
-    setForm((prev) => ({
-      ...prev,
-      members: [...prev.members, emptyMember()],
-    }));
-  };
-
-  const removeMember = (index) => {
-    if (form.members.length <= 1) return;
-    setForm((prev) => ({
-      ...prev,
-      members: prev.members.filter((_, i) => i !== index),
-    }));
   };
 
   const handleSubmit = async (e) => {
@@ -140,99 +111,10 @@ export default function RegisterModal({ open, onClose }) {
           </div>
         </section>
 
-        {/* Team members */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between pb-1.5 border-b border-white/[0.06]">
-            <h3
-              className="text-xs font-bold text-[#38b6ff] uppercase tracking-widest"
-              style={{ fontFamily: "Montserrat, sans-serif" }}
-            >
-              Team Members
-            </h3>
-            {form.members.length < 4 && (
-              <button
-                type="button"
-                onClick={addMember}
-                className="flex items-center gap-1 text-[10px] font-bold text-[#38b6ff] hover:text-[#5cc4ff] uppercase tracking-wider transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Add Member
-              </button>
-            )}
-          </div>
-
-          <div className="space-y-4">
-            {form.members.map((member, index) => (
-              <div
-                key={index}
-                className="p-4 rounded-xl border border-white/[0.06] bg-white/[0.01] space-y-3.5"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                    Member {index + 1}
-                  </span>
-                  {form.members.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeMember(index)}
-                      className="p-1 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                      aria-label="Remove member"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-                <div className="space-y-3.5">
-                  <div>
-                    <label
-                      htmlFor={`member-name-${index}`}
-                      className={labelClass}
-                    >
-                      Full Name
-                    </label>
-                    <input
-                      id={`member-name-${index}`}
-                      type="text"
-                      required
-                      placeholder="Jane Smith"
-                      value={member.name}
-                      onChange={(e) =>
-                        updateMember(index, "name", e.target.value)
-                      }
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor={`member-email-${index}`}
-                      className={labelClass}
-                    >
-                      Gmail
-                    </label>
-                    <input
-                      id={`member-email-${index}`}
-                      type="email"
-                      required
-                      placeholder="member@gmail.com"
-                      value={member.email}
-                      onChange={(e) =>
-                        updateMember(index, "email", e.target.value)
-                      }
-                      className={inputClass}
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <p className="text-[10px] text-slate-500">
-            Up to 4 members (excluding team leader). Teams must have 2–5 people.
-          </p>
-        </section>
         {error && <p className="text-red-400 text-xs">{error}</p>}
         {success ? (
           <div className="w-full px-5 py-3 rounded-lg bg-green-500/10 border border-green-500/30 text-green-400 text-sm text-center">
-            Đăng ký thành công! Vui lòng chờ Coordinator duyệt tài khoản.
+            Đăng ký thành công! Vui lòng mở Gmail để xác thực tài khoản.
           </div>
         ) : (
           <button
