@@ -99,10 +99,10 @@ export function CoordinatorActionButton({
     primary:
       "text-white border-transparent shadow-sm shadow-orange-200 bg-gradient-to-r from-[#F26F21] to-[#c9520e] hover:shadow-orange-300",
     secondary:
-      "text-slate-700 bg-white border-slate-200 hover:bg-slate-50 hover:border-slate-300",
+      "text-slate-700 bg-white border-slate-300 hover:bg-slate-50 hover:border-slate-400",
     ghost:
       "text-slate-600 bg-transparent border-transparent hover:bg-slate-100",
-    danger: "text-red-700 bg-red-50 border-red-200 hover:bg-red-100",
+    danger: "text-red-700 bg-red-50 border-red-300 hover:bg-red-100",
   };
 
   return (

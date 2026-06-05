@@ -7,7 +7,7 @@ import authService from "../../services/authService";
 import { loginSuccess } from "../../store/authSlice";
 
 const inputClass =
-  "w-full px-4 py-2 rounded-lg bg-white/[0.02] border border-white/[0.08] text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-[#F26F21]/50 focus:ring-1 focus:ring-[#F26F21]/20 hover:border-white/[0.15] transition-all";
+  "w-full px-4 py-2 rounded-lg bg-[#0F121E] border border-white/[0.18] text-white text-sm placeholder:text-slate-400 focus:outline-none focus:border-[#F26F21] focus:ring-2 focus:ring-[#F26F21]/30 hover:border-white/[0.3] transition-all";
 
 const ROLE_ROUTES = {
   Coordinator: "/coordinator/dashboard",

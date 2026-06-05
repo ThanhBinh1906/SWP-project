@@ -142,3 +142,68 @@ h1, h2, h3, h4, h5, h6 {
 ::-webkit-scrollbar-thumb { background: rgba(242, 111, 33, 0.3); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(242, 111, 33, 0.5); }
 
+/* ==========================================================================
+   Premium SaaS Form Controls Accessibility & Contrast Overrides
+   ========================================================================== */
+
+/* 1. Global styling for inputs, textareas, and selects with border-slate-200 */
+input.border-slate-200, 
+select.border-slate-200, 
+textarea.border-slate-200 {
+  border-color: #94A3B8 !important; /* High contrast gray-400 border */
+  color: #0F172A !important;        /* Crisp slate-900 text */
+  background-color: #FFFFFF !important;
+}
+
+/* 2. Style date picker inputs explicitly */
+input[type="date"].border-slate-200 {
+  border-color: #94A3B8 !important;
+  color: #0F172A !important;
+  background-color: #FFFFFF !important;
+}
+
+/* 3. Style placeholders globally for clear visibility */
+input::placeholder,
+textarea::placeholder {
+  color: #64748B !important; /* Visible slate-500 placeholder text */
+  opacity: 1 !important;
+}
+
+/* 4. Focus states - FPT Orange with outline shadow */
+input.border-slate-200:focus, 
+select.border-slate-200:focus, 
+textarea.border-slate-200:focus,
+input[type="date"].border-slate-200:focus {
+  border-color: #F26F21 !important;
+  box-shadow: 0 0 0 3px rgba(242, 111, 33, 0.18) !important;
+  outline: 2px solid transparent !important;
+}
+
+/* 5. Select dropdown options contrast styling */
+select.border-slate-200 option {
+  background-color: #FFFFFF !important;
+  color: #0F172A !important;
+}
+
+/* 6. Label typography hierarchy and visual contrast */
+label.block {
+  color: #1E293B !important; /* slate-800 for high-contrast visual hierarchy */
+  font-weight: 700 !important; /* Bold font for scanning */
+  letter-spacing: 0.05em !important; /* Elegant tracking-wider */
+}
+
+/* 7. WebKit Calendar Picker icon accessibility opacity */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.6;
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* 8. Select/Input wrapper focus indicator */
+div.border-slate-200:focus-within {
+  border-color: #F26F21 !important;
+  box-shadow: 0 0 0 3px rgba(242, 111, 33, 0.18) !important;
+}
+

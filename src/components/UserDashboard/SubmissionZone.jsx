@@ -145,27 +145,27 @@ export function SubmissionZone() {
       ) : (
         <div className="mb-3">
           <div
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl mb-2 border border-slate-200 focus-within:border-[#F26F21] focus-within:ring-1 focus-within:ring-[#F26F21] transition-all duration-200"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl mb-2 border border-slate-300 hover:border-slate-400 focus-within:border-[#F26F21] focus-within:ring-2 focus-within:ring-[#F26F21]/18 transition-all duration-200"
             style={{ background: "#FFFFFF" }}
           >
-            <Github className="w-4 h-4 text-slate-400 flex-shrink-0" />
+            <Github className="w-4 h-4 text-slate-500 flex-shrink-0" />
             <input
               type="text"
               value={repoUrl}
               onChange={(e) => setRepoUrl(e.target.value)}
               placeholder="https://github.com/team-alpha/project"
-              className="flex-1 bg-transparent text-sm text-[#111827] placeholder-slate-400 outline-none"
+              className="flex-1 bg-transparent text-sm text-[#0F172A] placeholder-slate-500 outline-none"
             />
           </div>
           <div
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-slate-200 focus-within:border-[#F26F21] focus-within:ring-1 focus-within:ring-[#F26F21] transition-all duration-200"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-slate-300 hover:border-slate-400 focus-within:border-[#F26F21] focus-within:ring-2 focus-within:ring-[#F26F21]/18 transition-all duration-200"
             style={{ background: "#FFFFFF" }}
           >
-            <Link className="w-4 h-4 text-slate-400 flex-shrink-0" />
+            <Link className="w-4 h-4 text-slate-500 flex-shrink-0" />
             <input
               type="text"
               placeholder="Demo URL (optional)"
-              className="flex-1 bg-transparent text-sm text-[#111827] placeholder-slate-400 outline-none"
+              className="flex-1 bg-transparent text-sm text-[#0F172A] placeholder-slate-500 outline-none"
             />
           </div>
         </div>

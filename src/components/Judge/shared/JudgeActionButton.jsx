@@ -1,9 +1,9 @@
 export function JudgeActionButton({ variant = "secondary", disabled = false, children, icon: Icon, className = "", ...props }) {
   const variants = {
     primary: "border-orange-600 bg-gradient-to-r from-[#F26F21] to-[#c9520e] text-white hover:shadow-lg",
-    secondary: "border-slate-200 bg-white text-slate-700 hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700",
+    secondary: "border-slate-300 bg-white text-slate-700 hover:border-orange-400 hover:bg-orange-50 hover:text-orange-700",
     ghost: "border-transparent bg-transparent text-slate-600 hover:bg-slate-100",
-    danger: "border-red-200 bg-red-50 text-red-700 hover:bg-red-100",
+    danger: "border-red-300 bg-red-50 text-red-700 hover:bg-red-100",
   };
 
   return (

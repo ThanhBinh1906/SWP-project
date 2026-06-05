@@ -1,8 +1,8 @@
 import { useState } from "react";
+import { useSelector } from "react-redux";
 import {
   Users,
   Github,
-  School,
   Plus,
   CheckCircle,
   Clock,
@@ -12,53 +12,59 @@ import {
   Trash2,
   User,
   Mail,
+  Phone,
+  Hash,
+  School,
+  Lock,
 } from "lucide-react";
 import axiosInstance from "../../services/axiosInstance";
-import teamService from "../../services/teamService";
 
-// ---------------------------------------------------------------------------
-// CONSTANTS — chỉnh tại đây nếu BE thay đổi rules
-// ---------------------------------------------------------------------------
-const MIN_MEMBERS = 1; // TODO: đổi thành 3 nếu BE yêu cầu tối thiểu 3 người
-const MAX_MEMBERS = 4;
+const MIN_MEMBERS = 0; // members ngoài leader, có thể 0
+const MAX_MEMBERS = 3; // tối đa 3 member thêm vào (leader + 3 = 4)
 
-// Member fields — TODO: thêm studentCode, phone, isFPTStudent nếu BE yêu cầu sau
 const EMPTY_MEMBER = {
   fullName: "",
+  studentCode: "",
   email: "",
-  school: "",
+  phone: "",
+  isFPTStudent: false,
 };
 
 // ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-function InputField({ label, required, icon: Icon, error, ...props }) {
+function InputField({ label, required, icon: Icon, error, locked, ...props }) {
   const [focused, setFocused] = useState(false);
   return (
     <div>
       {label && (
-        <label className="block text-xs font-semibold text-[#374151] mb-1.5 uppercase tracking-wider">
+        <label className="block text-xs font-bold text-slate-800 mb-1.5 uppercase tracking-wider">
           {label} {required && <span style={{ color: "#F26F21" }}>*</span>}
+          {locked && <Lock className="inline w-3 h-3 ml-1 text-slate-400" />}
         </label>
       )}
       <div className="relative">
         {Icon && (
           <Icon
             className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-            style={{ color: focused ? "#F26F21" : "#9CA3AF" }}
+            style={{
+              color: locked ? "#D1D5DB" : focused ? "#F26F21" : "#64748B",
+            }}
           />
         )}
         <input
           {...props}
-          className="w-full py-2.5 rounded-xl text-sm text-[#111827] outline-none transition-all duration-200"
+          readOnly={locked}
+          className="w-full py-2.5 rounded-xl text-sm outline-none transition-all duration-200 placeholder:text-slate-500"
           style={{
             paddingLeft: Icon ? "2.5rem" : "1rem",
             paddingRight: "1rem",
-            background: "#F9FAFB",
-            border: `1px solid ${error ? "#ef4444" : focused ? "#F26F21" : "#E5E7EB"}`,
-            boxShadow: focused ? "0 0 0 3px rgba(242,111,33,0.08)" : "none",
+            background: locked ? "#F3F4F6" : "#FFFFFF",
+            color: locked ? "#6B7280" : "#0F172A",
+            border: `1px solid ${error ? "#ef4444" : focused ? "#F26F21" : "#94A3B8"}`,
+            boxShadow:
+              !locked && focused ? "0 0 0 3px rgba(242,111,33,0.18)" : "none",
+            cursor: locked ? "not-allowed" : "text",
           }}
-          onFocus={() => setFocused(true)}
+          onFocus={() => !locked && setFocused(true)}
           onBlur={() => setFocused(false)}
         />
       </div>
@@ -72,6 +78,26 @@ function InputField({ label, required, icon: Icon, error, ...props }) {
         </p>
       )}
     </div>
+  );
+}
+
+function FPTCheckbox({ value, onChange }) {
+  return (
+    <label className="flex items-center gap-2.5 cursor-pointer select-none w-fit mt-1">
+      <div
+        onClick={onChange}
+        className="w-4 h-4 rounded flex items-center justify-center transition-all duration-150 flex-shrink-0"
+        style={{
+          background: value ? "#F26F21" : "#FFFFFF",
+          border: `1px solid ${value ? "#F26F21" : "#94A3B8"}`,
+        }}
+      >
+        {value && <CheckCircle className="w-3 h-3 text-white" />}
+      </div>
+      <span className="text-xs font-semibold text-slate-700">
+        Là sinh viên FPT
+      </span>
+    </label>
   );
 }
 
@@ -93,15 +119,12 @@ function ApiError({ message }) {
 }
 
 // ---------------------------------------------------------------------------
-// MemberCard — 1 thành viên trong form
-// ---------------------------------------------------------------------------
-function MemberCard({ index, member, errors, onChange, onRemove, canRemove }) {
+function MemberCard({ index, member, errors, onChange, onRemove }) {
   return (
     <div
       className="rounded-xl overflow-hidden"
       style={{ border: "1px solid #E5E7EB", background: "#FAFAFA" }}
     >
-      {/* Card header */}
       <div
         className="flex items-center justify-between px-4 py-2.5"
         style={{ background: "#F3F4F6", borderBottom: "1px solid #E5E7EB" }}
@@ -109,7 +132,7 @@ function MemberCard({ index, member, errors, onChange, onRemove, canRemove }) {
         <div className="flex items-center gap-2">
           <div
             className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
-            style={{ background: "#F26F21" }}
+            style={{ background: "#6366f1" }}
           >
             {index + 1}
           </div>
@@ -117,97 +140,116 @@ function MemberCard({ index, member, errors, onChange, onRemove, canRemove }) {
             Thành viên {index + 1}
           </span>
         </div>
-        {canRemove && (
-          <button
-            onClick={() => onRemove(index)}
-            className="w-6 h-6 rounded-lg flex items-center justify-center transition-colors duration-150"
-            style={{ color: "#9CA3AF" }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(239,68,68,0.08)";
-              e.currentTarget.style.color = "#ef4444";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
-              e.currentTarget.style.color = "#9CA3AF";
-            }}
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-        )}
+        <button
+          onClick={() => onRemove(index)}
+          className="w-6 h-6 rounded-lg flex items-center justify-center transition-colors duration-150"
+          style={{ color: "#9CA3AF" }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "rgba(239,68,68,0.08)";
+            e.currentTarget.style.color = "#ef4444";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "transparent";
+            e.currentTarget.style.color = "#9CA3AF";
+          }}
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
       </div>
-
-      {/* Fields */}
-      <div className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <InputField
-          label="Họ và tên"
-          required
-          icon={User}
-          placeholder="Nguyễn Văn A"
-          value={member.fullName}
-          onChange={(e) => onChange(index, "fullName", e.target.value)}
-          error={errors?.fullName}
+      <div className="p-4 space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <InputField
+            label="Họ và tên"
+            required
+            icon={User}
+            placeholder="Nguyễn Văn A"
+            value={member.fullName}
+            onChange={(e) => onChange(index, "fullName", e.target.value)}
+            error={errors?.fullName}
+          />
+          <InputField
+            label="Mã sinh viên"
+            required
+            icon={Hash}
+            placeholder="SE123456"
+            value={member.studentCode}
+            onChange={(e) => onChange(index, "studentCode", e.target.value)}
+            error={errors?.studentCode}
+          />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <InputField
+            label="Email"
+            required
+            icon={Mail}
+            type="email"
+            placeholder="example@email.com"
+            value={member.email}
+            onChange={(e) => onChange(index, "email", e.target.value)}
+            error={errors?.email}
+          />
+          <InputField
+            label="Số điện thoại"
+            required
+            icon={Phone}
+            type="tel"
+            placeholder="0912345678"
+            value={member.phone}
+            onChange={(e) => onChange(index, "phone", e.target.value)}
+            error={errors?.phone}
+          />
+        </div>
+        <FPTCheckbox
+          value={member.isFPTStudent}
+          onChange={() => onChange(index, "isFPTStudent", !member.isFPTStudent)}
         />
-        <InputField
-          label="Email"
-          required
-          icon={Mail}
-          type="email"
-          placeholder="example@email.com"
-          value={member.email}
-          onChange={(e) => onChange(index, "email", e.target.value)}
-          error={errors?.email}
-        />
-        <InputField
-          label="Trường"
-          required
-          icon={School}
-          placeholder="FPT University"
-          value={member.school}
-          onChange={(e) => onChange(index, "school", e.target.value)}
-          error={errors?.school}
-        />
-        {/* TODO: thêm StudentCode, Phone, IsFPTStudent nếu BE yêu cầu
-        <InputField label="Mã SV" ... />
-        <InputField label="Số điện thoại" ... />
-        <div> IsFPTStudent checkbox </div>
-        */}
       </div>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// TeamCreateForm — Step 1: info team + members
-// ---------------------------------------------------------------------------
 function TeamCreateForm({ onCreated }) {
+  const { user } = useSelector((s) => s.auth);
+
   const [teamForm, setTeamForm] = useState({
     teamName: "",
-    school: "",
-    githubRepo: "",
+    university: "",
+    githubRepoLink: "",
   });
-  const [members, setMembers] = useState([{ ...EMPTY_MEMBER }]);
+  const [leaderExtra, setLeaderExtra] = useState({
+    studentCode: "",
+    phone: "",
+    isFPTStudent: false,
+  });
+  const [members, setMembers] = useState([]);
   const [teamErrors, setTeamErrors] = useState({});
-  const [memberErrors, setMemberErrors] = useState([]); // array of {fullName, email, school}
+  const [leaderErrors, setLeaderErrors] = useState({});
+  const [memberErrors, setMemberErrors] = useState([]);
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState("");
 
-  // --- Team form handlers ---
   const handleTeamChange = (field, value) => {
-    setTeamForm((prev) => ({ ...prev, [field]: value }));
-    if (teamErrors[field]) setTeamErrors((prev) => ({ ...prev, [field]: "" }));
+    setTeamForm((p) => ({ ...p, [field]: value }));
+    if (teamErrors[field]) setTeamErrors((p) => ({ ...p, [field]: "" }));
     setApiError("");
   };
 
-  // --- Member handlers ---
-  const handleMemberChange = (index, field, value) => {
-    setMembers((prev) =>
-      prev.map((m, i) => (i === index ? { ...m, [field]: value } : m)),
+  const handleLeaderChange = (field, value) => {
+    setLeaderExtra((p) => ({ ...p, [field]: value }));
+    if (leaderErrors[field]) setLeaderErrors((p) => ({ ...p, [field]: "" }));
+    setApiError("");
+  };
+
+  const handleMemberChange = (i, field, value) => {
+    setMembers((p) =>
+      p.map((m, idx) => (idx === i ? { ...m, [field]: value } : m)),
     );
-    if (memberErrors[index]?.[field]) {
-      setMemberErrors((prev) => {
-        const next = [...prev];
-        next[index] = { ...next[index], [field]: "" };
-        return next;
+    if (memberErrors[i]?.[field]) {
+      setMemberErrors((p) => {
+        const n = [...p];
+        n[i] = { ...n[i], [field]: "" };
+        return n;
       });
     }
     setApiError("");
@@ -215,35 +257,46 @@ function TeamCreateForm({ onCreated }) {
 
   const addMember = () => {
     if (members.length >= MAX_MEMBERS) return;
-    setMembers((prev) => [...prev, { ...EMPTY_MEMBER }]);
+    setMembers((p) => [...p, { ...EMPTY_MEMBER }]);
   };
 
-  const removeMember = (index) => {
-    setMembers((prev) => prev.filter((_, i) => i !== index));
-    setMemberErrors((prev) => prev.filter((_, i) => i !== index));
+  const removeMember = (i) => {
+    setMembers((p) => p.filter((_, idx) => idx !== i));
+    setMemberErrors((p) => p.filter((_, idx) => idx !== i));
   };
 
-  // --- Validation ---
   const validate = () => {
     let valid = true;
-
-    // Team
     const te = {};
     if (!teamForm.teamName.trim()) {
-      te.teamName = "Tên team không được để trống";
+      te.teamName = "Bắt buộc";
       valid = false;
     }
-    if (!teamForm.school.trim()) {
-      te.school = "Trường không được để trống";
+    if (!teamForm.university.trim()) {
+      te.university = "Bắt buộc";
       valid = false;
     }
     setTeamErrors(te);
 
-    // Members
+    const le = {};
+    if (!leaderExtra.studentCode.trim()) {
+      le.studentCode = "Bắt buộc";
+      valid = false;
+    }
+    if (!leaderExtra.phone.trim()) {
+      le.phone = "Bắt buộc";
+      valid = false;
+    }
+    setLeaderErrors(le);
+
     const me = members.map((m) => {
       const e = {};
       if (!m.fullName.trim()) {
         e.fullName = "Bắt buộc";
+        valid = false;
+      }
+      if (!m.studentCode.trim()) {
+        e.studentCode = "Bắt buộc";
         valid = false;
       }
       if (!m.email.trim()) {
@@ -253,59 +306,57 @@ function TeamCreateForm({ onCreated }) {
         e.email = "Email không hợp lệ";
         valid = false;
       }
-      if (!m.school.trim()) {
-        e.school = "Bắt buộc";
+      if (!m.phone.trim()) {
+        e.phone = "Bắt buộc";
         valid = false;
       }
       return e;
     });
     setMemberErrors(me);
-
     return valid;
   };
 
-  // --- Submit ---
   const handleSubmit = async () => {
     if (!validate()) return;
-
     setLoading(true);
     setApiError("");
-    console.log("Submitting team:", teamForm, "members:", members);
     try {
-      // Bước 1: Tạo team
+      // Bước 1: Tạo team + leader info
       const teamPayload = {
         teamName: teamForm.teamName.trim(),
-        school: teamForm.school.trim(),
-        ...(teamForm.githubRepo.trim() && {
-          githubRepo: teamForm.githubRepo.trim(),
-        }),
+        university: teamForm.university.trim(),
+        trackId: 2, // TODO: Coordinator sẽ phân track sau
+        githubRepoLink: teamForm.githubRepoLink.trim() || null,
+        fullName: user?.username || "",
+        studentCode: leaderExtra.studentCode.trim(),
+        email: user?.email || "",
+        phone: leaderExtra.phone.trim(),
+        isFPTStudent: leaderExtra.isFPTStudent,
       };
-      const teamRes = await teamService.createTeam(teamPayload);
 
-      // TODO: nếu BE đổi field name thì sửa dòng dưới
-      const teamId = teamRes.data?.teamId;
+      const res = await axiosInstance.post("/api/teams", teamPayload);
+      const teamId = res.data?.data?.id;
+      if (!teamId) throw new Error("Không nhận được team ID từ server.");
 
-      if (!teamId) throw new Error("Không nhận được teamId từ server");
+      // Bước 2: Thêm từng member nếu có
+      if (members.length > 0) {
+        await Promise.all(
+          members.map((m) =>
+            axiosInstance.post(`/api/teams/${teamId}/members`, {
+              fullName: m.fullName.trim(),
+              studentCode: m.studentCode.trim(),
+              email: m.email.trim(),
+              phone: m.phone.trim(),
+              isFPTStudent: m.isFPTStudent,
+            }),
+          ),
+        );
+      }
 
-      // Bước 2: Thêm từng thành viên
-      // TODO: nếu BE hỗ trợ bulk POST thì gộp thành 1 call
-      await Promise.all(
-        members.map((m) =>
-          axiosInstance.post(`/teams/${teamId}/members`, {
-            fullName: m.fullName.trim(),
-            email: m.email.trim(),
-            school: m.school.trim(),
-            // TODO: thêm studentCode, phone, isFPTStudent nếu BE yêu cầu
-          }),
-        ),
-      );
-
-      onCreated({ ...teamPayload, teamId, members, status: "Pending" });
+      onCreated({ ...res.data.data, members });
     } catch (err) {
       setApiError(
-        err?.response?.data?.message ||
-          err?.message ||
-          "Đã có lỗi xảy ra. Vui lòng thử lại.",
+        err?.response?.data?.message || err?.message || "Đã có lỗi xảy ra.",
       );
     } finally {
       setLoading(false);
@@ -342,10 +393,9 @@ function TeamCreateForm({ onCreated }) {
         </p>
       </div>
 
-      {/* API Error */}
       <ApiError message={apiError} />
 
-      {/* ---- SECTION 1: Thông tin team ---- */}
+      {/* Section 1: Team info */}
       <div
         className="rounded-2xl p-6 space-y-4"
         style={{
@@ -354,16 +404,7 @@ function TeamCreateForm({ onCreated }) {
           boxShadow: "0 4px 12px rgba(0,0,0,0.03)",
         }}
       >
-        <h4 className="text-sm font-bold text-[#111827] flex items-center gap-2">
-          <span
-            className="w-5 h-5 rounded-md flex items-center justify-center text-white text-xs font-black"
-            style={{ background: "#F26F21" }}
-          >
-            1
-          </span>
-          Thông tin Team
-        </h4>
-
+        <SectionTitle number="1" title="Thông tin Team" />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <InputField
             label="Tên Team"
@@ -378,22 +419,22 @@ function TeamCreateForm({ onCreated }) {
             required
             icon={School}
             placeholder="VD: FPT University"
-            value={teamForm.school}
-            onChange={(e) => handleTeamChange("school", e.target.value)}
-            error={teamErrors.school}
+            value={teamForm.university}
+            onChange={(e) => handleTeamChange("university", e.target.value)}
+            error={teamErrors.university}
           />
         </div>
         <InputField
           label="GitHub Repo"
           icon={Github}
           type="url"
-          placeholder="https://github.com/your-org/repo (tuỳ chọn)"
-          value={teamForm.githubRepo}
-          onChange={(e) => handleTeamChange("githubRepo", e.target.value)}
+          placeholder="https://github.com/... (tuỳ chọn)"
+          value={teamForm.githubRepoLink}
+          onChange={(e) => handleTeamChange("githubRepoLink", e.target.value)}
         />
       </div>
 
-      {/* ---- SECTION 2: Thành viên ---- */}
+      {/* Section 2: Leader info */}
       <div
         className="rounded-2xl p-6 space-y-4"
         style={{
@@ -403,19 +444,77 @@ function TeamCreateForm({ onCreated }) {
         }}
       >
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-bold text-[#111827] flex items-center gap-2">
-            <span
-              className="w-5 h-5 rounded-md flex items-center justify-center text-white text-xs font-black"
-              style={{ background: "#F26F21" }}
-            >
-              2
-            </span>
-            Thành viên
-            <span className="text-xs font-normal text-slate-400">
-              ({members.length}/{MAX_MEMBERS}) — tối thiểu {MIN_MEMBERS}, tối đa{" "}
-              {MAX_MEMBERS}
-            </span>
-          </h4>
+          <SectionTitle number="2" title="Thông tin Leader (bạn)" />
+          <span
+            className="text-[10px] px-2 py-1 rounded-lg font-semibold"
+            style={{
+              background: "rgba(242,111,33,0.08)",
+              color: "#F26F21",
+              border: "1px solid rgba(242,111,33,0.2)",
+            }}
+          >
+            Leader
+          </span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <InputField
+            label="Họ và tên"
+            icon={User}
+            value={user?.username || ""}
+            locked
+          />
+          <InputField
+            label="Email"
+            icon={Mail}
+            type="email"
+            value={user?.email || ""}
+            locked
+          />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <InputField
+            label="Mã sinh viên"
+            required
+            icon={Hash}
+            placeholder="SE123456"
+            value={leaderExtra.studentCode}
+            onChange={(e) => handleLeaderChange("studentCode", e.target.value)}
+            error={leaderErrors.studentCode}
+          />
+          <InputField
+            label="Số điện thoại"
+            required
+            icon={Phone}
+            type="tel"
+            placeholder="0912345678"
+            value={leaderExtra.phone}
+            onChange={(e) => handleLeaderChange("phone", e.target.value)}
+            error={leaderErrors.phone}
+          />
+        </div>
+        <FPTCheckbox
+          value={leaderExtra.isFPTStudent}
+          onChange={() =>
+            handleLeaderChange("isFPTStudent", !leaderExtra.isFPTStudent)
+          }
+        />
+      </div>
+
+      {/* Section 3: Members */}
+      <div
+        className="rounded-2xl p-6 space-y-4"
+        style={{
+          background: "#FFFFFF",
+          border: "1px solid #E5E7EB",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.03)",
+        }}
+      >
+        <div className="flex items-center justify-between">
+          <SectionTitle
+            number="3"
+            title="Thành viên khác"
+            subtitle={`(${members.length}/${MAX_MEMBERS}) — tuỳ chọn`}
+          />
           {members.length < MAX_MEMBERS && (
             <button
               onClick={addMember}
@@ -437,23 +536,28 @@ function TeamCreateForm({ onCreated }) {
           )}
         </div>
 
-        <div className="space-y-3">
-          {members.map((m, i) => (
-            <MemberCard
-              key={i}
-              index={i}
-              member={m}
-              errors={memberErrors[i]}
-              onChange={handleMemberChange}
-              onRemove={removeMember}
-              canRemove={members.length > MIN_MEMBERS}
-            />
-          ))}
-        </div>
+        {members.length === 0 ? (
+          <p className="text-xs text-center py-4 text-slate-400">
+            Chưa có thành viên nào. Nhấn "Thêm thành viên" để thêm.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {members.map((m, i) => (
+              <MemberCard
+                key={i}
+                index={i}
+                member={m}
+                errors={memberErrors[i]}
+                onChange={handleMemberChange}
+                onRemove={removeMember}
+              />
+            ))}
+          </div>
+        )}
 
         {members.length >= MAX_MEMBERS && (
-          <p className="text-xs text-center" style={{ color: "#9CA3AF" }}>
-            Đã đạt tối đa {MAX_MEMBERS} thành viên
+          <p className="text-xs text-center text-slate-400">
+            Đã đạt tối đa {MAX_MEMBERS} thành viên (chưa tính leader)
           </p>
         )}
       </div>
@@ -509,12 +613,9 @@ function TeamCreateForm({ onCreated }) {
 }
 
 // ---------------------------------------------------------------------------
-// TeamCreatedBanner — sau khi tạo thành công
-// ---------------------------------------------------------------------------
 function TeamCreatedBanner({ team }) {
   return (
     <div className="max-w-2xl mx-auto mt-6 space-y-4">
-      {/* Success header */}
       <div
         className="rounded-2xl p-8 text-center"
         style={{
@@ -538,12 +639,11 @@ function TeamCreatedBanner({ team }) {
           Đăng ký thành công!
         </h3>
         <p className="text-sm text-slate-500">
-          Team <strong className="text-[#111827]">{team.name}</strong> đang chờ
-          Coordinator duyệt.
+          Team <strong className="text-[#111827]">{team.teamName}</strong> đang
+          chờ Coordinator duyệt.
         </p>
       </div>
 
-      {/* Team info */}
       <div
         className="rounded-2xl p-5"
         style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}
@@ -552,10 +652,10 @@ function TeamCreatedBanner({ team }) {
           Thông tin Team
         </h4>
         <div className="space-y-2">
-          <InfoRow label="Tên team" value={team.name} />
-          <InfoRow label="Trường" value={team.school} />
-          {team.githubRepo && (
-            <InfoRow label="GitHub" value={team.githubRepo} isLink />
+          <InfoRow label="Tên team" value={team.teamName} />
+          <InfoRow label="Trường" value={team.university} />
+          {team.githubRepoLink && (
+            <InfoRow label="GitHub" value={team.githubRepoLink} isLink />
           )}
           <InfoRow
             label="Trạng thái"
@@ -575,62 +675,92 @@ function TeamCreatedBanner({ team }) {
         </div>
       </div>
 
-      {/* Members table */}
-      <div
-        className="rounded-2xl overflow-hidden"
-        style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}
-      >
+      {team.members?.length > 0 && (
         <div
-          className="px-5 py-3.5 border-b"
-          style={{ borderColor: "#E5E7EB" }}
+          className="rounded-2xl overflow-hidden"
+          style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}
         >
-          <h4 className="text-xs font-bold text-[#374151] uppercase tracking-widest">
-            Thành viên ({team.members?.length || 0})
-          </h4>
-        </div>
-        <table className="w-full text-xs">
-          <thead>
-            <tr
-              style={{
-                background: "#F9FAFB",
-                borderBottom: "1px solid #E5E7EB",
-              }}
-            >
-              {["#", "Họ và tên", "Email", "Trường"].map((h) => (
-                <th
-                  key={h}
-                  className="px-4 py-2.5 text-left font-semibold text-slate-500 uppercase tracking-wider text-[10px]"
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {(team.members || []).map((m, i) => (
+          <div
+            className="px-5 py-3.5 border-b"
+            style={{ borderColor: "#E5E7EB" }}
+          >
+            <h4 className="text-xs font-bold text-[#374151] uppercase tracking-widest">
+              Thành viên ({team.members.length})
+            </h4>
+          </div>
+          <table className="w-full text-xs">
+            <thead>
               <tr
-                key={i}
                 style={{
-                  borderBottom:
-                    i < team.members.length - 1 ? "1px solid #F3F4F6" : "none",
+                  background: "#F9FAFB",
+                  borderBottom: "1px solid #E5E7EB",
                 }}
               >
-                <td className="px-4 py-3 text-slate-400">{i + 1}</td>
-                <td className="px-4 py-3 font-semibold text-[#111827]">
-                  {m.fullName}
-                </td>
-                <td className="px-4 py-3 text-slate-500">{m.email}</td>
-                <td className="px-4 py-3 text-slate-500">{m.school}</td>
+                {["#", "Họ và tên", "Mã SV", "Email", "SĐT", "FPT"].map((h) => (
+                  <th
+                    key={h}
+                    className="px-4 py-2.5 text-left font-semibold text-slate-500 uppercase tracking-wider text-[10px]"
+                  >
+                    {h}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {team.members.map((m, i) => (
+                <tr
+                  key={i}
+                  style={{
+                    borderBottom:
+                      i < team.members.length - 1
+                        ? "1px solid #F3F4F6"
+                        : "none",
+                  }}
+                >
+                  <td className="px-4 py-3 text-slate-400">{i + 1}</td>
+                  <td className="px-4 py-3 font-semibold text-[#111827]">
+                    {m.fullName}
+                  </td>
+                  <td className="px-4 py-3 text-slate-500">{m.studentCode}</td>
+                  <td className="px-4 py-3 text-slate-500">{m.email}</td>
+                  <td className="px-4 py-3 text-slate-500">{m.phone}</td>
+                  <td className="px-4 py-3">
+                    {m.isFPTStudent ? (
+                      <span className="text-emerald-600 font-bold">✓</span>
+                    ) : (
+                      <span className="text-slate-300">—</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <p className="text-xs text-center text-slate-400 pb-2">
         Bạn sẽ nhận thông báo khi Coordinator duyệt team.
       </p>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+function SectionTitle({ number, title, subtitle }) {
+  return (
+    <h4 className="text-sm font-bold text-[#111827] flex items-center gap-2">
+      <span
+        className="w-5 h-5 rounded-md flex items-center justify-center text-white text-xs font-black"
+        style={{ background: "#F26F21" }}
+      >
+        {number}
+      </span>
+      {title}
+      {subtitle && (
+        <span className="text-xs font-normal text-slate-400">{subtitle}</span>
+      )}
+    </h4>
   );
 }
 
@@ -658,13 +788,9 @@ function InfoRow({ label, value, isLink }) {
 }
 
 // ---------------------------------------------------------------------------
-// TeamView — entry point
-// ---------------------------------------------------------------------------
 export function TeamView() {
-  // false = chưa có team | object = đã tạo/có team
-  // TODO: khi BE có GET /api/teams/my-team → fetch ở đây, set team = data hoặc false nếu 404
+  // TODO: khi BE có GET /api/teams/{id} → fetch team hiện tại của user khi mount
   const [team, setTeam] = useState(false);
-
   if (!team) return <TeamCreateForm onCreated={setTeam} />;
   return <TeamCreatedBanner team={team} />;
 }
