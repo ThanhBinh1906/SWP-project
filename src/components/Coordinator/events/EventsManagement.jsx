@@ -12,12 +12,12 @@ import axiosInstance from "../../../services/axiosInstance";
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-const STATUS_OPTIONS = ["Draft", "Published", "Ongoing", "Closed"];
+const STATUS_OPTIONS = ["Draft", "Open", "Ongoing", "Closed"];
 
 const statusTone = (s) =>
   s === "Ongoing"
     ? "success"
-    : s === "Published"
+    : s === "Open"
       ? "orange"
       : s === "Draft"
         ? "warning"

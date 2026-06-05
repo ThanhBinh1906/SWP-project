@@ -17,7 +17,7 @@ import {
   School,
   Lock,
 } from "lucide-react";
-import axiosInstance from "../../services/axiosInstance";
+import teamService from "../../services/teamService";
 
 const MIN_MEMBERS = 0; // members ngoài leader, có thể 0
 const MAX_MEMBERS = 3; // tối đa 3 member thêm vào (leader + 3 = 4)
@@ -334,15 +334,14 @@ function TeamCreateForm({ onCreated }) {
         isFPTStudent: leaderExtra.isFPTStudent,
       };
 
-      const res = await axiosInstance.post("/api/teams", teamPayload);
+      const res = await teamService.createTeam(teamPayload);
       const teamId = res.data?.data?.id;
       if (!teamId) throw new Error("Không nhận được team ID từ server.");
 
-      // Bước 2: Thêm từng member nếu có
       if (members.length > 0) {
         await Promise.all(
           members.map((m) =>
-            axiosInstance.post(`/api/teams/${teamId}/members`, {
+            teamService.addMember(teamId, {
               fullName: m.fullName.trim(),
               studentCode: m.studentCode.trim(),
               email: m.email.trim(),
@@ -612,7 +611,6 @@ function TeamCreateForm({ onCreated }) {
   );
 }
 
-// ---------------------------------------------------------------------------
 function TeamCreatedBanner({ team }) {
   return (
     <div className="max-w-2xl mx-auto mt-6 space-y-4">
@@ -789,7 +787,6 @@ function InfoRow({ label, value, isLink }) {
 
 // ---------------------------------------------------------------------------
 export function TeamView() {
-  // TODO: khi BE có GET /api/teams/{id} → fetch team hiện tại của user khi mount
   const [team, setTeam] = useState(false);
   if (!team) return <TeamCreateForm onCreated={setTeam} />;
   return <TeamCreatedBanner team={team} />;

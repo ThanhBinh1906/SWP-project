@@ -3,32 +3,21 @@ import {
   CoordinatorActionButton,
   CoordinatorBadge,
   CoordinatorPanel,
-  CoordinatorProgressBar,
   CoordinatorTable,
   ModalShell,
   icons,
 } from "../CoordinatorUI";
-import { UserPlus, AlertCircle, Loader2, CheckCircle } from "lucide-react";
+import { UserPlus, AlertCircle, Loader2 } from "lucide-react";
+import teamService from "../../../services/teamService";
+import mentorService from "../../../services/mentorService";
+import trackService from "../../../services/trackService";
+import eventService from "../../../services/eventService";
+import { getApiMessage, LoadingState, TEAM_MIN_MEMBERS } from "../coordinatorHelpers";
 
-// Extend icons object với các icon chưa có trong CoordinatorUI
-const extIcons = { ...icons, UserPlus, AlertCircle, Loader2, CheckCircle };
-import axiosInstance from "../../../services/axiosInstance";
+const extIcons = { ...icons, UserPlus, AlertCircle, Loader2 };
 
-// ---------------------------------------------------------------------------
-// CONSTANTS
-// ---------------------------------------------------------------------------
 const STATUS_FILTER_OPTIONS = ["All", "Pending", "Approved", "Disqualified"];
 
-// TODO: thay bằng GET /api/mentors khi BE có endpoint
-const MOCK_MENTORS = [
-  { id: "m1", name: "Linh Tran" },
-  { id: "m2", name: "Huy Vo" },
-  { id: "m3", name: "Mai Do" },
-];
-
-// ---------------------------------------------------------------------------
-// Empty state
-// ---------------------------------------------------------------------------
 function EmptyTeams() {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -39,30 +28,22 @@ function EmptyTeams() {
           border: "1px solid rgba(242,111,33,0.15)",
         }}
       >
-        <extIcons.UserRoundCog
-          className="w-7 h-7"
-          style={{ color: "#F26F21" }}
-        />
+        <extIcons.UserRoundCog className="w-7 h-7" style={{ color: "#F26F21" }} />
       </div>
       <p className="text-sm font-semibold text-slate-700">
         Chưa có team nào đăng ký
-      </p>
-      <p className="text-xs text-slate-400 mt-1">
-        Danh sách sẽ hiển thị khi có team đăng ký tham gia.
       </p>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Filter bar
-// ---------------------------------------------------------------------------
 function FilterBar({ value, onChange }) {
   return (
     <div className="flex items-center gap-2 mb-4 flex-wrap">
       {STATUS_FILTER_OPTIONS.map((s) => (
         <button
           key={s}
+          type="button"
           onClick={() => onChange(s)}
           className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150"
           style={{
@@ -78,64 +59,129 @@ function FilterBar({ value, onChange }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Main component
-// ---------------------------------------------------------------------------
+function getMemberCount(team) {
+  if (team.memberCount != null) return team.memberCount;
+  if (Array.isArray(team.members)) return team.members.length;
+  return "—";
+}
+
+function getTrackLabel(team, trackMap) {
+  if (team.trackName) return team.trackName;
+  if (team.trackId && trackMap[team.trackId]) return trackMap[team.trackId];
+  return "Chưa phân";
+}
+
 export function TeamsManagement() {
   const [teams, setTeams] = useState([]);
+  const [trackMap, setTrackMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState("");
-  const [filter, setFilter] = useState("All");
+  const [filter, setFilter] = useState("Pending");
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pagination, setPagination] = useState(null);
 
-  // Modals
   const [detailTeam, setDetailTeam] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [disqualifyTeam, setDisqualifyTeam] = useState(null);
   const [assignMentorTeam, setAssignMentorTeam] = useState(null);
+  const [approveTeam, setApproveTeam] = useState(null);
+  const [approveDetail, setApproveDetail] = useState(null);
+  const [approveLoading, setApproveLoading] = useState(false);
 
-  // Action states
-  const [actionLoading, setActionLoading] = useState(""); // teamId đang xử lý
+  const [actionLoading, setActionLoading] = useState("");
   const [actionError, setActionError] = useState("");
   const [disqualifyReason, setDisqualifyReason] = useState("");
   const [selectedMentorId, setSelectedMentorId] = useState("");
+  const [mentors, setMentors] = useState([]);
+  const [mentorsAvailable, setMentorsAvailable] = useState(false);
 
-  // ---------------------------------------------------------------------------
-  // Fetch teams
-  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    eventService
+      .getAll()
+      .then(async (res) => {
+        const events = res.data?.data || [];
+        const map = {};
+        for (const ev of events) {
+          try {
+            const tr = await trackService.getByEvent(ev.id);
+            (tr.data?.data || []).forEach((t) => {
+              map[t.id] = t.name;
+            });
+          } catch (_) {}
+        }
+        setTrackMap(map);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    mentorService
+      .getAll()
+      .then((res) => {
+        setMentors(res.data?.data || []);
+        setMentorsAvailable(true);
+      })
+      .catch(() => setMentorsAvailable(false));
+  }, []);
+
   const fetchTeams = useCallback(async () => {
     setLoading(true);
     setApiError("");
     try {
-      // TODO: thêm query params filter nếu BE hỗ trợ ?status=Pending&page=1
-      const res = await axiosInstance.get("/admin/teams");
-      setTeams(res.data || []);
+      const params = { pageNumber, pageSize: 10 };
+      if (filter !== "All") params.status = filter;
+
+      const res = await teamService.getAdminTeams(params);
+      const data = res.data?.data;
+      setTeams(data?.items || []);
+      setPagination(data);
     } catch (err) {
-      setApiError(
-        err?.response?.data?.message ||
-          "Không thể tải danh sách team. Vui lòng thử lại.",
-      );
+      setApiError(getApiMessage(err, "Không thể tải danh sách team."));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filter, pageNumber]);
 
   useEffect(() => {
     fetchTeams();
   }, [fetchTeams]);
 
-  // ---------------------------------------------------------------------------
-  // Actions
-  // ---------------------------------------------------------------------------
   const handleApprove = async (team) => {
-    setActionLoading(team.id);
+    setApproveTeam(team);
+    setApproveDetail(null);
+    setActionError("");
+    setApproveLoading(true);
+    try {
+      const res = await teamService.getById(team.id);
+      setApproveDetail(res.data?.data || team);
+    } catch (err) {
+      setActionError(getApiMessage(err, "Không thể tải chi tiết team."));
+      setApproveTeam(null);
+    } finally {
+      setApproveLoading(false);
+    }
+  };
+
+  const handleApproveConfirm = async () => {
+    if (!approveTeam || !approveDetail) return;
+
+    const memberCount = approveDetail.members?.length ?? 0;
+    if (memberCount < TEAM_MIN_MEMBERS) {
+      setActionError(
+        `Team chỉ có ${memberCount}/${TEAM_MIN_MEMBERS} thành viên. Leader cần thêm member trước khi duyệt.`,
+      );
+      return;
+    }
+
+    setActionLoading(approveTeam.id);
     setActionError("");
     try {
-      // NOTE: BE typo "appove" — đúng theo doc
-      await axiosInstance.put(`/teams/${team.id}/appove`);
-      setTeams((prev) =>
-        prev.map((t) => (t.id === team.id ? { ...t, status: "Approved" } : t)),
-      );
+      await teamService.approveTeam(approveTeam.id);
+      setApproveTeam(null);
+      setApproveDetail(null);
+      await fetchTeams();
     } catch (err) {
-      setActionError(err?.response?.data?.message || "Approve thất bại.");
+      setActionError(getApiMessage(err, "Approve thất bại."));
     } finally {
       setActionLoading("");
     }
@@ -146,78 +192,70 @@ export function TeamsManagement() {
     setActionLoading(disqualifyTeam.id);
     setActionError("");
     try {
-      await axiosInstance.put(`/teams/${disqualifyTeam.id}/disqualify`, {
-        // TODO: xác nhận BE có nhận reason không, nếu không thì xóa body
-        reason: disqualifyReason.trim() || undefined,
-      });
-      setTeams((prev) =>
-        prev.map((t) =>
-          t.id === disqualifyTeam.id ? { ...t, status: "Disqualified" } : t,
-        ),
+      await teamService.disqualifyTeam(
+        disqualifyTeam.id,
+        disqualifyReason.trim() || undefined,
       );
       setDisqualifyTeam(null);
       setDisqualifyReason("");
+      await fetchTeams();
     } catch (err) {
-      setActionError(err?.response?.data?.message || "Disqualify thất bại.");
+      setActionError(getApiMessage(err, "Disqualify thất bại."));
     } finally {
       setActionLoading("");
     }
   };
 
   const handleAssignMentorConfirm = async () => {
-    if (!assignMentorTeam || !selectedMentorId) return;
+    if (!assignMentorTeam || !selectedMentorId.trim()) return;
     setActionLoading(assignMentorTeam.id);
     setActionError("");
     try {
-      await axiosInstance.put(`/teams/${assignMentorTeam.id}/mentor`, {
-        mentorId: selectedMentorId,
-      });
-      const mentor = MOCK_MENTORS.find((m) => m.id === selectedMentorId);
-      setTeams((prev) =>
-        prev.map((t) =>
-          t.id === assignMentorTeam.id
-            ? { ...t, mentor: mentor?.name || selectedMentorId }
-            : t,
-        ),
+      await teamService.assignMentor(
+        assignMentorTeam.id,
+        selectedMentorId.trim(),
       );
       setAssignMentorTeam(null);
       setSelectedMentorId("");
+      await fetchTeams();
     } catch (err) {
-      setActionError(err?.response?.data?.message || "Assign mentor thất bại.");
+      setActionError(getApiMessage(err, "Assign mentor thất bại."));
     } finally {
       setActionLoading("");
     }
   };
 
-  // ---------------------------------------------------------------------------
-  // Filter
-  // ---------------------------------------------------------------------------
-  const filteredTeams =
-    filter === "All" ? teams : teams.filter((t) => t.status === filter);
+  const openDetail = async (team) => {
+    setDetailTeam(team);
+    setDetailLoading(true);
+    try {
+      const res = await teamService.getById(team.id);
+      setDetailTeam(res.data?.data || team);
+    } catch (_) {
+      setDetailTeam(team);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
 
-  // ---------------------------------------------------------------------------
-  // Table columns
-  // ---------------------------------------------------------------------------
   const columns = [
     { key: "name", label: "Team" },
     { key: "track", label: "Track" },
     { key: "mentor", label: "Mentor" },
     { key: "status", label: "Status" },
-    { key: "readiness", label: "Readiness" },
     { key: "actions", label: "Actions" },
   ];
 
   const renderCell = (row, key) => {
     const isActioning = actionLoading === row.id;
+    const displayName = row.teamName || row.name;
 
     if (key === "name")
       return (
         <div>
-          <p className="font-bold text-slate-900">{row.name}</p>
+          <p className="font-bold text-slate-900">{displayName}</p>
           <p className="text-xs text-slate-500">
-            {/* TODO: BE trả về leader name ở field nào thì map vào đây */}
-            Leader: {row.leader || row.leaderName || "—"} •{" "}
-            {row.memberCount ?? row.members ?? "?"} members
+            Leader: {row.leaderName || "—"} • {getMemberCount(row)} members
           </p>
         </div>
       );
@@ -225,26 +263,26 @@ export function TeamsManagement() {
     if (key === "track")
       return (
         <span className="text-sm text-slate-600">
-          {row.track || row.trackName || "Chưa phân"}
+          {getTrackLabel(row, trackMap)}
         </span>
       );
 
     if (key === "mentor")
       return (
         <button
+          type="button"
           className="text-sm transition-colors duration-150"
           style={{
-            color:
-              row.mentor && row.mentor !== "Unassigned" ? "#374151" : "#F26F21",
+            color: row.mentorId || row.mentorName ? "#374151" : "#F26F21",
           }}
           onClick={() => {
             setAssignMentorTeam(row);
-            setSelectedMentorId("");
+            setSelectedMentorId(row.mentorId || "");
             setActionError("");
           }}
         >
-          {row.mentor && row.mentor !== "Unassigned" ? (
-            row.mentor
+          {row.mentorName || row.mentorId ? (
+            row.mentorName || row.mentorId
           ) : (
             <span className="flex items-center gap-1 text-xs font-semibold">
               <extIcons.UserPlus className="w-3.5 h-3.5" /> Assign
@@ -268,23 +306,12 @@ export function TeamsManagement() {
         </CoordinatorBadge>
       );
 
-    if (key === "readiness")
-      return (
-        <div className="w-36">
-          {/* TODO: nếu BE không trả readiness thì xóa hoặc tính từ submission */}
-          <CoordinatorProgressBar value={row.readiness ?? 0} />
-        </div>
-      );
-
     if (key === "actions")
       return (
         <div className="flex gap-2 flex-wrap">
           <CoordinatorActionButton
             icon={extIcons.Eye}
-            onClick={() => {
-              setDetailTeam(row);
-              setActionError("");
-            }}
+            onClick={() => openDetail(row)}
           >
             Details
           </CoordinatorActionButton>
@@ -312,12 +339,8 @@ export function TeamsManagement() {
     return row[key] ?? "—";
   };
 
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
   return (
     <div className="space-y-6">
-      {/* Global action error */}
       {actionError && (
         <div
           className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm"
@@ -337,16 +360,16 @@ export function TeamsManagement() {
         subtitle="Approve, inspect, or disqualify participating teams"
         icon={extIcons.UserRoundCog}
       >
-        <FilterBar value={filter} onChange={setFilter} />
+        <FilterBar
+          value={filter}
+          onChange={(v) => {
+            setFilter(v);
+            setPageNumber(1);
+          }}
+        />
 
         {loading ? (
-          <div className="flex items-center justify-center py-16 gap-3 text-sm text-slate-400">
-            <extIcons.Loader2
-              className="w-5 h-5 animate-spin"
-              style={{ color: "#F26F21" }}
-            />
-            Đang tải danh sách team...
-          </div>
+          <LoadingState label="Đang tải danh sách team..." />
         ) : apiError ? (
           <div className="flex flex-col items-center py-12 gap-3">
             <p className="text-sm text-red-500">{apiError}</p>
@@ -354,21 +377,44 @@ export function TeamsManagement() {
               Thử lại
             </CoordinatorActionButton>
           </div>
-        ) : filteredTeams.length === 0 ? (
+        ) : teams.length === 0 ? (
           <EmptyTeams />
         ) : (
-          <CoordinatorTable
-            columns={columns}
-            rows={filteredTeams}
-            renderCell={renderCell}
-          />
+          <>
+            <CoordinatorTable
+              columns={columns}
+              rows={teams}
+              renderCell={renderCell}
+            />
+            {pagination && pagination.totalPages > 1 && (
+              <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
+                <span>
+                  Trang {pagination.pageNumber}/{pagination.totalPages} (
+                  {pagination.totalRecords} teams)
+                </span>
+                <div className="flex gap-2">
+                  <CoordinatorActionButton
+                    disabled={!pagination.hasPreviousPage}
+                    onClick={() => setPageNumber((p) => p - 1)}
+                  >
+                    Trước
+                  </CoordinatorActionButton>
+                  <CoordinatorActionButton
+                    disabled={!pagination.hasNextPage}
+                    onClick={() => setPageNumber((p) => p + 1)}
+                  >
+                    Sau
+                  </CoordinatorActionButton>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </CoordinatorPanel>
 
-      {/* ---- Modal: Detail ---- */}
       {detailTeam && (
         <ModalShell
-          title={`Chi tiết: ${detailTeam.name}`}
+          title={`Chi tiết: ${detailTeam.teamName || detailTeam.name}`}
           onClose={() => setDetailTeam(null)}
           actions={
             <CoordinatorActionButton
@@ -379,111 +425,79 @@ export function TeamsManagement() {
             </CoordinatorActionButton>
           }
         >
-          <div className="space-y-3 text-sm text-slate-600">
-            <Row label="Team" value={detailTeam.name} />
-            <Row
-              label="Leader"
-              value={detailTeam.leader || detailTeam.leaderName || "—"}
-            />
-            <Row label="Trường" value={detailTeam.school || "—"} />
-            <Row
-              label="Thành viên"
-              value={`${detailTeam.memberCount ?? detailTeam.members ?? "?"} người`}
-            />
-            <Row
-              label="Track"
-              value={detailTeam.track || detailTeam.trackName || "Chưa phân"}
-            />
-            <Row label="Mentor" value={detailTeam.mentor || "Unassigned"} />
-            <Row
-              label="GitHub"
-              value={detailTeam.githubRepo || "—"}
-              isLink={!!detailTeam.githubRepo}
-            />
-            <Row
-              label="Status"
-              value={
-                <CoordinatorBadge
-                  tone={
-                    detailTeam.status === "Approved"
-                      ? "success"
-                      : detailTeam.status === "Disqualified"
-                        ? "danger"
-                        : "warning"
-                  }
-                >
-                  {detailTeam.status}
-                </CoordinatorBadge>
-              }
-            />
-            {/* TODO: thêm submission info khi BE trả về */}
-            {detailTeam.readiness !== undefined && (
-              <CoordinatorProgressBar
-                label="Readiness"
-                value={detailTeam.readiness}
+          {detailLoading ? (
+            <LoadingState label="Đang tải chi tiết..." />
+          ) : (
+            <div className="space-y-3 text-sm text-slate-600">
+              <Row label="Team" value={detailTeam.teamName || detailTeam.name} />
+              <Row label="Trường" value={detailTeam.university || "—"} />
+              <Row
+                label="Track"
+                value={getTrackLabel(detailTeam, trackMap)}
               />
-            )}
-          </div>
+              <Row
+                label="GitHub"
+                value={detailTeam.githubRepoLink || "—"}
+                isLink={!!detailTeam.githubRepoLink}
+              />
+              <Row
+                label="Status"
+                value={
+                  <CoordinatorBadge
+                    tone={
+                      detailTeam.status === "Approved"
+                        ? "success"
+                        : detailTeam.status === "Disqualified"
+                          ? "danger"
+                          : "warning"
+                    }
+                  >
+                    {detailTeam.status}
+                  </CoordinatorBadge>
+                }
+              />
+              {Array.isArray(detailTeam.members) &&
+                detailTeam.members.length > 0 && (
+                  <div className="pt-2">
+                    <p className="text-xs font-bold text-slate-700 uppercase mb-2">
+                      Members ({detailTeam.members.length})
+                    </p>
+                    <div className="space-y-2">
+                      {detailTeam.members.map((m, i) => (
+                        <div
+                          key={m.id || i}
+                          className="rounded-lg bg-slate-50 px-3 py-2 text-xs"
+                        >
+                          <p className="font-semibold text-slate-800">
+                            {m.fullName}
+                          </p>
+                          <p className="text-slate-500">
+                            {m.email} • {m.studentCode}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+            </div>
+          )}
         </ModalShell>
       )}
 
-      {/* ---- Modal: Disqualify ---- */}
-      {disqualifyTeam && (
+      {approveTeam && (
         <ModalShell
-          title={`Disqualify: ${disqualifyTeam.name}?`}
-          onClose={() => setDisqualifyTeam(null)}
+          title={`Duyệt team: ${approveTeam.teamName || approveTeam.name}`}
+          onClose={() => {
+            setApproveTeam(null);
+            setApproveDetail(null);
+            setActionError("");
+          }}
           actions={
             <>
               <CoordinatorActionButton
                 onClick={() => {
-                  setDisqualifyTeam(null);
-                  setActionError("");
-                }}
-              >
-                Huỷ
-              </CoordinatorActionButton>
-              <CoordinatorActionButton
-                variant="danger"
-                disabled={actionLoading === disqualifyTeam.id}
-                onClick={handleDisqualifyConfirm}
-              >
-                {actionLoading === disqualifyTeam.id
-                  ? "Đang xử lý..."
-                  : "Xác nhận loại"}
-              </CoordinatorActionButton>
-            </>
-          }
-        >
-          <div className="space-y-3">
-            <p className="text-sm text-slate-600">
-              Bạn có chắc muốn loại team <strong>{disqualifyTeam.name}</strong>?
-              Hành động này không thể hoàn tác.
-            </p>
-            <textarea
-              className="min-h-28 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition-all"
-              placeholder="Lý do loại team (tuỳ chọn)"
-              value={disqualifyReason}
-              onChange={(e) => setDisqualifyReason(e.target.value)}
-              onFocus={(e) => (e.target.style.borderColor = "#F26F21")}
-              onBlur={(e) => (e.target.style.borderColor = "#E5E7EB")}
-            />
-            {actionError && (
-              <p className="text-xs text-red-500">{actionError}</p>
-            )}
-          </div>
-        </ModalShell>
-      )}
-
-      {/* ---- Modal: Assign Mentor ---- */}
-      {assignMentorTeam && (
-        <ModalShell
-          title={`Assign Mentor: ${assignMentorTeam.name}`}
-          onClose={() => setAssignMentorTeam(null)}
-          actions={
-            <>
-              <CoordinatorActionButton
-                onClick={() => {
-                  setAssignMentorTeam(null);
+                  setApproveTeam(null);
+                  setApproveDetail(null);
                   setActionError("");
                 }}
               >
@@ -492,56 +506,157 @@ export function TeamsManagement() {
               <CoordinatorActionButton
                 variant="primary"
                 disabled={
-                  !selectedMentorId || actionLoading === assignMentorTeam.id
+                  approveLoading ||
+                  actionLoading === approveTeam.id ||
+                  (approveDetail?.members?.length ?? 0) < TEAM_MIN_MEMBERS
+                }
+                onClick={handleApproveConfirm}
+              >
+                {actionLoading === approveTeam.id
+                  ? "Đang duyệt..."
+                  : "Xác nhận duyệt"}
+              </CoordinatorActionButton>
+            </>
+          }
+        >
+          {approveLoading ? (
+            <LoadingState label="Đang kiểm tra team..." />
+          ) : (
+            <div className="space-y-4 text-sm">
+              <p className="text-slate-600">
+                BE yêu cầu team có <strong>ít nhất {TEAM_MIN_MEMBERS} thành viên</strong>{" "}
+                (leader + member) trước khi duyệt.
+              </p>
+              <div
+                className={`rounded-xl border p-4 ${
+                  (approveDetail?.members?.length ?? 0) >= TEAM_MIN_MEMBERS
+                    ? "border-emerald-200 bg-emerald-50"
+                    : "border-amber-200 bg-amber-50"
+                }`}
+              >
+                <p className="font-bold text-slate-900">
+                  Số thành viên hiện tại:{" "}
+                  {approveDetail?.members?.length ?? 0}/{TEAM_MIN_MEMBERS}
+                </p>
+                {(approveDetail?.members?.length ?? 0) < TEAM_MIN_MEMBERS && (
+                  <p className="mt-2 text-xs text-amber-800">
+                    Team chưa đủ người. Leader cần đăng ký thêm member rồi thử lại.
+                  </p>
+                )}
+              </div>
+              {Array.isArray(approveDetail?.members) &&
+                approveDetail.members.length > 0 && (
+                  <div className="space-y-2">
+                    {approveDetail.members.map((m, i) => (
+                      <div
+                        key={m.id || i}
+                        className="rounded-lg bg-slate-50 px-3 py-2 text-xs"
+                      >
+                        <span className="font-semibold text-slate-800">
+                          {m.fullName}
+                          {m.isLeader ? " (Leader)" : ""}
+                        </span>
+                        <span className="text-slate-500"> — {m.studentCode}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              {actionError && (
+                <p className="text-xs text-red-600">{actionError}</p>
+              )}
+            </div>
+          )}
+        </ModalShell>
+      )}
+
+      {disqualifyTeam && (
+        <ModalShell
+          title={`Disqualify: ${disqualifyTeam.teamName || disqualifyTeam.name}?`}
+          onClose={() => setDisqualifyTeam(null)}
+          actions={
+            <>
+              <CoordinatorActionButton onClick={() => setDisqualifyTeam(null)}>
+                Huỷ
+              </CoordinatorActionButton>
+              <CoordinatorActionButton
+                variant="danger"
+                disabled={actionLoading === disqualifyTeam.id}
+                onClick={handleDisqualifyConfirm}
+              >
+                Xác nhận loại
+              </CoordinatorActionButton>
+            </>
+          }
+        >
+          <textarea
+            className="min-h-28 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+            placeholder="Lý do loại team (tuỳ chọn)"
+            value={disqualifyReason}
+            onChange={(e) => setDisqualifyReason(e.target.value)}
+          />
+        </ModalShell>
+      )}
+
+      {assignMentorTeam && (
+        <ModalShell
+          title={`Assign Mentor: ${assignMentorTeam.teamName || assignMentorTeam.name}`}
+          onClose={() => setAssignMentorTeam(null)}
+          actions={
+            <>
+              <CoordinatorActionButton onClick={() => setAssignMentorTeam(null)}>
+                Huỷ
+              </CoordinatorActionButton>
+              <CoordinatorActionButton
+                variant="primary"
+                disabled={
+                  !selectedMentorId.trim() ||
+                  actionLoading === assignMentorTeam.id
                 }
                 onClick={handleAssignMentorConfirm}
               >
-                {actionLoading === assignMentorTeam.id
-                  ? "Đang xử lý..."
-                  : "Assign"}
+                Assign
               </CoordinatorActionButton>
             </>
           }
         >
           <div className="space-y-3">
-            <p className="text-sm text-slate-500">
-              Chọn mentor cho team{" "}
-              <strong className="text-slate-800">
-                {assignMentorTeam.name}
-              </strong>
-              :
-            </p>
-            <div className="space-y-2">
-              {/* TODO: thay MOCK_MENTORS bằng fetch GET /api/mentors */}
-              {MOCK_MENTORS.map((m) => (
-                <button
-                  key={m.id}
-                  onClick={() => setSelectedMentorId(m.id)}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all duration-150 text-left"
-                  style={{
-                    background:
-                      selectedMentorId === m.id
-                        ? "rgba(242,111,33,0.08)"
-                        : "#F9FAFB",
-                    border: `1px solid ${selectedMentorId === m.id ? "#F26F21" : "#E5E7EB"}`,
-                  }}
-                >
-                  <div
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                    style={{ background: "#F26F21" }}
+            {mentorsAvailable && mentors.length > 0 ? (
+              <div className="space-y-2">
+                {mentors.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setSelectedMentorId(m.id)}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left border"
+                    style={{
+                      borderColor:
+                        selectedMentorId === m.id ? "#F26F21" : "#E5E7EB",
+                      background:
+                        selectedMentorId === m.id
+                          ? "rgba(242,111,33,0.08)"
+                          : "#F9FAFB",
+                    }}
                   >
-                    {m.name.charAt(0)}
-                  </div>
-                  <span className="font-semibold text-slate-700">{m.name}</span>
-                  {selectedMentorId === m.id && (
-                    <extIcons.CheckCircle
-                      className="w-4 h-4 ml-auto"
-                      style={{ color: "#F26F21" }}
-                    />
-                  )}
-                </button>
-              ))}
-            </div>
+                    <span className="font-semibold text-slate-700">
+                      {m.fullName}
+                    </span>
+                    <span className="text-xs text-slate-400">{m.email}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <>
+                <p className="text-xs text-slate-500">
+                  GET /api/mentors chưa có — nhập GUID mentor thủ công:
+                </p>
+                <input
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none font-mono"
+                  placeholder="22222222-2222-2222-2222-222222222222"
+                  value={selectedMentorId}
+                  onChange={(e) => setSelectedMentorId(e.target.value)}
+                />
+              </>
+            )}
             {actionError && (
               <p className="text-xs text-red-500">{actionError}</p>
             )}
@@ -552,9 +667,6 @@ export function TeamsManagement() {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Helper
-// ---------------------------------------------------------------------------
 function Row({ label, value, isLink }) {
   return (
     <div className="flex items-start justify-between gap-4">
