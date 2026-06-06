@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   CoordinatorActionButton,
+  CoordinatorBadge,
   CoordinatorPanel,
   CoordinatorProgressBar,
   ModalShell,
@@ -126,7 +127,7 @@ export function TracksManagement() {
     }
     setSaving(true);
     try {
-      await axiosInstance.post("/api/tracks", {
+      await axiosInstance.post("/tracks", {
         name: form.name.trim(),
         description: form.description.trim(),
         maxTeams: Number(form.maxTeams),
@@ -150,7 +151,7 @@ export function TracksManagement() {
     }
     setSaving(true);
     try {
-      await axiosInstance.put(`/api/tracks/${selectedTrack.id}`, {
+      await axiosInstance.put(`/tracks/${selectedTrack.id}`, {
         name: form.name.trim(),
         description: form.description.trim(),
         maxTeams: Number(form.maxTeams),
