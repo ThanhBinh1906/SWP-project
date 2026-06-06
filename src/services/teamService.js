@@ -1,17 +1,23 @@
 import api from "./axiosInstance";
 
 const teamService = {
-  // Leader
-  createTeam: (data) => api.post("/teams", data),
-  getMyTeam: () => api.get("/teams/my-team"), // TODO: khi BE có
-  updateTeam: (id, data) => api.put(`/teams/${id}`, data),
+  createTeam: (data) => api.post("/api/teams", data),
+  getMyTeam: () => api.get("/api/teams/my-team"), // TODO: khi BE có
+  getById: (id) => api.get(`/api/teams/${id}`),
+  updateTeam: (id, data) => api.put(`/api/teams/${id}`, data),
 
-  // Coordinator
-  getAllTeams: () => api.get("/admin/teams"),
-  approveTeam: (id) => api.put(`/teams/${id}/approve`),
+  getAdminTeams: (params) => api.get("/api/admin/teams", { params }),
+  approveTeam: (id) => api.put(`/api/teams/${id}/approve`),
   disqualifyTeam: (id, reason) =>
-    api.put(`/teams/${id}/disqualify`, { reason }),
-  assignMentor: (id, mentorId) => api.put(`/teams/${id}/mentor`, { mentorId }),
+    api.put(`/api/teams/${id}/disqualify`, { reason }),
+  assignMentor: (id, mentorId) =>
+    api.put(`/api/teams/${id}/mentor`, { mentorId }),
+
+  addMember: (teamId, data) => api.post(`/api/teams/${teamId}/members`, data),
+  updateMember: (teamId, memberId, data) =>
+    api.put(`/api/teams/${teamId}/members/${memberId}`, data),
+  deleteMember: (teamId, memberId) =>
+    api.delete(`/api/teams/${teamId}/members/${memberId}`),
 };
 
 export default teamService;
