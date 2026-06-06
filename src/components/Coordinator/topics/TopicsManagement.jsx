@@ -1,79 +1,219 @@
-import { useState } from "react";
-import { topics } from "../coordinatorMockData";
+import { useState, useEffect, useCallback } from "react";
 import {
   CoordinatorActionButton,
-  CoordinatorBadge,
   CoordinatorPanel,
   ModalShell,
   icons,
 } from "../CoordinatorUI";
+import eventService from "../../../services/eventService";
+import trackService from "../../../services/trackService";
+import roundService from "../../../services/roundService";
+import topicService from "../../../services/topicService";
+import {
+  FormError,
+  LoadingState,
+  ApiErrorState,
+  getApiMessage,
+} from "../coordinatorHelpers";
+
+const EMPTY_FORM = {
+  title: "",
+  description: "",
+  requirements: "",
+  attachmentUrl: "",
+};
 
 export function TopicsManagement() {
+  const [events, setEvents] = useState([]);
+  const [tracks, setTracks] = useState([]);
+  const [rounds, setRounds] = useState([]);
+  const [selectedEventId, setSelectedEventId] = useState("");
+  const [selectedTrackId, setSelectedTrackId] = useState("");
+  const [selectedRoundId, setSelectedRoundId] = useState("");
+
+  const [topics, setTopics] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState("");
+
   const [selected, setSelected] = useState(null);
+  const [modal, setModal] = useState(false);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [formError, setFormError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    eventService
+      .getAll()
+      .then((res) => {
+        const list = res.data?.data || [];
+        setEvents(list);
+        if (list.length > 0) setSelectedEventId(String(list[0].id));
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!selectedEventId) return;
+    trackService
+      .getByEvent(selectedEventId)
+      .then((res) => {
+        const list = res.data?.data || [];
+        setTracks(list);
+        setSelectedTrackId(list.length > 0 ? String(list[0].id) : "");
+      })
+      .catch(() => setTracks([]));
+  }, [selectedEventId]);
+
+  useEffect(() => {
+    if (!selectedTrackId) return;
+    roundService
+      .getByTrack(selectedTrackId)
+      .then((res) => {
+        const list = res.data?.data || [];
+        setRounds(list);
+        setSelectedRoundId(list.length > 0 ? String(list[0].id) : "");
+      })
+      .catch(() => setRounds([]));
+  }, [selectedTrackId]);
+
+  const fetchTopics = useCallback(async () => {
+    if (!selectedRoundId) {
+      setTopics([]);
+      return;
+    }
+    setLoading(true);
+    setApiError("");
+    try {
+      const res = await topicService.getByRound(selectedRoundId);
+      setTopics(res.data?.data || []);
+    } catch (err) {
+      setApiError(getApiMessage(err, "Không thể tải đề tài."));
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedRoundId]);
+
+  useEffect(() => {
+    fetchTopics();
+  }, [fetchTopics]);
+
+  const handleCreate = async () => {
+    if (!form.title.trim()) {
+      setFormError("Tiêu đề đề tài không được để trống.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await topicService.create(selectedRoundId, {
+        title: form.title.trim(),
+        description: form.description.trim() || null,
+        requirements: form.requirements.trim() || null,
+        attachmentUrl: form.attachmentUrl.trim() || null,
+      });
+      await fetchTopics();
+      setModal(false);
+      setForm(EMPTY_FORM);
+      setFormError("");
+    } catch (err) {
+      setFormError(getApiMessage(err, "Tạo đề tài thất bại."));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const selectedTrack = tracks.find((t) => String(t.id) === selectedTrackId);
+  const selectedRound = rounds.find((r) => String(r.id) === selectedRoundId);
+
   return (
     <div className="space-y-6">
       <CoordinatorPanel
         title="Topic filters"
-        subtitle="Filter by track, round, or publication status"
+        subtitle="Filter by event, track, and round"
         icon={icons.Filter}
         actions={
-          <CoordinatorActionButton variant="primary" icon={icons.Plus}>
+          <CoordinatorActionButton
+            variant="primary"
+            icon={icons.Plus}
+            disabled={!selectedRoundId}
+            onClick={() => {
+              setForm(EMPTY_FORM);
+              setFormError("");
+              setModal(true);
+            }}
+          >
             Add Topic
           </CoordinatorActionButton>
         }
       >
         <div className="grid gap-3 md:grid-cols-3">
-          <select className="rounded-xl border border-slate-200 px-3 py-2.5">
-            <option>All tracks</option>
+          <select
+            className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+            value={selectedEventId}
+            onChange={(e) => setSelectedEventId(e.target.value)}
+          >
+            {events.map((ev) => (
+              <option key={ev.id} value={ev.id}>
+                {ev.name}
+              </option>
+            ))}
           </select>
-          <select className="rounded-xl border border-slate-200 px-3 py-2.5">
-            <option>All rounds</option>
+          <select
+            className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+            value={selectedTrackId}
+            onChange={(e) => setSelectedTrackId(e.target.value)}
+          >
+            {tracks.map((tr) => (
+              <option key={tr.id} value={tr.id}>
+                {tr.name}
+              </option>
+            ))}
           </select>
-          <select className="rounded-xl border border-slate-200 px-3 py-2.5">
-            <option>All statuses</option>
+          <select
+            className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+            value={selectedRoundId}
+            onChange={(e) => setSelectedRoundId(e.target.value)}
+          >
+            {rounds.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
           </select>
         </div>
       </CoordinatorPanel>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {topics.map((topic) => (
-          <button
-            key={topic.id}
-            onClick={() => setSelected(topic)}
-            className="rounded-2xl border bg-white p-5 text-left transition hover:-translate-y-0.5 hover:shadow-lg"
-            style={{ borderColor: "#E5E7EB" }}
-          >
-            <div className="mb-4 flex items-start justify-between">
-              <div>
-                <h3 className="font-bold text-slate-900">{topic.name}</h3>
-                <p className="text-sm text-slate-500">
-                  {topic.track} • {topic.round}
+
+      {loading ? (
+        <LoadingState />
+      ) : apiError ? (
+        <ApiErrorState message={apiError} onRetry={fetchTopics} />
+      ) : topics.length === 0 ? (
+        <p className="py-12 text-center text-sm text-slate-400">
+          Chưa có đề tài cho vòng này.
+        </p>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {topics.map((topic) => (
+            <button
+              key={topic.id}
+              type="button"
+              onClick={() => setSelected(topic)}
+              className="rounded-2xl border bg-white p-5 text-left transition hover:-translate-y-0.5 hover:shadow-lg"
+              style={{ borderColor: "#E5E7EB" }}
+            >
+              <h3 className="font-bold text-slate-900">{topic.title}</h3>
+              <p className="mt-1 text-sm text-slate-500">
+                {selectedTrack?.name} • {selectedRound?.name}
+              </p>
+              {topic.description && (
+                <p className="mt-2 text-xs text-slate-500 line-clamp-2">
+                  {topic.description}
                 </p>
-              </div>
-              <CoordinatorBadge
-                tone={topic.status === "Published" ? "success" : "warning"}
-              >
-                {topic.status}
-              </CoordinatorBadge>
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-sm">
-              <div className="rounded-xl bg-slate-50 p-3">
-                <p className="text-slate-500">Files</p>
-                <p className="font-bold">{topic.attachments}</p>
-              </div>
-              <div className="rounded-xl bg-slate-50 p-3">
-                <p className="text-slate-500">Teams</p>
-                <p className="font-bold">{topic.assignedTeams}</p>
-              </div>
-              <div className="rounded-xl bg-slate-50 p-3">
-                <p className="text-slate-500">Random</p>
-                <p className="font-bold">
-                  {topic.randomAssigned ? "On" : "Off"}
-                </p>
-              </div>
-            </div>
-          </button>
-        ))}
-      </div>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
       {selected && (
         <ModalShell
           title="Topic details"
@@ -89,25 +229,85 @@ export function TopicsManagement() {
         >
           <div className="space-y-3 text-sm text-slate-600">
             <p>
-              <span className="font-bold text-slate-900">Topic:</span>{" "}
-              {selected.name}
+              <span className="font-bold text-slate-900">Title:</span>{" "}
+              {selected.title}
             </p>
             <p>
-              <span className="font-bold text-slate-900">Attachments:</span>{" "}
-              {selected.attachments} requirement files attached
+              <span className="font-bold text-slate-900">Description:</span>{" "}
+              {selected.description || "—"}
             </p>
             <p>
-              <span className="font-bold text-slate-900">
-                Random assignment:
-              </span>{" "}
-              {selected.randomAssigned ? "Enabled" : "Not enabled"}
+              <span className="font-bold text-slate-900">Requirements:</span>{" "}
+              {selected.requirements || "—"}
             </p>
-            <p>
-              <span className="font-bold text-slate-900">
-                Round association:
-              </span>{" "}
-              {selected.round}
-            </p>
+            {selected.attachmentUrl && (
+              <p>
+                <span className="font-bold text-slate-900">Attachment:</span>{" "}
+                <a
+                  href={selected.attachmentUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#F26F21] hover:underline"
+                >
+                  {selected.attachmentUrl}
+                </a>
+              </p>
+            )}
+          </div>
+        </ModalShell>
+      )}
+
+      {modal && (
+        <ModalShell
+          title="Add Topic"
+          onClose={() => setModal(false)}
+          actions={
+            <>
+              <CoordinatorActionButton onClick={() => setModal(false)}>
+                Cancel
+              </CoordinatorActionButton>
+              <CoordinatorActionButton
+                variant="primary"
+                disabled={saving}
+                onClick={handleCreate}
+              >
+                {saving ? "Saving..." : "Save"}
+              </CoordinatorActionButton>
+            </>
+          }
+        >
+          <div className="space-y-3">
+            <FormError msg={formError} />
+            <input
+              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+              placeholder="Title *"
+              value={form.title}
+              onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
+            />
+            <textarea
+              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none min-h-20"
+              placeholder="Description"
+              value={form.description}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, description: e.target.value }))
+              }
+            />
+            <textarea
+              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none min-h-20"
+              placeholder="Requirements"
+              value={form.requirements}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, requirements: e.target.value }))
+              }
+            />
+            <input
+              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+              placeholder="Attachment URL"
+              value={form.attachmentUrl}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, attachmentUrl: e.target.value }))
+              }
+            />
           </div>
         </ModalShell>
       )}
