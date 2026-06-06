@@ -7,119 +7,111 @@ import {
   ModalShell,
   icons,
 } from "../CoordinatorUI";
-import eventService from "../../../services/eventService";
-import trackService from "../../../services/trackService";
-import roundService from "../../../services/roundService";
-import {
-  FormError,
-  LoadingState,
-  ApiErrorState,
-  formatDateTime,
-  toDatetimeLocal,
-  fromDatetimeLocal,
-  getApiMessage,
-} from "../coordinatorHelpers";
+import { AlertCircle, Loader2 } from "lucide-react";
+import axiosInstance from "../../../services/axiosInstance";
 
-const ROUND_STATUSES = ["Upcoming", "Active", "Scoring", "Closed"];
+// ---------------------------------------------------------------------------
+const STATUS_OPTIONS = ["Upcoming", "Active", "Scoring", "Completed"];
 
 const statusTone = (s) =>
   s === "Active"
     ? "orange"
     : s === "Scoring"
       ? "purple"
-      : s === "Closed"
+      : s === "Completed"
         ? "success"
         : "neutral";
 
+function formatDateTime(iso) {
+  if (!iso) return "—";
+  return iso.replace("T", " ").slice(0, 16);
+}
+
+function FormError({ msg }) {
+  if (!msg) return null;
+  return (
+    <div
+      className="flex items-center gap-2 p-3 rounded-xl text-sm"
+      style={{
+        background: "rgba(239,68,68,0.06)",
+        border: "1px solid rgba(239,68,68,0.2)",
+        color: "#dc2626",
+      }}
+    >
+      <AlertCircle className="w-4 h-4 flex-shrink-0" />
+      {msg}
+    </div>
+  );
+}
+
 const EMPTY_FORM = {
+  trackId: "",
   name: "",
-  orderIndex: 1,
+  orderIndex: "",
   startTime: "",
   endTime: "",
-  advancingSlots: 8,
-  status: "Upcoming",
+  advancingSlots: "",
 };
 
+// ---------------------------------------------------------------------------
 export function RoundsManagement() {
-  const [events, setEvents] = useState([]);
-  const [tracks, setTracks] = useState([]);
-  const [selectedEventId, setSelectedEventId] = useState("");
-  const [selectedTrackId, setSelectedTrackId] = useState("");
-  const [rounds, setRounds] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [tracks, setTracks] = useState([]); // [{trackId, trackName, eventName, rounds:[]}]
+  const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState("");
 
-  const [modal, setModal] = useState(null);
+  const [modal, setModal] = useState(null); // null | "create" | "edit" | "status"
   const [selectedRound, setSelectedRound] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [statusValue, setStatusValue] = useState("");
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    eventService
-      .getAll()
-      .then((res) => {
-        const list = res.data?.data || [];
-        setEvents(list);
-        if (list.length > 0) setSelectedEventId(String(list[0].id));
-      })
-      .catch(() => setApiError("Không thể tải sự kiện."));
-  }, []);
-
-  useEffect(() => {
-    if (!selectedEventId) return;
-    trackService
-      .getByEvent(selectedEventId)
-      .then((res) => {
-        const list = res.data?.data || [];
-        setTracks(list);
-        setSelectedTrackId(list.length > 0 ? String(list[0].id) : "");
-      })
-      .catch(() => setApiError("Không thể tải tracks."));
-  }, [selectedEventId]);
-
+  // ---------------------------------------------------------------------------
   const fetchRounds = useCallback(async () => {
-    if (!selectedTrackId) {
-      setRounds([]);
-      return;
-    }
     setLoading(true);
     setApiError("");
     try {
-      const res = await roundService.getByTrack(selectedTrackId);
-      const list = (res.data?.data || []).sort(
-        (a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0),
-      );
-      setRounds(list);
+      const res = await axiosInstance.get("/api/tracks/rounds");
+      setTracks(res.data?.data || []);
     } catch (err) {
-      setApiError(getApiMessage(err, "Không thể tải vòng thi."));
+      setApiError(
+        err?.response?.data?.message || "Không thể tải danh sách rounds.",
+      );
     } finally {
       setLoading(false);
     }
-  }, [selectedTrackId]);
+  }, []);
 
   useEffect(() => {
     fetchRounds();
   }, [fetchRounds]);
 
-  const openCreate = () => {
-    setForm({ ...EMPTY_FORM, orderIndex: rounds.length + 1 });
+  // ---------------------------------------------------------------------------
+  const openCreate = (trackId) => {
+    setForm({ ...EMPTY_FORM, trackId: String(trackId) });
     setFormError("");
     setModal("create");
   };
 
-  const openEdit = (round) => {
-    setSelectedRound(round);
+  const openEdit = (round, trackId) => {
+    setSelectedRound({ ...round, trackId });
     setForm({
+      trackId: String(trackId),
       name: round.name,
-      orderIndex: round.orderIndex ?? 1,
-      startTime: toDatetimeLocal(round.startTime),
-      endTime: toDatetimeLocal(round.endTime),
-      advancingSlots: round.advancingSlots ?? 8,
-      status: round.status || "Upcoming",
+      orderIndex: String(round.orderIndex ?? ""),
+      startTime: round.startTime?.slice(0, 16) || "",
+      endTime: round.endTime?.slice(0, 16) || "",
+      advancingSlots: String(round.advancingSlots),
     });
     setFormError("");
     setModal("edit");
+  };
+
+  const openStatus = (round) => {
+    setSelectedRound(round);
+    setStatusValue(round.status);
+    setFormError("");
+    setModal("status");
   };
 
   const closeModal = () => {
@@ -128,25 +120,24 @@ export function RoundsManagement() {
     setFormError("");
   };
 
+  const handleFormChange = (field, value) => {
+    setForm((p) => ({ ...p, [field]: value }));
+    setFormError("");
+  };
+
   const validateForm = () => {
     if (!form.name.trim()) return "Tên vòng không được để trống.";
-    if (!form.startTime) return "Chọn thời gian bắt đầu.";
-    if (!form.endTime) return "Chọn thời gian kết thúc.";
+    if (!form.trackId) return "Vui lòng chọn track.";
+    if (!form.startTime) return "Vui lòng chọn thời gian bắt đầu.";
+    if (!form.endTime) return "Vui lòng chọn thời gian kết thúc.";
     if (form.endTime <= form.startTime)
       return "Thời gian kết thúc phải sau bắt đầu.";
+    if (!form.advancingSlots || Number(form.advancingSlots) < 1)
+      return "Số suất đi tiếp phải lớn hơn 0.";
     return "";
   };
 
-  const buildPayload = () => ({
-    trackId: Number(selectedTrackId),
-    name: form.name.trim(),
-    orderIndex: Number(form.orderIndex),
-    startTime: fromDatetimeLocal(form.startTime),
-    endTime: fromDatetimeLocal(form.endTime),
-    advancingSlots: Number(form.advancingSlots),
-    status: form.status,
-  });
-
+  // CREATE
   const handleCreate = async () => {
     const err = validateForm();
     if (err) {
@@ -155,16 +146,24 @@ export function RoundsManagement() {
     }
     setSaving(true);
     try {
-      await roundService.create(buildPayload());
+      await axiosInstance.post("/api/rounds", {
+        trackId: Number(form.trackId),
+        name: form.name.trim(),
+        orderIndex: Number(form.orderIndex) || 1,
+        startTime: new Date(form.startTime).toISOString(),
+        endTime: new Date(form.endTime).toISOString(),
+        advancingSlots: Number(form.advancingSlots),
+      });
       await fetchRounds();
       closeModal();
     } catch (err) {
-      setFormError(getApiMessage(err, "Tạo vòng thất bại."));
+      setFormError(err?.response?.data?.message || "Tạo round thất bại.");
     } finally {
       setSaving(false);
     }
   };
 
+  // EDIT
   const handleEdit = async () => {
     const err = validateForm();
     if (err) {
@@ -173,158 +172,315 @@ export function RoundsManagement() {
     }
     setSaving(true);
     try {
-      const { trackId, ...payload } = buildPayload();
-      await roundService.update(selectedRound.id, payload);
-      if (form.status !== selectedRound.status) {
-        await roundService.updateStatus(selectedRound.id, form.status);
-      }
+      await axiosInstance.put(`/api/rounds/${selectedRound.roundId}`, {
+        name: form.name.trim(),
+        orderIndex: Number(form.orderIndex) || 1,
+        startTime: new Date(form.startTime).toISOString(),
+        endTime: new Date(form.endTime).toISOString(),
+        advancingSlots: Number(form.advancingSlots),
+      });
       await fetchRounds();
       closeModal();
     } catch (err) {
-      setFormError(getApiMessage(err, "Cập nhật vòng thất bại."));
+      setFormError(err?.response?.data?.message || "Cập nhật round thất bại.");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleStatusChange = async (round, status) => {
+  // STATUS
+  const handleStatusUpdate = async () => {
+    if (!statusValue) return;
+    setSaving(true);
     try {
-      await roundService.updateStatus(round.id, status);
+      await axiosInstance.put(`/api/rounds/${selectedRound.roundId}/status`, {
+        status: statusValue,
+      });
       await fetchRounds();
+      closeModal();
     } catch (err) {
-      setApiError(getApiMessage(err, "Đổi trạng thái thất bại."));
+      setFormError(
+        err?.response?.data?.message || "Cập nhật trạng thái thất bại.",
+      );
+    } finally {
+      setSaving(false);
     }
   };
 
+  // ---------------------------------------------------------------------------
+  // Round form modal (shared create/edit)
+  const RoundFormModal = (
+    <ModalShell
+      title={
+        modal === "create"
+          ? "Tạo Round mới"
+          : `Chỉnh sửa: ${selectedRound?.name}`
+      }
+      onClose={closeModal}
+      actions={
+        <>
+          <CoordinatorActionButton onClick={closeModal} disabled={saving}>
+            Huỷ
+          </CoordinatorActionButton>
+          <CoordinatorActionButton
+            variant="primary"
+            disabled={saving}
+            onClick={modal === "create" ? handleCreate : handleEdit}
+          >
+            {saving
+              ? "Đang lưu..."
+              : modal === "create"
+                ? "Tạo Round"
+                : "Lưu thay đổi"}
+          </CoordinatorActionButton>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <FormError msg={formError} />
+        {/* Track selector — chỉ hiện khi create */}
+        {modal === "create" && (
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
+              Track <span className="text-orange-500">*</span>
+            </label>
+            <select
+              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+              value={form.trackId}
+              onChange={(e) => handleFormChange("trackId", e.target.value)}
+            >
+              <option value="">-- Chọn track --</option>
+              {tracks.map((t) => (
+                <option key={t.trackId} value={t.trackId}>
+                  {t.trackName} — {t.eventName}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        <div>
+          <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
+            Tên Round <span className="text-orange-500">*</span>
+          </label>
+          <input
+            className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+            placeholder="VD: Vòng Sơ Loại"
+            value={form.name}
+            onChange={(e) => handleFormChange("name", e.target.value)}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
+              Order
+            </label>
+            <input
+              type="number"
+              min="1"
+              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+              placeholder="1"
+              value={form.orderIndex}
+              onChange={(e) => handleFormChange("orderIndex", e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
+              Suất đi tiếp <span className="text-orange-500">*</span>
+            </label>
+            <input
+              type="number"
+              min="1"
+              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+              placeholder="10"
+              value={form.advancingSlots}
+              onChange={(e) =>
+                handleFormChange("advancingSlots", e.target.value)
+              }
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
+              Bắt đầu <span className="text-orange-500">*</span>
+            </label>
+            <input
+              type="datetime-local"
+              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+              value={form.startTime}
+              onChange={(e) => handleFormChange("startTime", e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
+              Kết thúc <span className="text-orange-500">*</span>
+            </label>
+            <input
+              type="datetime-local"
+              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+              value={form.endTime}
+              onChange={(e) => handleFormChange("endTime", e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+    </ModalShell>
+  );
+
+  // ---------------------------------------------------------------------------
   return (
     <div className="space-y-6">
       <CoordinatorPanel
-        title="Round filters"
-        subtitle="Chọn event và track để quản lý vòng thi"
-        icon={icons.Filter}
+        title="Round Management"
+        subtitle="Quản lý vòng thi theo từng track và sự kiện"
+        icon={icons.Timer}
         actions={
           <CoordinatorActionButton
             variant="primary"
             icon={icons.Plus}
-            onClick={openCreate}
-            disabled={!selectedTrackId}
+            onClick={() => openCreate("")}
           >
             Create Round
           </CoordinatorActionButton>
         }
       >
-        <div className="grid gap-3 md:grid-cols-2">
-          <select
-            className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-            value={selectedEventId}
-            onChange={(e) => setSelectedEventId(e.target.value)}
-          >
-            <option value="">Chọn sự kiện</option>
-            {events.map((ev) => (
-              <option key={ev.id} value={ev.id}>
-                {ev.name}
-              </option>
-            ))}
-          </select>
-          <select
-            className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-            value={selectedTrackId}
-            onChange={(e) => setSelectedTrackId(e.target.value)}
-          >
-            <option value="">Chọn track</option>
-            {tracks.map((tr) => (
-              <option key={tr.id} value={tr.id}>
-                {tr.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      </CoordinatorPanel>
-
-      <CoordinatorPanel
-        title="Round timeline"
-        subtitle="Configure timing, status, and advancement slots"
-        icon={icons.Timer}
-      >
         {loading ? (
-          <LoadingState />
+          <div className="flex items-center justify-center py-14 gap-2 text-sm text-slate-400">
+            <Loader2
+              className="w-4 h-4 animate-spin"
+              style={{ color: "#F26F21" }}
+            />
+            Đang tải...
+          </div>
         ) : apiError ? (
-          <ApiErrorState message={apiError} onRetry={fetchRounds} />
-        ) : rounds.length === 0 ? (
-          <p className="py-12 text-center text-sm text-slate-400">
-            Chưa có vòng thi nào.
-          </p>
+          <div className="flex flex-col items-center py-10 gap-3">
+            <p className="text-sm text-red-500">{apiError}</p>
+            <CoordinatorActionButton onClick={fetchRounds}>
+              Thử lại
+            </CoordinatorActionButton>
+          </div>
+        ) : tracks.length === 0 ? (
+          <div className="py-14 text-center text-sm text-slate-400">
+            Chưa có round nào.
+          </div>
         ) : (
-          <div className="space-y-5">
-            {rounds.map((round, index) => (
-              <div
-                key={round.id}
-                className="grid gap-4 rounded-2xl border border-slate-100 p-4 lg:grid-cols-[auto_1fr_220px_auto]"
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className="flex h-10 w-10 items-center justify-center rounded-xl text-sm font-bold text-white"
-                    style={{
-                      background:
-                        round.status === "Active" ? "#F26F21" : "#94A3B8",
-                    }}
-                  >
-                    {round.orderIndex ?? index + 1}
+          <div className="space-y-8">
+            {tracks.map((track) => (
+              <div key={track.trackId}>
+                {/* Track header */}
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                      <icons.GitBranch
+                        className="w-4 h-4"
+                        style={{ color: "#F26F21" }}
+                      />
+                      {track.trackName}
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {track.eventName}
+                    </p>
                   </div>
-                  <CoordinatorBadge tone={statusTone(round.status)}>
-                    {round.status}
-                  </CoordinatorBadge>
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900">{round.name}</h3>
-                  <p className="text-sm text-slate-500">
-                    {formatDateTime(round.startTime)} →{" "}
-                    {formatDateTime(round.endTime)}
-                  </p>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Advancing slots:{" "}
-                    <span className="font-bold text-slate-800">
-                      {round.advancingSlots}
-                    </span>
-                  </p>
-                </div>
-                <CoordinatorProgressBar
-                  label="Progress"
-                  value={round.status === "Closed" ? 100 : round.status === "Active" ? 50 : 0}
-                  color={round.status === "Active" ? "#F26F21" : "#64748B"}
-                />
-                <div className="flex flex-col gap-2">
                   <CoordinatorActionButton
-                    icon={icons.Edit3}
-                    onClick={() => openEdit(round)}
+                    icon={icons.Plus}
+                    onClick={() => openCreate(track.trackId)}
                   >
-                    Edit
+                    Add Round
                   </CoordinatorActionButton>
-                  <select
-                    className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none"
-                    value={round.status}
-                    onChange={(e) => handleStatusChange(round, e.target.value)}
-                  >
-                    {ROUND_STATUSES.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
                 </div>
+
+                {track.rounds.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-slate-200 py-8 text-center text-sm text-slate-400">
+                    Chưa có round nào trong track này.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {track.rounds.map((round, idx) => (
+                      <div
+                        key={round.roundId}
+                        className="grid gap-4 rounded-2xl border border-slate-100 p-4 lg:grid-cols-[auto_1fr_180px_auto]"
+                        style={{
+                          background:
+                            round.status === "Active"
+                              ? "rgba(242,111,33,0.02)"
+                              : "#fff",
+                        }}
+                      >
+                        {/* Index + status */}
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="flex h-10 w-10 items-center justify-center rounded-xl text-sm font-bold text-white flex-shrink-0"
+                            style={{
+                              background:
+                                round.status === "Active"
+                                  ? "#F26F21"
+                                  : "#94A3B8",
+                            }}
+                          >
+                            {idx + 1}
+                          </div>
+                          <CoordinatorBadge tone={statusTone(round.status)}>
+                            {round.status}
+                          </CoordinatorBadge>
+                        </div>
+
+                        {/* Info */}
+                        <div>
+                          <h4 className="font-bold text-slate-900">
+                            {round.name}
+                          </h4>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            {formatDateTime(round.startTime)} →{" "}
+                            {formatDateTime(round.endTime)}
+                          </p>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            Suất đi tiếp:{" "}
+                            <span className="font-bold text-slate-700">
+                              {round.advancingSlots}
+                            </span>
+                          </p>
+                        </div>
+
+                        {/* Progress */}
+                        <CoordinatorProgressBar
+                          label="Progress"
+                          value={round.progressPercentage ?? 0}
+                          color={
+                            round.status === "Active" ? "#F26F21" : "#64748B"
+                          }
+                        />
+
+                        {/* Actions */}
+                        <div className="flex flex-col gap-2 justify-center">
+                          <CoordinatorActionButton
+                            icon={icons.Edit3}
+                            onClick={() => openEdit(round, track.trackId)}
+                          >
+                            Edit
+                          </CoordinatorActionButton>
+                          <CoordinatorActionButton
+                            icon={icons.SlidersHorizontal}
+                            onClick={() => openStatus(round)}
+                          >
+                            Status
+                          </CoordinatorActionButton>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
         )}
       </CoordinatorPanel>
 
-      {(modal === "create" || modal === "edit") && (
+      {/* Modals */}
+      {(modal === "create" || modal === "edit") && RoundFormModal}
+
+      {modal === "status" && (
         <ModalShell
-          title={
-            modal === "create"
-              ? "Tạo vòng thi"
-              : `Sửa vòng: ${selectedRound?.name}`
-          }
+          title={`Đổi trạng thái: ${selectedRound?.name}`}
           onClose={closeModal}
           actions={
             <>
@@ -334,78 +490,30 @@ export function RoundsManagement() {
               <CoordinatorActionButton
                 variant="primary"
                 disabled={saving}
-                onClick={modal === "create" ? handleCreate : handleEdit}
+                onClick={handleStatusUpdate}
               >
-                {saving ? "Đang lưu..." : "Lưu"}
+                {saving ? "Đang lưu..." : "Cập nhật"}
               </CoordinatorActionButton>
             </>
           }
         >
           <div className="space-y-3">
-            <FormError msg={formError} />
-            <input
-              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-              placeholder="Tên vòng *"
-              value={form.name}
-              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-            />
-            <div className="grid gap-3 sm:grid-cols-2">
-              <input
-                type="number"
-                min={1}
-                className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-                placeholder="Thứ tự (orderIndex)"
-                value={form.orderIndex}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, orderIndex: e.target.value }))
-                }
-              />
-              <input
-                type="number"
-                min={0}
-                className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-                placeholder="Advancing slots"
-                value={form.advancingSlots}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, advancingSlots: e.target.value }))
-                }
-              />
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <label className="text-xs text-slate-500">Bắt đầu *</label>
-                <input
-                  type="datetime-local"
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-                  value={form.startTime}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, startTime: e.target.value }))
-                  }
-                />
-              </div>
-              <div>
-                <label className="text-xs text-slate-500">Kết thúc *</label>
-                <input
-                  type="datetime-local"
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-                  value={form.endTime}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, endTime: e.target.value }))
-                  }
-                />
-              </div>
-            </div>
+            <p className="text-sm text-slate-500">
+              Trạng thái hiện tại:{" "}
+              <CoordinatorBadge tone={statusTone(selectedRound?.status)}>
+                {selectedRound?.status}
+              </CoordinatorBadge>
+            </p>
             <select
               className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-              value={form.status}
-              onChange={(e) => setForm((p) => ({ ...p, status: e.target.value }))}
+              value={statusValue}
+              onChange={(e) => setStatusValue(e.target.value)}
             >
-              {ROUND_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
+              {STATUS_OPTIONS.map((s) => (
+                <option key={s}>{s}</option>
               ))}
             </select>
+            <FormError msg={formError} />
           </div>
         </ModalShell>
       )}
