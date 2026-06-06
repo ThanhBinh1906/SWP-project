@@ -38,7 +38,10 @@ function EmptyTeams() {
           border: "1px solid rgba(242,111,33,0.15)",
         }}
       >
-        <extIcons.UserRoundCog className="w-7 h-7" style={{ color: "#F26F21" }} />
+        <extIcons.UserRoundCog
+          className="w-7 h-7"
+          style={{ color: "#F26F21" }}
+        />
       </div>
       <p className="text-sm font-semibold text-slate-700">
         Chưa có team nào đăng ký
@@ -71,7 +74,6 @@ function FilterBar({ value, onChange }) {
           {s}
         </button>
       ))}
->>>>>>> 4826152b104e6dd7f42abab3cd1408ca67126ebe
     </div>
   );
 }
@@ -239,13 +241,7 @@ export function TeamsManagement() {
         <button
           type="button"
           className="text-sm transition-colors duration-150"
-<<<<<<< HEAD
           style={{ color: row.mentorId ? "#374151" : "#F26F21" }}
-=======
-          style={{
-            color: row.mentorId || row.mentorName ? "#374151" : "#F26F21",
-          }}
->>>>>>> 4826152b104e6dd7f42abab3cd1408ca67126ebe
           onClick={() => {
             setAssignMentorTeam(row);
             setSelectedMentorId(row.mentorId || "");
@@ -360,7 +356,6 @@ export function TeamsManagement() {
           </div>
         ) : filteredTeams.length === 0 ? (
           <EmptyTeams />
->>>>>>> 4826152b104e6dd7f42abab3cd1408ca67126ebe
         ) : (
           <CoordinatorTable
             columns={columns}
@@ -468,8 +463,9 @@ export function TeamsManagement() {
           ) : (
             <div className="space-y-4 text-sm">
               <p className="text-slate-600">
-                BE yêu cầu team có <strong>ít nhất {TEAM_MIN_MEMBERS} thành viên</strong>{" "}
-                (leader + member) trước khi duyệt.
+                BE yêu cầu team có{" "}
+                <strong>ít nhất {TEAM_MIN_MEMBERS} thành viên</strong> (leader +
+                member) trước khi duyệt.
               </p>
               <div
                 className={`rounded-xl border p-4 ${
@@ -479,12 +475,13 @@ export function TeamsManagement() {
                 }`}
               >
                 <p className="font-bold text-slate-900">
-                  Số thành viên hiện tại:{" "}
-                  {approveDetail?.members?.length ?? 0}/{TEAM_MIN_MEMBERS}
+                  Số thành viên hiện tại: {approveDetail?.members?.length ?? 0}/
+                  {TEAM_MIN_MEMBERS}
                 </p>
                 {(approveDetail?.members?.length ?? 0) < TEAM_MIN_MEMBERS && (
                   <p className="mt-2 text-xs text-amber-800">
-                    Team chưa đủ người. Leader cần đăng ký thêm member rồi thử lại.
+                    Team chưa đủ người. Leader cần đăng ký thêm member rồi thử
+                    lại.
                   </p>
                 )}
               </div>
@@ -500,7 +497,10 @@ export function TeamsManagement() {
                           {m.fullName}
                           {m.isLeader ? " (Leader)" : ""}
                         </span>
-                        <span className="text-slate-500"> — {m.studentCode}</span>
+                        <span className="text-slate-500">
+                          {" "}
+                          — {m.studentCode}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -621,7 +621,6 @@ export function TeamsManagement() {
             {actionError && (
               <p className="text-xs text-red-500">{actionError}</p>
             )}
->>>>>>> 4826152b104e6dd7f42abab3cd1408ca67126ebe
           </div>
         </ModalShell>
       )}
@@ -633,7 +632,6 @@ export function TeamsManagement() {
 // Helper
 // ---------------------------------------------------------------------------
 function Row({ label, value, isLink }) {
->>>>>>> 4826152b104e6dd7f42abab3cd1408ca67126ebe
   return (
     <div className="flex items-start justify-between gap-4">
       <span className="text-xs text-slate-400 flex-shrink-0 w-24">{label}</span>
