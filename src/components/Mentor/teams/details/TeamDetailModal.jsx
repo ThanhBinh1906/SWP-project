@@ -11,10 +11,9 @@ export function TeamDetailModal({ team, onClose }) {
   const { X } = mentorIcons;
 
   if (!team) return null;
-
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4">
-      <div className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4 animate-fade-in">
+      <div className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-2xl bg-white shadow-2xl animate-modal-scale">
         <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b bg-white px-5 py-4" style={{ borderColor: "#E5E7EB" }}>
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Team detail view</p>
