@@ -13,6 +13,7 @@ import UserDashboard from "./page/UserDashboard";
 import CoordinatorDashboardUI from "./page/CoordinatorDashboardUI";
 import MentorDashboard from "./page/MentorDashboard";
 import JudgeDashboard from "./page/JudgeDashboard";
+import ResultPage from "./page/ResultPage";
 
 // ---- Error pages ----
 import Pending from "./page/error/Pending";
@@ -119,6 +120,7 @@ const router = createBrowserRouter([
       </ProtectedRoute>
     ),
   },
+  { path: "/results", element: <ResultPage /> },
 ]);
 
 export default function App() {

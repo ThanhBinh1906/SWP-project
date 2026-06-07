@@ -302,11 +302,10 @@ export function CoordinatorTable({
     </div>
   );
 }
-
 export function ModalShell({ title, children, onClose, actions }) {
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4 animate-fade-in">
-      <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl">
+      <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl animate-modal-scale">
         <div className="mb-5 flex items-start justify-between gap-4">
           <h3 className="text-lg font-bold text-slate-900">{title}</h3>
           <button
