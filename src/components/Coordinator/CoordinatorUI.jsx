@@ -94,6 +94,7 @@ export function CoordinatorActionButton({
   icon: Icon,
   onClick,
   className = "",
+  disabled = false,
 }) {
   const variants = {
     primary:
@@ -109,7 +110,12 @@ export function CoordinatorActionButton({
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex items-center justify-center gap-2 rounded-xl border px-3.5 py-2 text-sm font-semibold transition-all hover:scale-[1.02] ${variants[variant]} ${className}`}
+      disabled={disabled}
+      className={`inline-flex items-center justify-center gap-2 rounded-xl border px-3.5 py-2 text-sm font-semibold transition-all ${
+        disabled
+          ? "cursor-not-allowed opacity-50 hover:scale-100"
+          : "hover:scale-[1.02]"
+      } ${variants[variant]} ${className}`}
     >
       {Icon && <Icon className="h-4 w-4" />}
       {children}
