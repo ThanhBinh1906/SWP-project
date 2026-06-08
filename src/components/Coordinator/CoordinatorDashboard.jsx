@@ -3,9 +3,7 @@ import { CoordinatorHeader } from "./CoordinatorHeader";
 import { CoordinatorPageTitle } from "./CoordinatorPageTitle";
 import { CoordinatorSidebar } from "./CoordinatorSidebar";
 import { DashboardOverview } from "./dashboard/DashboardOverview";
-import { EventsManagement } from "./events/EventsManagement";
-import { TracksManagement } from "./tracks/TracksManagement";
-import { RoundsManagement } from "./rounds/RoundsManagement";
+import { CompetitionSetup } from "./CompetitionSetup";
 import { CriteriaManagement } from "./criteria/CriteriaManagement";
 import { TopicsManagement } from "./topics/TopicsManagement";
 import { UsersManagement } from "./users/UsersManagement";
@@ -21,17 +19,9 @@ const viewTitles = {
     title: "Coordinator Dashboard",
     sub: "Monitor hackathon operations, registrations, judging, and results",
   },
-  events: {
-    title: "Event Management",
-    sub: "Create, update, and monitor hackathon events",
-  },
-  tracks: {
-    title: "Track Management",
-    sub: "Manage competition tracks, capacities, and event associations",
-  },
-  rounds: {
-    title: "Round Management",
-    sub: "Configure timelines, submission windows, scoring, and advancement",
+  "competition-setup": {
+    title: "Competition Setup",
+    sub: "Manage events, tracks, and rounds in a unified tree view",
   },
   criteria: {
     title: "Criteria Management",
@@ -73,9 +63,7 @@ const viewTitles = {
 
 const views = {
   dashboard: DashboardOverview,
-  events: EventsManagement,
-  tracks: TracksManagement,
-  rounds: RoundsManagement,
+  "competition-setup": CompetitionSetup,
   criteria: CriteriaManagement,
   topics: TopicsManagement,
   users: UsersManagement,

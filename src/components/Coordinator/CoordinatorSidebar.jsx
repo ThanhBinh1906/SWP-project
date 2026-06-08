@@ -1,4 +1,5 @@
 import { icons } from "./CoordinatorUI";
+import { Layers } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { Code2, CloudUpload, Users, LogOut, Trophy, X } from "lucide-react";
@@ -13,13 +14,11 @@ const navItems = [
     icon: icons.LayoutDashboard,
   },
   {
-    id: "events",
-    label: "Events",
-    labelVi: "Sự kiện",
-    icon: icons.CalendarDays,
+    id: "competition-setup",
+    label: "Competition Setup",
+    labelVi: "Cài đặt thi đấu",
+    icon: Layers,
   },
-  { id: "tracks", label: "Tracks", labelVi: "Bảng thi", icon: icons.GitBranch },
-  { id: "rounds", label: "Rounds", labelVi: "Vòng thi", icon: icons.Timer },
   {
     id: "criteria",
     label: "Criteria",
