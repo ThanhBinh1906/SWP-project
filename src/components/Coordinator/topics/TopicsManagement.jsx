@@ -14,6 +14,8 @@ import {
   LoadingState,
   ApiErrorState,
   getApiMessage,
+  SetupRequiredBanner,
+  validateRoundSelection,
 } from "../coordinatorHelpers";
 
 const EMPTY_FORM = {
@@ -53,7 +55,13 @@ export function TopicsManagement() {
   }, []);
 
   useEffect(() => {
-    if (!selectedEventId) return;
+    if (!selectedEventId) {
+      setTracks([]);
+      setSelectedTrackId("");
+      return;
+    }
+    setTracks([]);
+    setSelectedTrackId("");
     trackService
       .getByEvent(selectedEventId)
       .then((res) => {
@@ -65,7 +73,13 @@ export function TopicsManagement() {
   }, [selectedEventId]);
 
   useEffect(() => {
-    if (!selectedTrackId) return;
+    if (!selectedTrackId) {
+      setRounds([]);
+      setSelectedRoundId("");
+      return;
+    }
+    setRounds([]);
+    setSelectedRoundId("");
     roundService
       .getByTrack(selectedTrackId)
       .then((res) => {
@@ -97,14 +111,35 @@ export function TopicsManagement() {
     fetchTopics();
   }, [fetchTopics]);
 
+  const roundCheck = validateRoundSelection({
+    selectedEventId,
+    selectedTrackId,
+    selectedRoundId,
+    rounds,
+    tracks,
+    events,
+  });
+
   const handleCreate = async () => {
+    const check = validateRoundSelection({
+      selectedEventId,
+      selectedTrackId,
+      selectedRoundId,
+      rounds,
+      tracks,
+      events,
+    });
+    if (!check.roundId) {
+      setFormError(check.error);
+      return;
+    }
     if (!form.title.trim()) {
       setFormError("Tiêu đề đề tài không được để trống.");
       return;
     }
     setSaving(true);
     try {
-      await topicService.create(selectedRoundId, {
+      await topicService.create(check.roundId, {
         title: form.title.trim(),
         description: form.description.trim() || null,
         requirements: form.requirements.trim() || null,
@@ -134,8 +169,9 @@ export function TopicsManagement() {
           <CoordinatorActionButton
             variant="primary"
             icon={icons.Plus}
-            disabled={!selectedRoundId}
+            disabled={!roundCheck.roundId}
             onClick={() => {
+              if (!roundCheck.roundId) return;
               setForm(EMPTY_FORM);
               setFormError("");
               setModal(true);
@@ -151,42 +187,63 @@ export function TopicsManagement() {
             value={selectedEventId}
             onChange={(e) => setSelectedEventId(e.target.value)}
           >
-            {events.map((ev) => (
-              <option key={ev.id} value={ev.id}>
-                {ev.name}
-              </option>
-            ))}
+            {events.length === 0 ? (
+              <option value="">Chưa có sự kiện</option>
+            ) : (
+              events.map((ev) => (
+                <option key={ev.id} value={ev.id}>
+                  {ev.name}
+                </option>
+              ))
+            )}
           </select>
           <select
             className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
             value={selectedTrackId}
             onChange={(e) => setSelectedTrackId(e.target.value)}
+            disabled={!tracks.length}
           >
-            {tracks.map((tr) => (
-              <option key={tr.id} value={tr.id}>
-                {tr.name}
-              </option>
-            ))}
+            {tracks.length === 0 ? (
+              <option value="">Chưa có Track</option>
+            ) : (
+              tracks.map((tr) => (
+                <option key={tr.id} value={tr.id}>
+                  {tr.name}
+                </option>
+              ))
+            )}
           </select>
           <select
             className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
             value={selectedRoundId}
             onChange={(e) => setSelectedRoundId(e.target.value)}
+            disabled={!rounds.length}
           >
-            {rounds.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name}
-              </option>
-            ))}
+            {rounds.length === 0 ? (
+              <option value="">Chưa có Round — tạo ở mục Rounds</option>
+            ) : (
+              rounds.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))
+            )}
           </select>
         </div>
       </CoordinatorPanel>
+
+      {roundCheck.error && (
+        <SetupRequiredBanner
+          title={roundCheck.error}
+          hint="Thứ tự: Event → Track → Round → Topic"
+        />
+      )}
 
       {loading ? (
         <LoadingState />
       ) : apiError ? (
         <ApiErrorState message={apiError} onRetry={fetchTopics} />
-      ) : topics.length === 0 ? (
+      ) : !roundCheck.roundId ? null : topics.length === 0 ? (
         <p className="py-12 text-center text-sm text-slate-400">
           Chưa có đề tài cho vòng này.
         </p>
