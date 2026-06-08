@@ -76,6 +76,63 @@ export function LoadingState({ label = "Đang tải..." }) {
   );
 }
 
+export function SetupRequiredBanner({ title, hint }) {
+  return (
+    <div
+      className="rounded-xl border p-4 text-sm"
+      style={{
+        background: "#FFFBEB",
+        borderColor: "#FDE68A",
+        color: "#92400E",
+      }}
+    >
+      <p className="font-semibold">{title}</p>
+      {hint && <p className="mt-1 text-xs opacity-90">{hint}</p>}
+    </div>
+  );
+}
+
+/** Trả về roundId hợp lệ hoặc null + message lỗi */
+export function validateRoundSelection({
+  selectedEventId,
+  selectedTrackId,
+  selectedRoundId,
+  rounds,
+  tracks,
+  events,
+}) {
+  if (!events?.length) {
+    return { roundId: null, error: "Chưa có sự kiện. Vui lòng tạo Event trước." };
+  }
+  if (!selectedEventId) {
+    return { roundId: null, error: "Vui lòng chọn sự kiện." };
+  }
+  if (!tracks?.length) {
+    return {
+      roundId: null,
+      error: "Chưa có Track cho sự kiện này. Vui lòng tạo Track trước.",
+    };
+  }
+  if (!selectedTrackId) {
+    return { roundId: null, error: "Vui lòng chọn Track." };
+  }
+  if (!rounds?.length) {
+    return {
+      roundId: null,
+      error:
+        "Chưa có vòng thi (Round) cho Track này. Vui lòng sang mục Rounds để tạo vòng thi trước.",
+    };
+  }
+  if (!selectedRoundId) {
+    return { roundId: null, error: "Vui lòng chọn vòng thi (Round)." };
+  }
+  const id = Number(selectedRoundId);
+  if (!Number.isFinite(id) || id <= 0) {
+    return { roundId: null, error: "Round ID không hợp lệ." };
+  }
+  return { roundId: id, error: null };
+}
+
 export function ApiErrorState({ message, onRetry }) {
   return (
     <div className="flex flex-col items-center py-10 gap-3">

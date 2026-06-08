@@ -17,6 +17,8 @@ import {
   LoadingState,
   ApiErrorState,
   getApiMessage,
+  SetupRequiredBanner,
+  validateRoundSelection,
 } from "../coordinatorHelpers";
 
 const EMPTY_CRITERION = {
@@ -61,7 +63,13 @@ export function CriteriaManagement() {
   }, []);
 
   useEffect(() => {
-    if (!selectedEventId) return;
+    if (!selectedEventId) {
+      setTracks([]);
+      setSelectedTrackId("");
+      return;
+    }
+    setTracks([]);
+    setSelectedTrackId("");
     trackService
       .getByEvent(selectedEventId)
       .then((res) => {
@@ -73,7 +81,13 @@ export function CriteriaManagement() {
   }, [selectedEventId]);
 
   useEffect(() => {
-    if (!selectedTrackId) return;
+    if (!selectedTrackId) {
+      setRounds([]);
+      setSelectedRoundId("");
+      return;
+    }
+    setRounds([]);
+    setSelectedRoundId("");
     roundService
       .getByTrack(selectedTrackId)
       .then((res) => {
@@ -111,6 +125,15 @@ export function CriteriaManagement() {
   );
   const valid = totalWeight <= 1.001;
 
+  const roundCheck = validateRoundSelection({
+    selectedEventId,
+    selectedTrackId,
+    selectedRoundId,
+    rounds,
+    tracks,
+    events,
+  });
+
   const columns = [
     { key: "name", label: "Criterion" },
     { key: "maxScore", label: "Max score" },
@@ -119,13 +142,25 @@ export function CriteriaManagement() {
   ];
 
   const handleAddCriterion = async () => {
+    const check = validateRoundSelection({
+      selectedEventId,
+      selectedTrackId,
+      selectedRoundId,
+      rounds,
+      tracks,
+      events,
+    });
+    if (!check.roundId) {
+      setFormError(check.error);
+      return;
+    }
     if (!form.name.trim()) {
       setFormError("Tên tiêu chí không được để trống.");
       return;
     }
     setSaving(true);
     try {
-      await criterionService.create(selectedRoundId, {
+      await criterionService.create(check.roundId, {
         name: form.name.trim(),
         description: form.description.trim() || null,
         maxScore: Number(form.maxScore),
@@ -143,6 +178,18 @@ export function CriteriaManagement() {
   };
 
   const handleImport = async () => {
+    const check = validateRoundSelection({
+      selectedEventId,
+      selectedTrackId,
+      selectedRoundId,
+      rounds,
+      tracks,
+      events,
+    });
+    if (!check.roundId) {
+      setFormError(check.error);
+      return;
+    }
     if (!selectedTemplateId) {
       setFormError("Chọn template để import.");
       return;
@@ -150,7 +197,7 @@ export function CriteriaManagement() {
     setSaving(true);
     try {
       await criterionService.importTemplate(
-        selectedRoundId,
+        check.roundId,
         Number(selectedTemplateId),
       );
       await fetchCriteria();
@@ -176,36 +223,57 @@ export function CriteriaManagement() {
             value={selectedEventId}
             onChange={(e) => setSelectedEventId(e.target.value)}
           >
-            {events.map((ev) => (
-              <option key={ev.id} value={ev.id}>
-                {ev.name}
-              </option>
-            ))}
+            {events.length === 0 ? (
+              <option value="">Chưa có sự kiện</option>
+            ) : (
+              events.map((ev) => (
+                <option key={ev.id} value={ev.id}>
+                  {ev.name}
+                </option>
+              ))
+            )}
           </select>
           <select
             className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
             value={selectedTrackId}
             onChange={(e) => setSelectedTrackId(e.target.value)}
+            disabled={!tracks.length}
           >
-            {tracks.map((tr) => (
-              <option key={tr.id} value={tr.id}>
-                {tr.name}
-              </option>
-            ))}
+            {tracks.length === 0 ? (
+              <option value="">Chưa có Track</option>
+            ) : (
+              tracks.map((tr) => (
+                <option key={tr.id} value={tr.id}>
+                  {tr.name}
+                </option>
+              ))
+            )}
           </select>
           <select
             className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
             value={selectedRoundId}
             onChange={(e) => setSelectedRoundId(e.target.value)}
+            disabled={!rounds.length}
           >
-            {rounds.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name}
-              </option>
-            ))}
+            {rounds.length === 0 ? (
+              <option value="">Chưa có Round — tạo ở mục Rounds</option>
+            ) : (
+              rounds.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))
+            )}
           </select>
         </div>
       </CoordinatorPanel>
+
+      {roundCheck.error && (
+        <SetupRequiredBanner
+          title={roundCheck.error}
+          hint="Thứ tự: Event → Track → Round → Criteria"
+        />
+      )}
 
       <CoordinatorPanel
         title="Weight validation"
@@ -215,8 +283,9 @@ export function CriteriaManagement() {
           <>
             <CoordinatorActionButton
               icon={icons.Upload}
-              disabled={!selectedRoundId}
+              disabled={!roundCheck.roundId}
               onClick={() => {
+                if (!roundCheck.roundId) return;
                 setFormError("");
                 setModal("import");
               }}
@@ -226,8 +295,9 @@ export function CriteriaManagement() {
             <CoordinatorActionButton
               variant="primary"
               icon={icons.Plus}
-              disabled={!selectedRoundId}
+              disabled={!roundCheck.roundId}
               onClick={() => {
+                if (!roundCheck.roundId) return;
                 setForm(EMPTY_CRITERION);
                 setFormError("");
                 setModal("criterion");
@@ -265,7 +335,7 @@ export function CriteriaManagement() {
           <LoadingState />
         ) : apiError ? (
           <ApiErrorState message={apiError} onRetry={fetchCriteria} />
-        ) : criteria.length === 0 ? (
+        ) : !roundCheck.roundId ? null : criteria.length === 0 ? (
           <p className="py-10 text-center text-sm text-slate-400">
             Chưa có tiêu chí cho vòng này.
           </p>
