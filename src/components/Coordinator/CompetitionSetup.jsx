@@ -13,8 +13,8 @@ import axiosInstance from "../../services/axiosInstance";
 // ---------------------------------------------------------------------------
 // Constants & helpers (preserved from originals)
 // ---------------------------------------------------------------------------
-const EVENT_STATUS_OPTIONS = ["Draft", "Open", "Ongoing", "Closed"];
-const ROUND_STATUS_OPTIONS = ["Upcoming", "Active", "Scoring", "Completed"];
+const EVENT_STATUS_OPTIONS = ["Draft", "Registration", "Active", "Completed"];
+const ROUND_STATUS_OPTIONS = ["Upcoming", "Active", "Scoring", "Closed"];
 
 const eventStatusTone = (s) =>
   s === "Ongoing"
@@ -34,7 +34,13 @@ const roundStatusTone = (s) =>
         ? "success"
         : "neutral";
 
-const EVENT_EMPTY = { name: "", description: "", startDate: "", endDate: "", status: "Draft" };
+const EVENT_EMPTY = {
+  name: "",
+  description: "",
+  startDate: "",
+  endDate: "",
+  status: "Draft",
+};
 const TRACK_EMPTY = { name: "", description: "", maxTeams: "", eventId: "" };
 const ROUND_EMPTY = {
   trackId: "",
@@ -150,7 +156,8 @@ export function CompetitionSetup() {
         [eventId]: {
           data: [],
           loading: false,
-          error: err?.response?.data?.message || "Không thể tải danh sách track.",
+          error:
+            err?.response?.data?.message || "Không thể tải danh sách track.",
         },
       }));
     }
@@ -308,9 +315,7 @@ export function CompetitionSetup() {
       await fetchEvents();
       closeEventModal();
     } catch (err) {
-      setEventFormError(
-        err?.response?.data?.message || "Cập nhật thất bại.",
-      );
+      setEventFormError(err?.response?.data?.message || "Cập nhật thất bại.");
     } finally {
       setEventSaving(false);
     }
@@ -324,9 +329,7 @@ export function CompetitionSetup() {
       await fetchEvents();
       closeEventModal();
     } catch (err) {
-      setEventFormError(
-        err?.response?.data?.message || "Xóa thất bại.",
-      );
+      setEventFormError(err?.response?.data?.message || "Xóa thất bại.");
     } finally {
       setEventSaving(false);
     }
@@ -383,7 +386,7 @@ export function CompetitionSetup() {
     }
     setTrackSaving(true);
     try {
-      await axiosInstance.post("/tracks", {
+      await axiosInstance.post("/api/tracks", {
         name: trackForm.name.trim(),
         description: trackForm.description.trim(),
         maxTeams: Number(trackForm.maxTeams),
@@ -392,9 +395,7 @@ export function CompetitionSetup() {
       await fetchTracksForEvent(trackForm.eventId);
       closeTrackModal();
     } catch (err) {
-      setTrackFormError(
-        err?.response?.data?.message || "Tạo track thất bại.",
-      );
+      setTrackFormError(err?.response?.data?.message || "Tạo track thất bại.");
     } finally {
       setTrackSaving(false);
     }
@@ -409,7 +410,7 @@ export function CompetitionSetup() {
     }
     setTrackSaving(true);
     try {
-      await axiosInstance.put(`/tracks/${selectedTrack.id}`, {
+      await axiosInstance.put(`/api/tracks/${selectedTrack.id}`, {
         name: trackForm.name.trim(),
         description: trackForm.description.trim(),
         maxTeams: Number(trackForm.maxTeams),
@@ -496,9 +497,7 @@ export function CompetitionSetup() {
       await fetchRoundsForTrack(roundForm.trackId);
       closeRoundModal();
     } catch (err) {
-      setRoundFormError(
-        err?.response?.data?.message || "Tạo round thất bại.",
-      );
+      setRoundFormError(err?.response?.data?.message || "Tạo round thất bại.");
     } finally {
       setRoundSaving(false);
     }
@@ -865,11 +864,8 @@ export function CompetitionSetup() {
                                               {round.name}
                                             </h4>
                                             <p className="text-xs text-slate-500 mt-0.5">
-                                              {formatDateTime(
-                                                round.startTime,
-                                              )}{" "}
-                                              →{" "}
-                                              {formatDateTime(round.endTime)}
+                                              {formatDateTime(round.startTime)}{" "}
+                                              → {formatDateTime(round.endTime)}
                                             </p>
                                             <p className="text-xs text-slate-500 mt-0.5">
                                               Suất đi tiếp:{" "}
@@ -897,10 +893,7 @@ export function CompetitionSetup() {
                                             <CoordinatorActionButton
                                               icon={icons.Edit3}
                                               onClick={() =>
-                                                openEditRound(
-                                                  round,
-                                                  track.id,
-                                                )
+                                                openEditRound(round, track.id)
                                               }
                                             >
                                               Edit
@@ -908,10 +901,7 @@ export function CompetitionSetup() {
                                             <CoordinatorActionButton
                                               icon={icons.SlidersHorizontal}
                                               onClick={() =>
-                                                openRoundStatus(
-                                                  round,
-                                                  track.id,
-                                                )
+                                                openRoundStatus(round, track.id)
                                               }
                                             >
                                               Status

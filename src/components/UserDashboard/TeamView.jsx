@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { createPortal } from "react-dom";
 import { useSelector } from "react-redux";
 import axiosInstance from "../../services/axiosInstance";
 import {
@@ -18,7 +17,6 @@ import {
   Hash,
   School,
   Lock,
-  X,
   Edit2,
 } from "lucide-react";
 import teamService from "../../services/teamService";
@@ -213,13 +211,20 @@ function MemberCard({ index, member, errors, onChange, onRemove }) {
 }
 
 // ---------------------------------------------------------------------------
-function TeamCreateForm({ onCreated }) {
+function TeamCreateForm({
+  onCreated,
+  eventId,
+  tracks,
+  tracksLoading,
+  tracksError,
+}) {
   const { user } = useSelector((s) => s.auth);
 
   const [teamForm, setTeamForm] = useState({
     teamName: "",
     university: "",
     githubRepoLink: "",
+    trackId: "",
   });
   const [leaderExtra, setLeaderExtra] = useState({
     studentCode: "",
@@ -280,6 +285,10 @@ function TeamCreateForm({ onCreated }) {
       te.university = "Bắt buộc";
       valid = false;
     }
+    if (!teamForm.trackId) {
+      te.trackId = "Vui lòng chọn track";
+      valid = false;
+    }
     setTeamErrors(te);
 
     const le = {};
@@ -329,7 +338,7 @@ function TeamCreateForm({ onCreated }) {
       const teamPayload = {
         teamName: teamForm.teamName.trim(),
         university: teamForm.university.trim(),
-        trackId: 2, // TODO: Coordinator sẽ phân track sau
+        trackId: Number(teamForm.trackId),
         githubRepoLink: teamForm.githubRepoLink.trim() || null,
         fullName: user?.username || "",
         studentCode: leaderExtra.studentCode.trim(),
@@ -435,6 +444,93 @@ function TeamCreateForm({ onCreated }) {
           value={teamForm.githubRepoLink}
           onChange={(e) => handleTeamChange("githubRepoLink", e.target.value)}
         />
+
+        {/* Track selector */}
+        <div>
+          <label className="block text-xs font-bold text-slate-800 mb-1.5 uppercase tracking-wider">
+            Track tham gia <span style={{ color: "#F26F21" }}>*</span>
+          </label>
+          {tracksLoading ? (
+            <div className="flex items-center gap-2 py-2.5 text-xs text-slate-400">
+              <Loader2
+                className="w-4 h-4 animate-spin"
+                style={{ color: "#F26F21" }}
+              />
+              Đang tải danh sách track...
+            </div>
+          ) : tracksError ? (
+            <div
+              className="flex items-center gap-2 p-2.5 rounded-xl text-xs"
+              style={{
+                background: "rgba(239,68,68,0.06)",
+                border: "1px solid rgba(239,68,68,0.2)",
+                color: "#dc2626",
+              }}
+            >
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              {tracksError}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {tracks.map((track) => {
+                const selected = String(teamForm.trackId) === String(track.id);
+                return (
+                  <button
+                    key={track.id}
+                    type="button"
+                    onClick={() => {
+                      handleTeamChange("trackId", track.id);
+                    }}
+                    className="flex items-start gap-3 p-3 rounded-xl text-left transition-all duration-150"
+                    style={{
+                      border: selected
+                        ? "1.5px solid #F26F21"
+                        : "1px solid #E5E7EB",
+                      background: selected
+                        ? "rgba(242,111,33,0.06)"
+                        : "#FFFFFF",
+                      boxShadow: selected
+                        ? "0 0 0 3px rgba(242,111,33,0.12)"
+                        : "none",
+                    }}
+                  >
+                    <div
+                      className="w-4 h-4 rounded-full flex-shrink-0 mt-0.5 flex items-center justify-center"
+                      style={{
+                        border: selected
+                          ? "5px solid #F26F21"
+                          : "1.5px solid #94A3B8",
+                        background: selected ? "#FFF" : "#FFF",
+                      }}
+                    />
+                    <div>
+                      <p
+                        className="text-xs font-bold"
+                        style={{ color: selected ? "#F26F21" : "#111827" }}
+                      >
+                        {track.name || track.trackName}
+                      </p>
+                      {track.description && (
+                        <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                          {track.description}
+                        </p>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {teamErrors.trackId && (
+            <p
+              className="mt-1 text-xs flex items-center gap-1"
+              style={{ color: "#ef4444" }}
+            >
+              <AlertCircle className="w-3 h-3 flex-shrink-0" />
+              {teamErrors.trackId}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Section 2: Leader info */}
@@ -870,9 +966,9 @@ function MemberModal({ teamId, member, onClose, onSaved }) {
     }
   };
 
-  return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4 animate-fade-in">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4 animate-modal-scale">
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4">
+      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-base font-bold text-slate-900">
             {isEdit ? "Sửa thành viên" : "Thêm thành viên"}
@@ -881,7 +977,7 @@ function MemberModal({ teamId, member, onClose, onSaved }) {
             onClick={onClose}
             className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"
           >
-            <X className="w-4 h-4" />
+            <AlertCircle className="w-4 h-4" />
           </button>
         </div>
 
@@ -966,8 +1062,7 @@ function MemberModal({ teamId, member, onClose, onSaved }) {
           </button>
         </div>
       </div>
-    </div>,
-    document.body,
+    </div>
   );
 }
 
@@ -1014,9 +1109,10 @@ function EditTeamModal({ team, onClose, onSaved }) {
       setSaving(false);
     }
   };
-  return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4 animate-fade-in">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4 animate-modal-scale">
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4">
+      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-base font-bold text-slate-900">
             Sửa thông tin Team
@@ -1025,7 +1121,7 @@ function EditTeamModal({ team, onClose, onSaved }) {
             onClick={onClose}
             className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"
           >
-            <X className="w-4 h-4" />
+            <AlertCircle className="w-4 h-4" />
           </button>
         </div>
 
@@ -1108,8 +1204,7 @@ function EditTeamModal({ team, onClose, onSaved }) {
           </button>
         </div>
       </div>
-    </div>,
-    document.body,
+    </div>
   );
 }
 
@@ -1126,7 +1221,9 @@ function TeamInfoView({ team: initialTeam }) {
 
   const refreshTeam = async () => {
     try {
-      const res = await axiosInstance.get("/api/teams/my-team");
+      const res = await axiosInstance.get(
+        `/api/teams/my-team/?eventId=${eventId}`,
+      );
       setTeam(res.data?.data || team);
     } catch {}
   };
@@ -1449,44 +1546,42 @@ function TeamInfoView({ team: initialTeam }) {
       )}
 
       {/* Delete confirm */}
-      {deleteTarget &&
-        createPortal(
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4 animate-fade-in">
-            <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl space-y-4 animate-modal-scale">
-              <h3 className="text-base font-bold text-slate-900">
-                Xóa thành viên?
-              </h3>
-              <p className="text-sm text-slate-600">
-                Bạn có chắc muốn xóa <strong>{deleteTarget.fullName}</strong>{" "}
-                khỏi team?
-              </p>
-              {actionError && (
-                <p className="text-xs text-red-500">{actionError}</p>
-              )}
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => setDeleteTarget(null)}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600"
-                  style={{ background: "#F3F4F6", border: "1px solid #E5E7EB" }}
-                >
-                  Huỷ
-                </button>
-                <button
-                  onClick={handleDelete}
-                  disabled={deleting}
-                  className="px-4 py-2 rounded-xl text-sm font-bold text-white"
-                  style={{
-                    background: deleting ? "#fca5a5" : "#ef4444",
-                    cursor: deleting ? "not-allowed" : "pointer",
-                  }}
-                >
-                  {deleting ? "Đang xóa..." : "Xác nhận xóa"}
-                </button>
-              </div>
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl space-y-4">
+            <h3 className="text-base font-bold text-slate-900">
+              Xóa thành viên?
+            </h3>
+            <p className="text-sm text-slate-600">
+              Bạn có chắc muốn xóa <strong>{deleteTarget.fullName}</strong> khỏi
+              team?
+            </p>
+            {actionError && (
+              <p className="text-xs text-red-500">{actionError}</p>
+            )}
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600"
+                style={{ background: "#F3F4F6", border: "1px solid #E5E7EB" }}
+              >
+                Huỷ
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="px-4 py-2 rounded-xl text-sm font-bold text-white"
+                style={{
+                  background: deleting ? "#fca5a5" : "#ef4444",
+                  cursor: deleting ? "not-allowed" : "pointer",
+                }}
+              >
+                {deleting ? "Đang xóa..." : "Xác nhận xóa"}
+              </button>
             </div>
-          </div>,
-          document.body,
-        )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1497,19 +1592,58 @@ export function TeamView() {
   const [team, setTeam] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // eventId + tracks — fetched here so both TeamView and TeamCreateForm can use them
+  const [eventId, setEventId] = useState(null);
+  const [tracks, setTracks] = useState([]);
+  const [tracksLoading, setTracksLoading] = useState(true);
+  const [tracksError, setTracksError] = useState("");
+
+  // Step 1: fetch active event + tracks
   useEffect(() => {
-    axiosInstance
-      .get("/api/teams/my-team")
-      .then((res) => setTeam(res.data?.data || false))
-      .catch((err) => {
-        // 404 = chưa có team → show form
-        if (err?.response?.status === 404) setTeam(false);
-        else setTeam(false); // lỗi khác cũng show form, tránh block user
-      })
-      .finally(() => setLoading(false));
+    const fetchActiveEvent = async () => {
+      setTracksLoading(true);
+      setTracksError("");
+      try {
+        const eventRes = await axiosInstance.get("/api/events/active");
+        const activeEventId = eventRes.data?.data?.id || eventRes.data?.id;
+        if (!activeEventId)
+          throw new Error("Không tìm thấy event đang diễn ra.");
+        setEventId(activeEventId);
+
+        const tracksRes = await axiosInstance.get(
+          `/api/events/${activeEventId}/tracks`,
+        );
+        const trackList = tracksRes.data?.data || tracksRes.data || [];
+        setTracks(trackList);
+      } catch (err) {
+        setTracksError(
+          err?.response?.data?.message ||
+            err?.message ||
+            "Không thể tải danh sách track.",
+        );
+      } finally {
+        setTracksLoading(false);
+      }
+    };
+
+    fetchActiveEvent();
   }, []);
 
-  if (loading)
+  // Step 2: once eventId is ready, fetch my-team
+  useEffect(() => {
+    if (!eventId) return;
+    setLoading(true);
+    axiosInstance
+      .get(`/api/teams/my-team?eventId=${eventId}`)
+      .then((res) => setTeam(res.data?.data || false))
+      .catch((err) => {
+        if (err?.response?.status === 404) setTeam(false);
+        else setTeam(false);
+      })
+      .finally(() => setLoading(false));
+  }, [eventId]);
+
+  if (tracksLoading || loading)
     return (
       <div className="flex items-center justify-center py-20 gap-3 text-sm text-slate-400">
         <Loader2
@@ -1520,6 +1654,15 @@ export function TeamView() {
       </div>
     );
 
-  if (!team) return <TeamCreateForm onCreated={setTeam} />;
+  if (!team)
+    return (
+      <TeamCreateForm
+        onCreated={setTeam}
+        eventId={eventId}
+        tracks={tracks}
+        tracksLoading={tracksLoading}
+        tracksError={tracksError}
+      />
+    );
   return <TeamInfoView team={team} />;
 }
