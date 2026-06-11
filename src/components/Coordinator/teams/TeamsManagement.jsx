@@ -8,7 +8,7 @@ import {
   icons,
 } from "../CoordinatorUI";
 import { UserPlus, AlertCircle, Loader2, CheckCircle } from "lucide-react";
-import axiosInstance from "../../../services/axiosInstance";
+import teamService from "../../../services/teamService";
 
 const extIcons = { ...icons, UserPlus, AlertCircle, Loader2, CheckCircle };
 
@@ -124,15 +124,14 @@ export function TeamsManagement() {
       setLoading(true);
       setApiError("");
       try {
-        const params = new URLSearchParams();
-        params.append("pageNumber", p);
-        params.append("pageSize", pageSize);
-        if (statusFilter !== "All") params.append("status", statusFilter);
+        const params = {
+          pageNumber: p,
+          pageSize,
+        };
+        if (statusFilter !== "All") params.status = statusFilter;
         // TODO: thêm trackId filter khi có track selector
 
-        const res = await axiosInstance.get(
-          `/api/admin/teams?${params.toString()}`,
-        );
+        const res = await teamService.getAdminTeams(params);
         const data = res.data?.data;
         setTeams(data?.items || []);
         setTotalPages(data?.totalPages || 1);
@@ -164,7 +163,7 @@ export function TeamsManagement() {
     setActionLoading(team.id);
     setActionError("");
     try {
-      await axiosInstance.put(`/api/teams/${team.id}/approve`);
+      await teamService.approveTeam(team.id);
       setTeams((prev) =>
         prev.map((t) => (t.id === team.id ? { ...t, status: "Approved" } : t)),
       );
@@ -179,9 +178,10 @@ export function TeamsManagement() {
     setActionLoading(disqualifyTeam.id);
     setActionError("");
     try {
-      await axiosInstance.put(`/api/teams/${disqualifyTeam.id}/disqualify`, {
-        reason: disqualifyReason.trim() || undefined,
-      });
+      await teamService.disqualifyTeam(
+        disqualifyTeam.id,
+        disqualifyReason.trim() || undefined,
+      );
       setTeams((prev) =>
         prev.map((t) =>
           t.id === disqualifyTeam.id ? { ...t, status: "Disqualified" } : t,
@@ -200,9 +200,7 @@ export function TeamsManagement() {
     setActionLoading(assignMentorTeam.id);
     setActionError("");
     try {
-      await axiosInstance.put(`/api/teams/${assignMentorTeam.id}/mentor`, {
-        mentorId: selectedMentorId,
-      });
+      await teamService.assignMentor(assignMentorTeam.id, selectedMentorId);
       const mentor = MOCK_MENTORS.find((m) => m.id === selectedMentorId);
       setTeams((prev) =>
         prev.map((t) =>

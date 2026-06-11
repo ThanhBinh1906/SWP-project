@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { MentorBadge } from "../../shared/MentorBadge";
 import { MentorProgressBar } from "../../shared/MentorProgressBar";
@@ -9,6 +10,14 @@ import { TopicSection } from "./TopicSection";
 
 export function TeamDetailModal({ team, onClose }) {
   const { X } = mentorIcons;
+
+  useEffect(() => {
+    if (!team) return;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [team]);
 
   if (!team) return null;
   return createPortal(

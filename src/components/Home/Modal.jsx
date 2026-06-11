@@ -27,19 +27,19 @@ export default function Modal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 fade-in-up"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#04060A]/80 backdrop-blur-md animate-fade-in"
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
     >
       <button
         type="button"
-        className="absolute inset-0 bg-[#04060A]/80 backdrop-blur-md transition-opacity duration-300"
+        className="absolute inset-0 transition-opacity duration-300"
         onClick={onClose}
         aria-label="Close"
       />
       <div
-        className={`relative w-full ${maxWidth} max-h-[90vh] flex flex-col rounded-2xl overflow-hidden border border-white/[0.08] bg-[#0A0C14] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)]`}
+        className={`relative w-full ${maxWidth} max-h-[90vh] flex flex-col rounded-2xl overflow-hidden border border-white/[0.08] bg-[#0A0C14] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)] animate-modal-scale`}
       >
         <div className="flex-shrink-0 flex items-start justify-between gap-4 px-6 pt-6 pb-4 border-b border-white/[0.06]">
           <div className="space-y-1">

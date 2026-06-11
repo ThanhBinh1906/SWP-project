@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
   Activity,
@@ -303,6 +303,13 @@ export function CoordinatorTable({
   );
 }
 export function ModalShell({ title, children, onClose, actions }) {
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4 animate-fade-in">
       <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl animate-modal-scale">

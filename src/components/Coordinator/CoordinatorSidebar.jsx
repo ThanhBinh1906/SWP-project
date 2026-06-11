@@ -26,10 +26,8 @@ const navItems = [
     icon: icons.SlidersHorizontal,
   },
   { id: "topics", label: "Topics", labelVi: "Đề tài", icon: icons.Lightbulb },
-  { id: "users", label: "Users", labelVi: "Người dùng", icon: icons.Users },
+  { id: "accounts", label: "Accounts", labelVi: "Tài khoản", icon: icons.Users },
   { id: "teams", label: "Teams", labelVi: "Đội thi", icon: icons.UserRoundCog },
-  { id: "mentors", label: "Mentors", labelVi: "Cố vấn", icon: icons.Handshake },
-  { id: "judges", label: "Judges", labelVi: "Giám khảo", icon: icons.Scale },
   { id: "results", label: "Results", labelVi: "Kết quả", icon: icons.Trophy },
   {
     id: "export",

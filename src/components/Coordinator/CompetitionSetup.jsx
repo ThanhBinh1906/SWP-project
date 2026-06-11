@@ -8,7 +8,7 @@ import {
   icons,
 } from "./CoordinatorUI";
 import { AlertCircle, Loader2, ChevronDown, ChevronRight } from "lucide-react";
-import axiosInstance from "../../services/axiosInstance";
+import eventService from "../../services/eventService";
 
 // ---------------------------------------------------------------------------
 // Constants & helpers (preserved from originals)
@@ -128,7 +128,7 @@ export function CompetitionSetup() {
     setEventsLoading(true);
     setEventsError("");
     try {
-      const res = await axiosInstance.get("/api/events");
+      const res = await eventService.getAll();
       setEvents(res.data?.data || []);
     } catch (err) {
       setEventsError(
@@ -145,7 +145,7 @@ export function CompetitionSetup() {
       [eventId]: { data: [], loading: true, error: "" },
     }));
     try {
-      const res = await axiosInstance.get(`/api/events/${eventId}/tracks`);
+      const res = await eventService.getTracks(eventId);
       setTracksByEvent((prev) => ({
         ...prev,
         [eventId]: { data: res.data?.data || [], loading: false, error: "" },
@@ -169,7 +169,7 @@ export function CompetitionSetup() {
       [trackId]: { data: [], loading: true, error: "" },
     }));
     try {
-      const res = await axiosInstance.get("/api/tracks/rounds");
+      const res = await eventService.getTracksRounds();
       const allTracks = res.data?.data || [];
       const match = allTracks.find(
         (t) => String(t.trackId) === String(trackId),
@@ -278,7 +278,7 @@ export function CompetitionSetup() {
     }
     setEventSaving(true);
     try {
-      await axiosInstance.post("/api/events", {
+      await eventService.create({
         name: eventForm.name.trim(),
         description: eventForm.description.trim(),
         startDate: eventForm.startDate,
@@ -305,7 +305,7 @@ export function CompetitionSetup() {
     }
     setEventSaving(true);
     try {
-      await axiosInstance.put(`/api/events/${selectedEvent.id}`, {
+      await eventService.update(selectedEvent.id, {
         name: eventForm.name.trim(),
         description: eventForm.description.trim(),
         startDate: eventForm.startDate,
@@ -325,7 +325,7 @@ export function CompetitionSetup() {
   const handleDeleteEvent = async () => {
     setEventSaving(true);
     try {
-      await axiosInstance.delete(`/api/events/${selectedEvent.id}`);
+      await eventService.remove(selectedEvent.id);
       await fetchEvents();
       closeEventModal();
     } catch (err) {
@@ -386,7 +386,7 @@ export function CompetitionSetup() {
     }
     setTrackSaving(true);
     try {
-      await axiosInstance.post("/api/tracks", {
+      await eventService.createTrack({
         name: trackForm.name.trim(),
         description: trackForm.description.trim(),
         maxTeams: Number(trackForm.maxTeams),
@@ -410,7 +410,7 @@ export function CompetitionSetup() {
     }
     setTrackSaving(true);
     try {
-      await axiosInstance.put(`/api/tracks/${selectedTrack.id}`, {
+      await eventService.updateTrack(selectedTrack.id, {
         name: trackForm.name.trim(),
         description: trackForm.description.trim(),
         maxTeams: Number(trackForm.maxTeams),
@@ -486,7 +486,7 @@ export function CompetitionSetup() {
     }
     setRoundSaving(true);
     try {
-      await axiosInstance.post("/api/rounds", {
+      await eventService.createRound({
         trackId: Number(roundForm.trackId),
         name: roundForm.name.trim(),
         orderIndex: Number(roundForm.orderIndex) || 1,
@@ -512,7 +512,7 @@ export function CompetitionSetup() {
     }
     setRoundSaving(true);
     try {
-      await axiosInstance.put(`/api/rounds/${selectedRound.roundId}`, {
+      await eventService.updateRound(selectedRound.roundId, {
         name: roundForm.name.trim(),
         orderIndex: Number(roundForm.orderIndex) || 1,
         startTime: new Date(roundForm.startTime).toISOString(),
@@ -535,9 +535,7 @@ export function CompetitionSetup() {
     if (!roundStatusValue) return;
     setRoundSaving(true);
     try {
-      await axiosInstance.put(`/api/rounds/${selectedRound.roundId}/status`, {
-        status: roundStatusValue,
-      });
+      await eventService.updateRoundStatus(selectedRound.roundId, roundStatusValue);
       await fetchRoundsForTrack(selectedRound.trackId);
       closeRoundModal();
     } catch (err) {

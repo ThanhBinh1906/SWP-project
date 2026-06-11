@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useSelector } from "react-redux";
-import axiosInstance from "../../services/axiosInstance";
+import trackService from "../../services/trackService";
 import {
   Users,
   Github,
@@ -29,6 +30,7 @@ const EMPTY_MEMBER = {
   studentCode: "",
   email: "",
   phone: "",
+  university: "",
   isFPTStudent: false,
 };
 
@@ -905,6 +907,13 @@ function MemberModal({ teamId, member, onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
   const [apiError, setApiError] = useState("");
 
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
   const handleChange = (field, value) => {
     setForm((p) => ({ ...p, [field]: value }));
     if (errors[field]) setErrors((p) => ({ ...p, [field]: "" }));
@@ -938,6 +947,7 @@ function MemberModal({ teamId, member, onClose, onSaved }) {
       else if (form.phone.trim().length > 15)
         e.phone = "Số điện thoại tối đa 15 ký tự.";
     }
+    if (!form.university?.trim()) e.university = "Trường không được để trống.";
     setErrors(e);
     return !Object.keys(e).length;
   };
@@ -951,6 +961,7 @@ function MemberModal({ teamId, member, onClose, onSaved }) {
         studentCode: form.studentCode.trim(),
         email: form.email.trim(),
         phone: form.phone.trim(),
+        university: form.university.trim(),
         isFPTStudent: form.isFPTStudent,
       };
       if (isEdit) {
@@ -966,9 +977,9 @@ function MemberModal({ teamId, member, onClose, onSaved }) {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4 animate-fade-in">
+      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4 animate-modal-scale">
         <div className="flex items-center justify-between">
           <h3 className="text-base font-bold text-slate-900">
             {isEdit ? "Sửa thành viên" : "Thêm thành viên"}
@@ -1034,6 +1045,15 @@ function MemberModal({ teamId, member, onClose, onSaved }) {
             onChange={(e) => handleChange("phone", e.target.value)}
             error={errors.phone}
           />
+          <InputField
+            label="Trường"
+            required
+            icon={School}
+            placeholder="FPT University"
+            value={form.university}
+            onChange={(e) => handleChange("university", e.target.value)}
+            error={errors.university}
+          />
         </div>
 
         <FPTCheckbox
@@ -1062,7 +1082,8 @@ function MemberModal({ teamId, member, onClose, onSaved }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -1078,6 +1099,13 @@ function EditTeamModal({ team, onClose, onSaved }) {
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [apiError, setApiError] = useState("");
+
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
 
   const handleChange = (field, value) => {
     setForm((p) => ({ ...p, [field]: value }));
@@ -1110,9 +1138,9 @@ function EditTeamModal({ team, onClose, onSaved }) {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4 animate-fade-in">
+      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4 animate-modal-scale">
         <div className="flex items-center justify-between">
           <h3 className="text-base font-bold text-slate-900">
             Sửa thông tin Team
@@ -1204,7 +1232,8 @@ function EditTeamModal({ team, onClose, onSaved }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -1217,13 +1246,22 @@ function TeamInfoView({ team: initialTeam }) {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [actionError, setActionError] = useState("");
+
+  useEffect(() => {
+    if (deleteTarget) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [deleteTarget]);
   const [editTeamModal, setEditTeamModal] = useState(false);
 
   const refreshTeam = async () => {
     try {
-      const res = await axiosInstance.get(
-        `/api/teams/my-team/?eventId=${eventId}`,
-      );
+      const res = await teamService.getMyTeam(eventId);
       setTeam(res.data?.data || team);
     } catch {}
   };
@@ -1546,42 +1584,44 @@ function TeamInfoView({ team: initialTeam }) {
       )}
 
       {/* Delete confirm */}
-      {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl space-y-4">
-            <h3 className="text-base font-bold text-slate-900">
-              Xóa thành viên?
-            </h3>
-            <p className="text-sm text-slate-600">
-              Bạn có chắc muốn xóa <strong>{deleteTarget.fullName}</strong> khỏi
-              team?
-            </p>
-            {actionError && (
-              <p className="text-xs text-red-500">{actionError}</p>
-            )}
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setDeleteTarget(null)}
-                className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600"
-                style={{ background: "#F3F4F6", border: "1px solid #E5E7EB" }}
-              >
-                Huỷ
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="px-4 py-2 rounded-xl text-sm font-bold text-white"
-                style={{
-                  background: deleting ? "#fca5a5" : "#ef4444",
-                  cursor: deleting ? "not-allowed" : "pointer",
-                }}
-              >
-                {deleting ? "Đang xóa..." : "Xác nhận xóa"}
-              </button>
+      {deleteTarget &&
+        createPortal(
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4 animate-fade-in">
+            <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl space-y-4 animate-modal-scale">
+              <h3 className="text-base font-bold text-slate-900">
+                Xóa thành viên?
+              </h3>
+              <p className="text-sm text-slate-600">
+                Bạn có chắc muốn xóa <strong>{deleteTarget.fullName}</strong>{" "}
+                khỏi team?
+              </p>
+              {actionError && (
+                <p className="text-xs text-red-500">{actionError}</p>
+              )}
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setDeleteTarget(null)}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600"
+                  style={{ background: "#F3F4F6", border: "1px solid #E5E7EB" }}
+                >
+                  Huỷ
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="px-4 py-2 rounded-xl text-sm font-bold text-white"
+                  style={{
+                    background: deleting ? "#fca5a5" : "#ef4444",
+                    cursor: deleting ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {deleting ? "Đang xóa..." : "Xác nhận xóa"}
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
@@ -1592,49 +1632,40 @@ export function TeamView() {
   const [team, setTeam] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // eventId + tracks — fetched here so both TeamView and TeamCreateForm can use them
-  const [eventId, setEventId] = useState(null);
+  // Read eventId from Redux store
+  const eventId = useSelector((s) => s.event.activeEventId);
   const [tracks, setTracks] = useState([]);
   const [tracksLoading, setTracksLoading] = useState(true);
   const [tracksError, setTracksError] = useState("");
 
-  // Step 1: fetch active event + tracks
+  // Step 1: fetch tracks when eventId is ready
   useEffect(() => {
-    const fetchActiveEvent = async () => {
+    if (!eventId) return;
+    const fetchTracks = async () => {
       setTracksLoading(true);
       setTracksError("");
       try {
-        const eventRes = await axiosInstance.get("/api/events/active");
-        const activeEventId = eventRes.data?.data?.id || eventRes.data?.id;
-        if (!activeEventId)
-          throw new Error("Không tìm thấy event đang diễn ra.");
-        setEventId(activeEventId);
-
-        const tracksRes = await axiosInstance.get(
-          `/api/events/${activeEventId}/tracks`,
-        );
+        const tracksRes = await trackService.getByEvent(eventId);
         const trackList = tracksRes.data?.data || tracksRes.data || [];
         setTracks(trackList);
       } catch (err) {
         setTracksError(
-          err?.response?.data?.message ||
-            err?.message ||
-            "Không thể tải danh sách track.",
+          err?.response?.data?.message || "Không thể tải danh sách track.",
         );
       } finally {
         setTracksLoading(false);
       }
     };
 
-    fetchActiveEvent();
-  }, []);
+    fetchTracks();
+  }, [eventId]);
 
   // Step 2: once eventId is ready, fetch my-team
   useEffect(() => {
     if (!eventId) return;
     setLoading(true);
-    axiosInstance
-      .get(`/api/teams/my-team?eventId=${eventId}`)
+    teamService
+      .getMyTeam(eventId)
       .then((res) => setTeam(res.data?.data || false))
       .catch((err) => {
         if (err?.response?.status === 404) setTeam(false);

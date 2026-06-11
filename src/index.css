@@ -207,3 +207,11 @@ div.border-slate-200:focus-within {
   box-shadow: 0 0 0 3px rgba(242, 111, 33, 0.18) !important;
 }
 
+/* 9. Global focus outline reset to prevent layout shifts */
+input:focus,
+select:focus,
+textarea:focus,
+button:focus {
+  outline: none !important;
+}
+

@@ -2,7 +2,10 @@ import api from "./axiosInstance";
 
 const teamService = {
   createTeam: (data) => api.post("/api/teams", data),
-  getMyTeam: () => api.get("/api/teams/my-team"), // TODO: khi BE có
+  getMyTeam: (eventId) =>
+    api.get(
+      eventId ? `/api/teams/my-team?eventId=${eventId}` : "/api/teams/my-team"
+    ),
   getById: (id) => api.get(`/api/teams/${id}`),
   updateTeam: (id, data) => api.put(`/api/teams/${id}`, data),
 

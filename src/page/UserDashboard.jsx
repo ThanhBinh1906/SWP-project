@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchActiveEvent } from "../store/eventSlice";
+import { Loader2 } from "lucide-react";
 import { Sidebar } from "../components/UserDashboard/Sidebar";
 import { Header } from "../components/UserDashboard/Header";
 import { ChallengesView } from "../components/UserDashboard/ChallengesView";
@@ -23,6 +26,27 @@ const viewTitles = {
 export default function UserDashboard() {
   const [activeNav, setActiveNav] = useState("challenges");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const dispatch = useDispatch();
+  const { activeEventId, loading } = useSelector((s) => s.event);
+
+  useEffect(() => {
+    if (activeEventId === null) {
+      dispatch(fetchActiveEvent());
+    }
+  }, [dispatch, activeEventId]);
+
+  if (loading) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-[#0B0E14] text-white">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-[#F26F21]" />
+          <p className="text-sm font-semibold tracking-wider text-slate-300 uppercase">
+            Đang tải thông tin sự kiện...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

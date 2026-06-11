@@ -6,10 +6,8 @@ import { DashboardOverview } from "./dashboard/DashboardOverview";
 import { CompetitionSetup } from "./CompetitionSetup";
 import { CriteriaManagement } from "./criteria/CriteriaManagement";
 import { TopicsManagement } from "./topics/TopicsManagement";
-import { UsersManagement } from "./users/UsersManagement";
 import { TeamsManagement } from "./teams/TeamsManagement";
-import { MentorsManagement } from "./mentors/MentorsManagement";
-import { JudgesManagement } from "./judges/JudgesManagement";
+import { AccountsManagement } from "./account/AccountManagement";
 import { ResultsManagement } from "./results/ResultsManagement";
 import { ExportManagement } from "./export/ExportManagement";
 import { AuditLog } from "./audit/AuditLog";
@@ -31,21 +29,13 @@ const viewTitles = {
     title: "Topic Management",
     sub: "Manage challenge topics, attachments, and round associations",
   },
-  users: {
-    title: "User Approval Management",
-    sub: "Review pending leaders and manage approval decisions",
+  accounts: {
+    title: "Account Management",
+    sub: "Manage participants, mentors, and judges in one place",
   },
   teams: {
     title: "Team Approval Management",
     sub: "Approve teams, review details, and manage disqualification",
-  },
-  mentors: {
-    title: "Mentor Assignment",
-    sub: "Assign mentors to tracks and teams while monitoring workload",
-  },
-  judges: {
-    title: "Judge Assignment",
-    sub: "Assign judges to rounds and manage guest judge participation",
   },
   results: {
     title: "Result Finalization",
@@ -66,10 +56,8 @@ const views = {
   "competition-setup": CompetitionSetup,
   criteria: CriteriaManagement,
   topics: TopicsManagement,
-  users: UsersManagement,
+  accounts: AccountsManagement,
   teams: TeamsManagement,
-  mentors: MentorsManagement,
-  judges: JudgesManagement,
   results: ResultsManagement,
   export: ExportManagement,
   audit: AuditLog,

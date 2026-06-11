@@ -1,8 +1,17 @@
+import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { judgeIcons } from "./judgeIcons";
 
 export function JudgeModal({ title, subtitle, children, footer, onClose, maxWidth = "max-w-3xl" }) {
   const { X } = judgeIcons;
+
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4 animate-fade-in">
       <div className={`max-h-[90vh] w-full ${maxWidth} overflow-y-auto rounded-2xl bg-white shadow-2xl animate-modal-scale`}>
