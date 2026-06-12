@@ -242,7 +242,7 @@ export function TeamsManagement() {
         <div>
           <p className="font-bold text-slate-900">{row.teamName}</p>
           <p className="text-xs text-slate-500 truncate max-w-48">
-            {row.university} • {row.members?.length ?? 0} members
+            {row.university} • {row.memberCount ?? 0} members
           </p>
         </div>
       );
@@ -425,8 +425,11 @@ export function TeamsManagement() {
             />
             <InfoRow
               label="Thành viên"
-              value={`${detailTeam.members?.length ?? 0} người`}
+              value={`${detailTeam.memberCount ?? 0} người`}
             />
+            {detailTeam.disqualifyReason && (
+              <InfoRow label="Lý do loại" value={detailTeam.disqualifyReason} />
+            )}
             <InfoRow
               label="Status"
               value={

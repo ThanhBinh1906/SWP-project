@@ -5,10 +5,10 @@ const staffService = {
   create: (eventId, data) => api.post(`/api/events/${eventId}/staff`, data),
   toggleStatus: (eventId, accountId, action, eventRole) =>
     api.put(
-      `/api/events/${eventId}/staff/${accountId}/${action}?eventRole=${eventRole}`
+      `/api/events/${eventId}/staff/${accountId}/${action}?eventRole=${eventRole}`,
     ),
-  assignRound: (roundId, accountId) =>
-    api.post(`/api/rounds/${roundId}/judges`, { accountId }),
+  assignRound: (roundId, judgeId) =>
+    api.post(`/api/rounds/${roundId}/judges`, { judgeId }),
 };
 
 export default staffService;

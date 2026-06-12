@@ -269,7 +269,12 @@ function StaffTab() {
     // action: "activate" | "deactivate"
     setActionLoading(s.accountId + action);
     try {
-      await staffService.toggleStatus(eventId, s.accountId, action, s.eventRole);
+      await staffService.toggleStatus(
+        eventId,
+        s.accountId,
+        action,
+        s.eventRole,
+      );
       await fetchStaff();
     } catch (err) {
       setApiError(err?.response?.data?.message || `${action} thất bại.`);
@@ -289,6 +294,7 @@ function StaffTab() {
       await staffService.assignRound(roundId, assignRoundModal.accountId);
       setAssignRoundModal(null);
       setRoundId("");
+      await fetchStaff(); // refresh list sau khi assign
     } catch (err) {
       setAssignError(err?.response?.data?.message || "Assign thất bại.");
     } finally {

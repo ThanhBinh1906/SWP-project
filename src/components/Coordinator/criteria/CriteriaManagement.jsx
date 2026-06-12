@@ -1,4 +1,5 @@
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect, useCallback, useRef } from "react";
+import * as XLSX from "xlsx";
 import {
   CoordinatorActionButton,
   CoordinatorBadge,
@@ -42,6 +43,14 @@ export function CriteriaManagement() {
   const [apiError, setApiError] = useState("");
 
   const [modal, setModal] = useState(null);
+
+  // Create template state
+  const [templateName, setTemplateName] = useState("");
+  const [templateDesc, setTemplateDesc] = useState("");
+  const [templateItems, setTemplateItems] = useState([]);
+  const [templateFileError, setTemplateFileError] = useState("");
+  const [templateWeightError, setTemplateWeightError] = useState("");
+  const fileInputRef = useRef(null);
   const [form, setForm] = useState(EMPTY_CRITERION);
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [formError, setFormError] = useState("");
@@ -210,6 +219,134 @@ export function CriteriaManagement() {
     }
   };
 
+  // ---------------------------------------------------------------------------
+  // Parse Excel file
+  const handleExcelUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setTemplateFileError("");
+    setTemplateWeightError("");
+    setTemplateItems([]);
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const wb = XLSX.read(evt.target.result, { type: "binary" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
+
+        // Validate columns — case-insensitive match
+        const required = ["name", "maxscore", "weight"];
+        const rawKeys = Object.keys(rows[0] || {});
+        const keysLower = rawKeys.map((k) => k.toLowerCase().trim());
+        const missing = required.filter((r) => !keysLower.includes(r));
+        if (missing.length) {
+          // Show original expected names
+          const missingDisplay = missing.map((m) =>
+            m === "maxscore" ? "maxScore" : m,
+          );
+          setTemplateFileError(
+            `File thiếu cột: ${missingDisplay.join(", ")}. Cần có: name, description, maxScore, weight`,
+          );
+          return;
+        }
+        // Build key map (original case)
+        const keyMap = {};
+        rawKeys.forEach((k) => {
+          keyMap[k.toLowerCase().trim()] = k;
+        });
+
+        // Parse items using keyMap for case-insensitive access
+        const items = rows.map((r) => ({
+          name: String(r[keyMap["name"]] || "").trim(),
+          description: String(r[keyMap["description"]] || "").trim(),
+          maxScore: Number(r[keyMap["maxscore"]] || 10),
+          weight: Number(r[keyMap["weight"]] || 0),
+        }));
+
+        // Validate name
+        const emptyName = items.findIndex((it) => !it.name);
+        if (emptyName >= 0) {
+          setTemplateFileError(
+            `Hàng ${emptyName + 2}: Cột "name" không được để trống.`,
+          );
+          return;
+        }
+
+        // Validate weight sum = 100
+        const totalW = items.reduce((s, it) => s + it.weight, 0);
+        if (Math.abs(totalW - 100) > 0.01) {
+          setTemplateWeightError(
+            `Tổng weight = ${totalW}. Phải đúng bằng 100.`,
+          );
+        }
+
+        setTemplateItems(items);
+      } catch {
+        setTemplateFileError(
+          "Không thể đọc file. Hãy dùng đúng định dạng .xlsx hoặc .xls.",
+        );
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  const handleCreateTemplate = async () => {
+    if (!templateName.trim()) {
+      setFormError("Tên template không được để trống.");
+      return;
+    }
+    if (!templateItems.length) {
+      setFormError("Vui lòng upload file Excel trước.");
+      return;
+    }
+    if (templateFileError) {
+      setFormError(templateFileError);
+      return;
+    }
+    const totalW = templateItems.reduce((s, it) => s + it.weight, 0);
+    if (Math.abs(totalW - 100) > 0.01) {
+      setFormError(`Tổng weight = ${totalW}, phải bằng 100.`);
+      return;
+    }
+
+    setSaving(true);
+    setFormError("");
+    try {
+      await criterionService.createTemplate({
+        name: templateName.trim(),
+        description: templateDesc.trim() || null,
+        items: templateItems,
+      });
+      // Refresh template list
+      const res = await criterionService.getTemplates();
+      setTemplates(res.data?.data || []);
+      setModal(null);
+      setTemplateName("");
+      setTemplateDesc("");
+      setTemplateItems([]);
+      setTemplateFileError("");
+      setTemplateWeightError("");
+    } catch (err) {
+      setFormError(getApiMessage(err, "Tạo template thất bại."));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Download sample Excel
+  const handleDownloadSample = () => {
+    const ws = XLSX.utils.aoa_to_sheet([
+      ["name", "description", "maxScore", "weight"],
+      ["Tính sáng tạo", "Đánh giá ý tưởng độc đáo", 10, 30],
+      ["Kỹ thuật", "Chất lượng code và kiến trúc", 10, 40],
+      ["Trình bày", "Demo và thuyết trình", 10, 30],
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template");
+    XLSX.writeFile(wb, "criterion-template-sample.xlsx");
+  };
+
   return (
     <div className="space-y-6">
       <CoordinatorPanel
@@ -281,6 +418,20 @@ export function CriteriaManagement() {
         icon={icons.SlidersHorizontal}
         actions={
           <>
+            <CoordinatorActionButton
+              icon={icons.Plus}
+              onClick={() => {
+                setTemplateName("");
+                setTemplateDesc("");
+                setTemplateItems([]);
+                setTemplateFileError("");
+                setTemplateWeightError("");
+                setFormError("");
+                setModal("createTemplate");
+              }}
+            >
+              New Template
+            </CoordinatorActionButton>
             <CoordinatorActionButton
               icon={icons.Upload}
               disabled={!roundCheck.roundId}
@@ -447,6 +598,264 @@ export function CriteriaManagement() {
                 </option>
               ))}
             </select>
+          </div>
+        </ModalShell>
+      )}
+      {modal === "createTemplate" && (
+        <ModalShell
+          title="Tạo Criterion Template"
+          onClose={() => setModal(null)}
+          actions={
+            <>
+              <CoordinatorActionButton
+                onClick={() => setModal(null)}
+                disabled={saving}
+              >
+                Huỷ
+              </CoordinatorActionButton>
+              <CoordinatorActionButton
+                variant="primary"
+                disabled={saving}
+                onClick={handleCreateTemplate}
+              >
+                {saving ? "Đang lưu..." : "Tạo Template"}
+              </CoordinatorActionButton>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <FormError msg={formError} />
+
+            {/* Template info */}
+            <div className="space-y-2">
+              <input
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+                placeholder="Tên template *"
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+              />
+              <textarea
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none min-h-14"
+                placeholder="Mô tả (tuỳ chọn)"
+                value={templateDesc}
+                onChange={(e) => setTemplateDesc(e.target.value)}
+              />
+            </div>
+
+            {/* Instructions */}
+            <div
+              className="rounded-xl p-3 space-y-1.5"
+              style={{
+                background: "rgba(242,111,33,0.04)",
+                border: "1px solid rgba(242,111,33,0.15)",
+              }}
+            >
+              <p className="text-xs font-semibold" style={{ color: "#F26F21" }}>
+                Hướng dẫn file Excel
+              </p>
+              <p className="text-xs text-slate-600">
+                File phải có 4 cột theo đúng thứ tự:
+              </p>
+              <div className="rounded-lg overflow-hidden border border-slate-200 text-xs">
+                <table className="w-full">
+                  <thead>
+                    <tr style={{ background: "#F9FAFB" }}>
+                      {["name", "description", "maxScore", "weight"].map(
+                        (h) => (
+                          <th
+                            key={h}
+                            className="px-2 py-1.5 text-left font-bold text-slate-600"
+                          >
+                            {h}
+                          </th>
+                        ),
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style={{ borderTop: "1px solid #F3F4F6" }}>
+                      <td className="px-2 py-1.5 text-slate-500">
+                        Tính sáng tạo
+                      </td>
+                      <td className="px-2 py-1.5 text-slate-500">
+                        Ý tưởng độc đáo
+                      </td>
+                      <td className="px-2 py-1.5 text-slate-500">10</td>
+                      <td className="px-2 py-1.5 text-slate-500">30</td>
+                    </tr>
+                    <tr style={{ borderTop: "1px solid #F3F4F6" }}>
+                      <td className="px-2 py-1.5 text-slate-500">Kỹ thuật</td>
+                      <td className="px-2 py-1.5 text-slate-500">
+                        Chất lượng code
+                      </td>
+                      <td className="px-2 py-1.5 text-slate-500">10</td>
+                      <td className="px-2 py-1.5 text-slate-500">70</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-xs text-slate-500">
+                ⚠️ Tổng cột <strong>weight</strong> phải đúng bằng{" "}
+                <strong>100</strong>.
+              </p>
+              <button
+                onClick={handleDownloadSample}
+                className="text-xs font-semibold flex items-center gap-1 mt-1"
+                style={{ color: "#F26F21" }}
+              >
+                <icons.Download className="w-3 h-3" /> Tải file mẫu
+              </button>
+            </div>
+
+            {/* File upload */}
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                className="hidden"
+                onChange={handleExcelUpload}
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-all"
+                style={{
+                  background: templateItems.length
+                    ? "rgba(34,197,94,0.06)"
+                    : "#F9FAFB",
+                  border: `1px dashed ${templateItems.length ? "#16a34a" : templateFileError ? "#ef4444" : "#D1D5DB"}`,
+                  color: templateItems.length ? "#16a34a" : "#6B7280",
+                }}
+              >
+                <icons.Upload className="w-4 h-4" />
+                {templateItems.length
+                  ? `✓ Đã tải ${templateItems.length} tiêu chí`
+                  : "Chọn file Excel (.xlsx, .xls)"}
+              </button>
+              {templateFileError && (
+                <p className="mt-1.5 text-xs text-red-500 flex items-start gap-1">
+                  <icons.X className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                  {templateFileError}
+                </p>
+              )}
+            </div>
+
+            {/* Weight warning */}
+            {templateWeightError && (
+              <div
+                className="flex items-center gap-2 p-3 rounded-xl text-xs"
+                style={{
+                  background: "rgba(234,179,8,0.08)",
+                  border: "1px solid rgba(234,179,8,0.3)",
+                  color: "#92400e",
+                }}
+              >
+                <icons.SlidersHorizontal className="w-3.5 h-3.5 flex-shrink-0" />
+                {templateWeightError}
+              </div>
+            )}
+
+            {/* Preview items */}
+            {templateItems.length > 0 && !templateFileError && (
+              <div
+                className="rounded-xl overflow-hidden"
+                style={{ border: "1px solid #E5E7EB" }}
+              >
+                <div
+                  className="px-3 py-2 text-xs font-semibold text-slate-600 uppercase tracking-wider"
+                  style={{
+                    background: "#F9FAFB",
+                    borderBottom: "1px solid #E5E7EB",
+                  }}
+                >
+                  Preview ({templateItems.length} tiêu chí)
+                </div>
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr
+                      style={{
+                        background: "#F9FAFB",
+                        borderBottom: "1px solid #E5E7EB",
+                      }}
+                    >
+                      {["Tên", "Max Score", "Weight (%)"].map((h) => (
+                        <th
+                          key={h}
+                          className="px-3 py-2 text-left font-semibold text-slate-500"
+                        >
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {templateItems.map((it, i) => (
+                      <tr
+                        key={i}
+                        style={{
+                          borderBottom:
+                            i < templateItems.length - 1
+                              ? "1px solid #F3F4F6"
+                              : "none",
+                        }}
+                      >
+                        <td className="px-3 py-2 font-medium text-slate-800">
+                          {it.name}
+                        </td>
+                        <td className="px-3 py-2 text-slate-500">
+                          {it.maxScore}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span
+                            className="font-bold"
+                            style={{
+                              color:
+                                Math.abs(
+                                  templateItems.reduce(
+                                    (s, x) => s + x.weight,
+                                    0,
+                                  ) - 100,
+                                ) > 0.01
+                                  ? "#ef4444"
+                                  : "#16a34a",
+                            }}
+                          >
+                            {it.weight}%
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                    <tr
+                      style={{
+                        background: "#F9FAFB",
+                        borderTop: "1px solid #E5E7EB",
+                      }}
+                    >
+                      <td
+                        className="px-3 py-2 font-bold text-slate-700"
+                        colSpan={2}
+                      >
+                        Tổng
+                      </td>
+                      <td
+                        className="px-3 py-2 font-black"
+                        style={{
+                          color:
+                            Math.abs(
+                              templateItems.reduce((s, x) => s + x.weight, 0) -
+                                100,
+                            ) > 0.01
+                              ? "#ef4444"
+                              : "#16a34a",
+                        }}
+                      >
+                        {templateItems.reduce((s, x) => s + x.weight, 0)}%
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </ModalShell>
       )}
