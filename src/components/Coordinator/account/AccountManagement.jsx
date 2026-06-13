@@ -200,7 +200,7 @@ function StaffTab() {
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState("");
-  const [roleFilter, setRoleFilter] = useState("All");
+  const [roleFilter, setRoleFilter] = useState("Mentor");
 
   const [createModal, setCreateModal] = useState(false);
   const [form, setForm] = useState(EMPTY_STAFF_FORM);
@@ -303,25 +303,34 @@ function StaffTab() {
   };
 
   // ---------------------------------------------------------------------------
-  const filtered =
-    roleFilter === "All"
-      ? staff
-      : staff.filter((s) => s.eventRole === roleFilter);
+  const filtered = staff.filter((s) => s.eventRole === roleFilter);
 
-  const columns = [
-    { key: "name", label: "Account" },
-    { key: "eventRole", label: "Role" },
-    { key: "judgeType", label: "Judge Type" },
-    { key: "status", label: "Status" },
-    { key: "actions", label: "Actions" },
-  ];
+  const columns =
+    roleFilter === "Mentor"
+      ? [
+          { key: "name", label: "Account" },
+          { key: "eventRole", label: "Role" },
+          // TODO: thêm cột "Team" khi có GET /api/events/{eventId}/staff trả về teamName
+          { key: "team", label: "Team" },
+          { key: "status", label: "Status" },
+          { key: "actions", label: "Actions" },
+        ]
+      : [
+          { key: "name", label: "Account" },
+          { key: "eventRole", label: "Role" },
+          { key: "judgeType", label: "Judge Type" },
+          // TODO: thêm cột "Round" khi có GET /api/rounds/{id}/judges trả về roundName
+          { key: "round", label: "Round" },
+          { key: "status", label: "Status" },
+          { key: "actions", label: "Actions" },
+        ];
 
   return (
     <div className="space-y-4">
       {/* Filter + Create */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex gap-2">
-          {["All", "Mentor", "Judge"].map((r) => (
+          {["Mentor", "Judge"].map((r) => (
             <button
               key={r}
               onClick={() => setRoleFilter(r)}
