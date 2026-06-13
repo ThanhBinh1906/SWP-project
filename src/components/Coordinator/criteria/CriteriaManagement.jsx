@@ -53,6 +53,7 @@ export function CriteriaManagement() {
   const fileInputRef = useRef(null);
   const [form, setForm] = useState(EMPTY_CRITERION);
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const [deleteTemplateTarget, setDeleteTemplateTarget] = useState(null);
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -335,6 +336,21 @@ export function CriteriaManagement() {
   };
 
   // Download sample Excel
+  const handleDeleteTemplate = async () => {
+    if (!deleteTemplateTarget) return;
+    setSaving(true);
+    try {
+      await criterionService.deleteTemplate(deleteTemplateTarget.id);
+      const res = await criterionService.getTemplates();
+      setTemplates(res.data?.data || []);
+      setDeleteTemplateTarget(null);
+    } catch (err) {
+      setFormError(getApiMessage(err, "Xóa template thất bại."));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleDownloadSample = () => {
     const ws = XLSX.utils.aoa_to_sheet([
       ["name", "description", "maxScore", "weight"],
@@ -586,18 +602,65 @@ export function CriteriaManagement() {
         >
           <div className="space-y-3">
             <FormError msg={formError} />
-            <select
-              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-              value={selectedTemplateId}
-              onChange={(e) => setSelectedTemplateId(e.target.value)}
-            >
-              <option value="">Chọn template</option>
-              {templates.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name} ({t.items?.length ?? 0} items)
-                </option>
-              ))}
-            </select>
+            <div className="space-y-2">
+              {templates.length === 0 ? (
+                <p className="text-sm text-slate-400 text-center py-4">
+                  Chưa có template nào.
+                </p>
+              ) : (
+                templates.map((t) => (
+                  <div
+                    key={t.id}
+                    onClick={() => setSelectedTemplateId(String(t.id))}
+                    className="flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer transition-all"
+                    style={{
+                      background:
+                        selectedTemplateId === String(t.id)
+                          ? "rgba(242,111,33,0.08)"
+                          : "#F9FAFB",
+                      border: `1px solid ${selectedTemplateId === String(t.id) ? "#F26F21" : "#E5E7EB"}`,
+                    }}
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">
+                        {t.name}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {t.items?.length ?? 0} tiêu chí •{" "}
+                        {t.description || "Không có mô tả"}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {selectedTemplateId === String(t.id) && (
+                        <icons.CheckCircle2
+                          className="w-4 h-4 flex-shrink-0"
+                          style={{ color: "#F26F21" }}
+                        />
+                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteTemplateTarget(t);
+                        }}
+                        className="w-6 h-6 rounded-lg flex items-center justify-center transition-all flex-shrink-0"
+                        style={{ color: "#9CA3AF" }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background =
+                            "rgba(239,68,68,0.08)";
+                          e.currentTarget.style.color = "#ef4444";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = "transparent";
+                          e.currentTarget.style.color = "#9CA3AF";
+                        }}
+                      >
+                        <icons.Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </ModalShell>
       )}
@@ -857,6 +920,35 @@ export function CriteriaManagement() {
               </div>
             )}
           </div>
+        </ModalShell>
+      )}
+      {deleteTemplateTarget && (
+        <ModalShell
+          title={`Xóa template: ${deleteTemplateTarget.name}?`}
+          onClose={() => setDeleteTemplateTarget(null)}
+          actions={
+            <>
+              <CoordinatorActionButton
+                onClick={() => setDeleteTemplateTarget(null)}
+                disabled={saving}
+              >
+                Huỷ
+              </CoordinatorActionButton>
+              <CoordinatorActionButton
+                variant="danger"
+                disabled={saving}
+                onClick={handleDeleteTemplate}
+              >
+                {saving ? "Đang xóa..." : "Xác nhận xóa"}
+              </CoordinatorActionButton>
+            </>
+          }
+        >
+          <p className="text-sm text-slate-600">
+            Template <strong>{deleteTemplateTarget.name}</strong> (
+            {deleteTemplateTarget.items?.length ?? 0} tiêu chí) sẽ bị xóa vĩnh
+            viễn.
+          </p>
         </ModalShell>
       )}
     </div>
