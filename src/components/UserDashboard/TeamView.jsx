@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { fetchMyTeam, updateMyTeam } from "../../store/teamSlice";
 import trackService from "../../services/trackService";
 import {
   Users,
@@ -1255,15 +1256,20 @@ function EditTeamModal({ team, onClose, onSaved }) {
 // ---------------------------------------------------------------------------
 // TeamInfoView — hiển thị khi đã có team (fetch từ API)
 // ---------------------------------------------------------------------------
-function TeamInfoView({ team: initialTeam }) {
+function TeamInfoView({ team: initialTeam, onRefresh }) {
   const [team, setTeam] = useState(initialTeam);
   const [memberModal, setMemberModal] = useState(null); // null | "add" | member object (edit)
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [actionError, setActionError] = useState("");
 
-  // Need eventId for refreshTeam
-  const eventId = useSelector((s) => s.event.activeEventId);
+  const dispatch = useDispatch();
+  const myTeam = useSelector((s) => s.team.myTeam);
+
+  // Sync local state when Redux updates
+  useEffect(() => {
+    if (myTeam) setTeam(myTeam);
+  }, [myTeam]);
 
   useEffect(() => {
     if (deleteTarget) {
@@ -1277,11 +1283,8 @@ function TeamInfoView({ team: initialTeam }) {
   }, [deleteTarget]);
   const [editTeamModal, setEditTeamModal] = useState(false);
 
-  const refreshTeam = async () => {
-    try {
-      const res = await teamService.getMyTeam(eventId);
-      setTeam(res.data?.data || team);
-    } catch {}
+  const refreshTeam = () => {
+    if (onRefresh) onRefresh(); // dispatch fetchMyTeam vào Redux
   };
 
   const handleDelete = async () => {
@@ -1657,53 +1660,41 @@ function TeamInfoView({ team: initialTeam }) {
 
 // ---------------------------------------------------------------------------
 export function TeamView() {
-  // null = đang load | false = chưa có team | object = đã có team
-  const [team, setTeam] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  // Read eventId from Redux store
+  const dispatch = useDispatch();
   const eventId = useSelector((s) => s.event.activeEventId);
+  const { myTeam, loading: teamLoading, fetched } = useSelector((s) => s.team);
+
+  // Tracks vẫn fetch local vì chỉ cần khi tạo team
   const [tracks, setTracks] = useState([]);
   const [tracksLoading, setTracksLoading] = useState(true);
   const [tracksError, setTracksError] = useState("");
 
-  // Step 1: fetch tracks when eventId is ready
   useEffect(() => {
     if (!eventId) return;
-    const fetchTracks = async () => {
-      setTracksLoading(true);
-      setTracksError("");
-      try {
-        const tracksRes = await trackService.getByEvent(eventId);
-        const trackList = tracksRes.data?.data || tracksRes.data || [];
-        setTracks(trackList);
-      } catch (err) {
+    setTracksLoading(true);
+    setTracksError("");
+    trackService
+      .getByEvent(eventId)
+      .then((res) => setTracks(res.data?.data || res.data || []))
+      .catch((err) =>
         setTracksError(
           err?.response?.data?.message || "Không thể tải danh sách track.",
-        );
-      } finally {
-        setTracksLoading(false);
-      }
-    };
-
-    fetchTracks();
+        ),
+      )
+      .finally(() => setTracksLoading(false));
   }, [eventId]);
 
-  // Step 2: once eventId is ready, fetch my-team
-  useEffect(() => {
-    if (!eventId) return;
-    setLoading(true);
-    teamService
-      .getMyTeam(eventId)
-      .then((res) => setTeam(res.data?.data || false))
-      .catch((err) => {
-        if (err?.response?.status === 404) setTeam(false);
-        else setTeam(false);
-      })
-      .finally(() => setLoading(false));
-  }, [eventId]);
+  // Khi tạo team xong → update Redux
+  const handleCreated = (newTeam) => {
+    dispatch(updateMyTeam(newTeam));
+  };
 
-  if (tracksLoading || loading)
+  // Khi refresh team (sau edit/add member) → re-fetch vào Redux
+  const handleRefresh = () => {
+    dispatch(fetchMyTeam());
+  };
+
+  if (tracksLoading || (teamLoading && !fetched))
     return (
       <div className="flex items-center justify-center py-20 gap-3 text-sm text-slate-400">
         <Loader2
@@ -1714,15 +1705,16 @@ export function TeamView() {
       </div>
     );
 
-  if (!team)
+  if (!myTeam)
     return (
       <TeamCreateForm
-        onCreated={setTeam}
+        onCreated={handleCreated}
         eventId={eventId}
         tracks={tracks}
         tracksLoading={tracksLoading}
         tracksError={tracksError}
       />
     );
-  return <TeamInfoView team={team} />;
+
+  return <TeamInfoView team={myTeam} onRefresh={handleRefresh} />;
 }
