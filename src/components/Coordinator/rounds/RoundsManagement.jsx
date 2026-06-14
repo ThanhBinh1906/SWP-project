@@ -9,6 +9,7 @@ import {
 } from "../CoordinatorUI";
 import { AlertCircle, Loader2 } from "lucide-react";
 import axiosInstance from "../../../services/axiosInstance";
+import { RoundSubmissionsModal } from "./RoundSubmissionsModal";
 
 // ---------------------------------------------------------------------------
 const STATUS_OPTIONS = ["Upcoming", "Active", "Scoring", "Completed"];
@@ -60,6 +61,7 @@ export function RoundsManagement() {
   const [apiError, setApiError] = useState("");
 
   const [modal, setModal] = useState(null); // null | "create" | "edit" | "status"
+  const [submissionsRound, setSubmissionsRound] = useState(null);
   const [selectedRound, setSelectedRound] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [statusValue, setStatusValue] = useState("");
@@ -464,6 +466,12 @@ export function RoundsManagement() {
                           >
                             Status
                           </CoordinatorActionButton>
+                          <CoordinatorActionButton
+                            icon={icons.Eye}
+                            onClick={() => setSubmissionsRound(round)}
+                          >
+                            Submissions
+                          </CoordinatorActionButton>
                         </div>
                       </div>
                     ))}
@@ -516,6 +524,13 @@ export function RoundsManagement() {
             <FormError msg={formError} />
           </div>
         </ModalShell>
+      )}
+
+      {submissionsRound && (
+        <RoundSubmissionsModal
+          round={submissionsRound}
+          onClose={() => setSubmissionsRound(null)}
+        />
       )}
     </div>
   );

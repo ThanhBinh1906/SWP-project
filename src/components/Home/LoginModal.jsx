@@ -15,6 +15,7 @@ const ROLE_ROUTES = {
   Mentor: "/mentor/dashboard",
   Judge: "/judge/dashboard",
   Pending: "/pending",
+  Inactive: "/pending",
 };
 
 export default function LoginModal({ open, onClose }) {
@@ -40,10 +41,25 @@ export default function LoginModal({ open, onClose }) {
     try {
       const res = await authService.login({ email, password });
       const data = res.data.data;
-      dispatch(loginSuccess(data));
+      const user = {
+        ...data,
+        roles: Array.isArray(data.roles) ? data.roles : [],
+      };
+      dispatch(loginSuccess(user));
       handleClose();
-      console.log("systemRole:", data.systemRole);
-      navigate(ROLE_ROUTES[data.systemRole] || "/");
+      const roles = user.roles;
+      const dest =
+        ROLE_ROUTES[user.systemRole] ||
+        (roles.includes("Coordinator")
+          ? "/coordinator/dashboard"
+          : roles.includes("Judge")
+            ? "/judge/dashboard"
+            : roles.includes("Leader")
+              ? "/dashboard"
+              : roles.includes("Mentor")
+                ? "/mentor/dashboard"
+                : "/");
+      navigate(dest);
     } catch (err) {
       const status = err.response?.status;
       const msg = err.response?.data?.message;

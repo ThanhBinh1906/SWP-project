@@ -127,7 +127,7 @@ export function TracksManagement() {
     }
     setSaving(true);
     try {
-      await axiosInstance.post("/tracks", {
+      await axiosInstance.post("/api/tracks", {
         name: form.name.trim(),
         description: form.description.trim(),
         maxTeams: Number(form.maxTeams),
@@ -151,7 +151,7 @@ export function TracksManagement() {
     }
     setSaving(true);
     try {
-      await axiosInstance.put(`/tracks/${selectedTrack.id}`, {
+      await axiosInstance.put(`/api/tracks/${selectedTrack.id}`, {
         name: form.name.trim(),
         description: form.description.trim(),
         maxTeams: Number(form.maxTeams),

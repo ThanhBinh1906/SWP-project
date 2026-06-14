@@ -12,11 +12,15 @@ const authSlice = createSlice({
   },
   reducers: {
     loginSuccess(state, { payload }) {
+      const user = {
+        ...payload,
+        roles: Array.isArray(payload.roles) ? payload.roles : [],
+      };
       state.token = payload.token;
-      state.user = payload;
+      state.user = user;
       state.isAuthenticated = true;
       localStorage.setItem("token", payload.token);
-      localStorage.setItem("user", JSON.stringify(payload));
+      localStorage.setItem("user", JSON.stringify(user));
     },
     logoutSuccess(state) {
       state.token = null;

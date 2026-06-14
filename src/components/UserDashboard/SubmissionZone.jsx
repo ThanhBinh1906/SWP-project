@@ -1,31 +1,215 @@
-import { useState, useRef } from "react";
-import { CloudUpload, Link, CheckCircle, X, Github } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import {
+  CloudUpload,
+  Link,
+  CheckCircle,
+  AlertCircle,
+  Loader2,
+  ExternalLink,
+} from "lucide-react";
+import teamService from "../../services/teamService";
+import roundService from "../../services/roundService";
+import submissionService from "../../services/submissionService";
+import { getApiMessage } from "../Coordinator/coordinatorHelpers";
 
-export function SubmissionZone() {
-  const [tab, setTab] = useState("file");
-  const [dragging, setDragging] = useState(false);
-  const [files, setFiles] = useState([]);
-  const [repoUrl, setRepoUrl] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const fileRef = useRef();
+function isValidUrl(value) {
+  if (!value?.trim()) return false;
+  try {
+    new URL(value.trim());
+    return true;
+  } catch {
+    return false;
+  }
+}
 
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setDragging(false);
-    const dropped = Array.from(e.dataTransfer.files);
-    setFiles((prev) => [...prev, ...dropped]);
-  };
+export function SubmissionZone({ eventId }) {
+  const [team, setTeam] = useState(null);
+  const [rounds, setRounds] = useState([]);
+  const [submissions, setSubmissions] = useState([]);
+  const [selectedRoundId, setSelectedRoundId] = useState("");
+  const [demoUrl, setDemoUrl] = useState("");
+  const [reportUrl, setReportUrl] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const handleSubmit = () => {
-    if (
-      (tab === "file" && files.length > 0) ||
-      (tab === "repo" && repoUrl.trim())
-    ) {
-      setSubmitted(true);
-      setTimeout(() => setSubmitted(false), 3000);
+  const loadData = useCallback(async () => {
+    if (!eventId) {
+      setLoading(false);
+      return;
     }
-    console.log("Submitted:", { files, repoUrl });
+    setLoading(true);
+    setError("");
+    try {
+      const teamRes = await teamService.getMyTeam(eventId);
+      const myTeam = teamRes.data?.data;
+      setTeam(myTeam || null);
+
+      if (!myTeam?.trackId) {
+        setRounds([]);
+        setSubmissions([]);
+        return;
+      }
+
+      const [roundsRes, subsRes] = await Promise.all([
+        roundService.getByTrack(myTeam.trackId),
+        submissionService.getByTeam(myTeam.id),
+      ]);
+      const roundList = roundsRes.data?.data || [];
+      const activeRounds = roundList.filter((r) => r.status === "Active");
+      setRounds(activeRounds);
+      setSubmissions(subsRes.data?.data || []);
+
+      if (activeRounds.length > 0) {
+        setSelectedRoundId(String(activeRounds[0].id));
+      }
+    } catch (err) {
+      if (err?.response?.status === 404) {
+        setTeam(null);
+      } else {
+        setError(getApiMessage(err, "Không thể tải thông tin nộp bài."));
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [eventId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const existingSubmission = submissions.find(
+    (s) => String(s.roundId) === selectedRoundId,
+  );
+  const selectedRound = rounds.find(
+    (r) => String(r.id) === selectedRoundId,
+  );
+
+  useEffect(() => {
+    if (existingSubmission) {
+      setDemoUrl(existingSubmission.demoUrl || "");
+      setReportUrl(existingSubmission.reportUrl || "");
+    } else {
+      setDemoUrl("");
+      setReportUrl("");
+    }
+  }, [existingSubmission?.id, selectedRoundId]);
+
+  const handleSubmit = async () => {
+    setError("");
+    setSuccess("");
+
+    if (!team) {
+      setError("Bạn chưa có team. Vui lòng tạo team trước.");
+      return;
+    }
+    if (team.status !== "Approved") {
+      setError("Team chưa được Coordinator duyệt. Không thể nộp bài.");
+      return;
+    }
+    if (!team.githubRepoLink?.trim()) {
+      setError("Team cần có GitHub repo link trước khi nộp bài.");
+      return;
+    }
+    if (!selectedRoundId) {
+      setError("Không có vòng thi đang Active để nộp bài.");
+      return;
+    }
+    if (!isValidUrl(demoUrl) && !isValidUrl(reportUrl)) {
+      setError("Cần ít nhất một URL hợp lệ (Demo hoặc Report).");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const body = {
+        demoUrl: isValidUrl(demoUrl) ? demoUrl.trim() : null,
+        reportUrl: isValidUrl(reportUrl) ? reportUrl.trim() : null,
+      };
+
+      if (existingSubmission) {
+        await submissionService.update(existingSubmission.id, body);
+        setSuccess("Cập nhật bài nộp thành công!");
+      } else {
+        await submissionService.create(selectedRoundId, body);
+        setSuccess("Nộp bài thành công!");
+      }
+      await loadData();
+      setTimeout(() => setSuccess(""), 4000);
+    } catch (err) {
+      setError(getApiMessage(err, "Nộp bài thất bại."));
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16 gap-2 text-sm text-slate-400">
+        <Loader2 className="w-5 h-5 animate-spin text-[#F26F21]" />
+        Đang tải...
+      </div>
+    );
+  }
+
+  if (!team) {
+    return (
+      <div
+        className="rounded-2xl p-6 text-sm"
+        style={{ background: "#FFFBEB", border: "1px solid #FDE68A", color: "#92400E" }}
+      >
+        <p className="font-semibold">Chưa có team</p>
+        <p className="mt-1">Vào mục Team Information để tạo team trước khi nộp bài.</p>
+      </div>
+    );
+  }
+
+  if (team.status !== "Approved") {
+    return (
+      <div
+        className="rounded-2xl p-6 text-sm"
+        style={{ background: "#FFFBEB", border: "1px solid #FDE68A", color: "#92400E" }}
+      >
+        <p className="font-semibold">Team chưa được duyệt</p>
+        <p className="mt-1">
+          Trạng thái hiện tại: <strong>{team.status || "Pending"}</strong>. Coordinator cần
+          approve team trước khi nộp bài.
+        </p>
+      </div>
+    );
+  }
+
+  if (!team.githubRepoLink?.trim()) {
+    return (
+      <div
+        className="rounded-2xl p-6 text-sm"
+        style={{ background: "#FFFBEB", border: "1px solid #FDE68A", color: "#92400E" }}
+      >
+        <p className="font-semibold">Thiếu GitHub repo</p>
+        <p className="mt-1">
+          Cập nhật GitHub link trong Team Information trước khi nộp bài.
+        </p>
+      </div>
+    );
+  }
+
+  if (rounds.length === 0) {
+    return (
+      <div
+        className="rounded-2xl p-6 text-sm"
+        style={{ background: "#FFFBEB", border: "1px solid #FDE68A", color: "#92400E" }}
+      >
+        <p className="font-semibold">Chưa có vòng thi Active</p>
+        <p className="mt-1">
+          Coordinator cần tạo Round và đổi status sang <strong>Active</strong> trong khung
+          thời gian nộp bài.
+        </p>
+      </div>
+    );
+  }
+
+  const isDisqualified = existingSubmission?.isDisqualified;
 
   return (
     <div
@@ -47,157 +231,124 @@ export function SubmissionZone() {
           <CloudUpload className="w-4 h-4" style={{ color: "#F26F21" }} />
         </div>
         <div>
-          <h3 className="text-sm font-bold text-[#111827]">Quick Submission</h3>
+          <h3 className="text-sm font-bold text-[#111827]">Nộp bài theo vòng</h3>
           <p className="text-[11px] text-slate-500">
-            Upload files or link your repository
+            Team: {team.teamName} • Track ID: {team.trackId}
           </p>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div
-        className="flex gap-1 mb-4 p-1 rounded-xl"
-        style={{ background: "#F3F4F6" }}
-      >
-        {[
-          ["file", "File Upload"],
-          ["repo", "Repository"],
-        ].map(([id, label]) => (
-          <button
-            key={id}
-            onClick={() => setTab(id)}
-            className="flex-1 py-2 rounded-lg text-xs font-semibold transition-all duration-200"
-            style={{
-              background: tab === id ? "#F26F21" : "transparent",
-              color: tab === id ? "#FFFFFF" : "#6b7280",
-              boxShadow:
-                tab === id ? "0 2px 8px rgba(242,111,33,0.15)" : "none",
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {tab === "file" ? (
-        <div>
-          <div
-            className="rounded-xl p-6 text-center cursor-pointer transition-all duration-200 mb-3"
-            style={{
-              border: `2px dashed ${dragging ? "#F26F21" : "#D1D5DB"}`,
-              background: dragging ? "#FFF6F0" : "#FAFAFA",
-            }}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragging(true);
-            }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={handleDrop}
-            onClick={() => fileRef.current?.click()}
-          >
-            <input
-              ref={fileRef}
-              type="file"
-              multiple
-              className="hidden"
-              onChange={(e) =>
-                setFiles((prev) => [
-                  ...prev,
-                  ...Array.from(e.target.files || []),
-                ])
-              }
-            />
-            <CloudUpload
-              className="w-8 h-8 mx-auto mb-2"
-              style={{ color: dragging ? "#F26F21" : "#6b7280" }}
-            />
-            <p className="text-xs font-semibold text-[#111827]">
-              {dragging ? "Drop files here" : "Drag & drop or click to upload"}
-            </p>
-            <p className="text-[10px] text-slate-500 mt-1">
-              ZIP, PDF, or any project files
-            </p>
-          </div>
-          {files.length > 0 && (
-            <div className="space-y-1.5 mb-3">
-              {files.map((f, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs"
-                  style={{ background: "#F9FAFB", border: "1px solid #E5E7EB" }}
-                >
-                  <CheckCircle className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
-                  <span className="text-slate-700 truncate flex-1">
-                    {f.name}
-                  </span>
-                  <button
-                    onClick={() =>
-                      setFiles((prev) => prev.filter((_, j) => j !== i))
-                    }
-                  >
-                    <X className="w-3 h-3 text-slate-400 hover:text-red-500 transition-colors" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="mb-3">
-          <div
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl mb-2 border border-slate-300 hover:border-slate-400 focus-within:border-[#F26F21] focus-within:ring-2 focus-within:ring-[#F26F21]/18 transition-all duration-200"
-            style={{ background: "#FFFFFF" }}
-          >
-            <Github className="w-4 h-4 text-slate-500 flex-shrink-0" />
-            <input
-              type="text"
-              value={repoUrl}
-              onChange={(e) => setRepoUrl(e.target.value)}
-              placeholder="https://github.com/team-alpha/project"
-              className="flex-1 bg-transparent text-sm text-[#0F172A] placeholder-slate-500 outline-none"
-            />
-          </div>
-          <div
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-slate-300 hover:border-slate-400 focus-within:border-[#F26F21] focus-within:ring-2 focus-within:ring-[#F26F21]/18 transition-all duration-200"
-            style={{ background: "#FFFFFF" }}
-          >
-            <Link className="w-4 h-4 text-slate-500 flex-shrink-0" />
-            <input
-              type="text"
-              placeholder="Demo URL (optional)"
-              className="flex-1 bg-transparent text-sm text-[#0F172A] placeholder-slate-500 outline-none"
-            />
-          </div>
+      {error && (
+        <div className="mb-4 flex items-start gap-2 rounded-xl p-3 text-xs text-red-600"
+          style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)" }}>
+          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+          {error}
         </div>
       )}
 
+      {success && (
+        <div className="mb-4 flex items-center gap-2 rounded-xl p-3 text-xs text-emerald-700"
+          style={{ background: "#D1FAE5", border: "1px solid #A7F3D0" }}>
+          <CheckCircle className="w-4 h-4" />
+          {success}
+        </div>
+      )}
+
+      {isDisqualified && (
+        <div className="mb-4 rounded-xl p-3 text-xs text-red-700"
+          style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)" }}>
+          <p className="font-bold">Bài nộp đã bị loại</p>
+          <p className="mt-1">{existingSubmission.disqualifyReason || "—"}</p>
+        </div>
+      )}
+
+      <div className="space-y-4">
+        <div>
+          <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+            Vòng thi (Active)
+          </label>
+          <select
+            className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+            value={selectedRoundId}
+            onChange={(e) => setSelectedRoundId(e.target.value)}
+          >
+            {rounds.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
+          </select>
+          {selectedRound && (
+            <p className="mt-1 text-[10px] text-slate-400">
+              {new Date(selectedRound.startTime).toLocaleString("vi-VN")} →{" "}
+              {new Date(selectedRound.endTime).toLocaleString("vi-VN")}
+            </p>
+          )}
+        </div>
+
+        {existingSubmission && (
+          <div className="rounded-xl p-3 text-xs" style={{ background: "#F0FDF4", border: "1px solid #BBF7D0" }}>
+            <p className="font-semibold text-emerald-800">Đã nộp bài cho vòng này</p>
+            <p className="text-emerald-700 mt-0.5">
+              Nộp lúc: {new Date(existingSubmission.createdAt).toLocaleString("vi-VN")}
+            </p>
+          </div>
+        )}
+
+        <div>
+          <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+            Demo URL
+          </label>
+          <div className="mt-1.5 flex items-center gap-2 px-3 py-2.5 rounded-xl border border-slate-300">
+            <Link className="w-4 h-4 text-slate-500" />
+            <input
+              type="url"
+              value={demoUrl}
+              onChange={(e) => setDemoUrl(e.target.value)}
+              placeholder="https://demo.example.com"
+              disabled={isDisqualified}
+              className="flex-1 bg-transparent text-sm outline-none"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+            Report URL
+          </label>
+          <div className="mt-1.5 flex items-center gap-2 px-3 py-2.5 rounded-xl border border-slate-300">
+            <ExternalLink className="w-4 h-4 text-slate-500" />
+            <input
+              type="url"
+              value={reportUrl}
+              onChange={(e) => setReportUrl(e.target.value)}
+              placeholder="https://drive.google.com/..."
+              disabled={isDisqualified}
+              className="flex-1 bg-transparent text-sm outline-none"
+            />
+          </div>
+          <p className="mt-1 text-[10px] text-slate-400">Ít nhất một trong Demo hoặc Report URL.</p>
+        </div>
+      </div>
+
       <button
         onClick={handleSubmit}
-        className="w-full py-3 rounded-xl text-sm font-bold transition-all duration-200"
+        disabled={saving || isDisqualified}
+        className="w-full mt-5 py-3 rounded-xl text-sm font-bold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         style={{
-          background: submitted
-            ? "#D1FAE5"
-            : "linear-gradient(135deg, #F26F21, #c9520e)",
-          color: submitted ? "#065F46" : "#fff",
-          border: submitted ? "1px solid #A7F3D0" : "none",
-          boxShadow: submitted ? "none" : "0 4px 14px rgba(242,111,33,0.2)",
-        }}
-        onMouseEnter={(e) => {
-          if (!submitted)
-            e.currentTarget.style.boxShadow =
-              "0 6px 20px rgba(242,111,33,0.35)";
-        }}
-        onMouseLeave={(e) => {
-          if (!submitted)
-            e.currentTarget.style.boxShadow = "0 4px 14px rgba(242,111,33,0.2)";
+          background: "linear-gradient(135deg, #F26F21, #c9520e)",
+          color: "#fff",
+          boxShadow: "0 4px 14px rgba(242,111,33,0.2)",
         }}
       >
-        {submitted ? (
+        {saving ? (
           <span className="flex items-center justify-center gap-2">
-            <CheckCircle className="w-4 h-4" /> Submitted Successfully!
+            <Loader2 className="w-4 h-4 animate-spin" /> Đang lưu...
           </span>
+        ) : existingSubmission ? (
+          "Cập nhật bài nộp"
         ) : (
-          "Submit Project"
+          "Nộp bài"
         )}
       </button>
     </div>

@@ -1,4 +1,4 @@
-import React from "react";
+import { hasAnyRole } from "./utils/roleHelpers";
 import "./index.css";
 import {
   createBrowserRouter,
@@ -50,7 +50,7 @@ function ProtectedRoute({ children, allowedRoles }) {
   if (user?.systemRole === "Rejected")
     return <Navigate to="/rejected" replace />;
 
-  if (allowedRoles && !allowedRoles.includes(user?.systemRole))
+  if (allowedRoles && !hasAnyRole(user, allowedRoles))
     return <Navigate to="/403" replace />;
 
   return children;

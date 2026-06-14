@@ -16,6 +16,9 @@ import {
   getApiMessage,
   SetupRequiredBanner,
   validateRoundSelection,
+  FormField,
+  FilterSelect,
+  ModalHintBanner,
 } from "../coordinatorHelpers";
 
 const EMPTY_FORM = {
@@ -162,8 +165,8 @@ export function TopicsManagement() {
   return (
     <div className="space-y-6">
       <CoordinatorPanel
-        title="Topic filters"
-        subtitle="Filter by event, track, and round"
+        title="Bộ lọc đề tài"
+        subtitle="Chọn Event → Track → Round trước khi thêm Topic"
         icon={icons.Filter}
         actions={
           <CoordinatorActionButton
@@ -182,8 +185,9 @@ export function TopicsManagement() {
         }
       >
         <div className="grid gap-3 md:grid-cols-3">
-          <select
-            className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+          <FilterSelect
+            label="Sự kiện (Event)"
+            icon={icons.CalendarDays}
             value={selectedEventId}
             onChange={(e) => setSelectedEventId(e.target.value)}
           >
@@ -196,9 +200,10 @@ export function TopicsManagement() {
                 </option>
               ))
             )}
-          </select>
-          <select
-            className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+          </FilterSelect>
+          <FilterSelect
+            label="Bảng thi (Track)"
+            icon={icons.GitBranch}
             value={selectedTrackId}
             onChange={(e) => setSelectedTrackId(e.target.value)}
             disabled={!tracks.length}
@@ -212,15 +217,16 @@ export function TopicsManagement() {
                 </option>
               ))
             )}
-          </select>
-          <select
-            className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+          </FilterSelect>
+          <FilterSelect
+            label="Vòng thi (Round)"
+            icon={icons.Timer}
             value={selectedRoundId}
             onChange={(e) => setSelectedRoundId(e.target.value)}
             disabled={!rounds.length}
           >
             {rounds.length === 0 ? (
-              <option value="">Chưa có Round — tạo ở mục Rounds</option>
+              <option value="">Chưa có Round — tạo ở Competition Setup</option>
             ) : (
               rounds.map((r) => (
                 <option key={r.id} value={r.id}>
@@ -228,7 +234,7 @@ export function TopicsManagement() {
                 </option>
               ))
             )}
-          </select>
+          </FilterSelect>
         </div>
       </CoordinatorPanel>
 
@@ -316,57 +322,86 @@ export function TopicsManagement() {
 
       {modal && (
         <ModalShell
-          title="Add Topic"
+          title="Thêm đề tài (Topic)"
           onClose={() => setModal(false)}
           actions={
             <>
               <CoordinatorActionButton onClick={() => setModal(false)}>
-                Cancel
+                Hủy
               </CoordinatorActionButton>
               <CoordinatorActionButton
                 variant="primary"
                 disabled={saving}
                 onClick={handleCreate}
               >
-                {saving ? "Saving..." : "Save"}
+                {saving ? "Đang lưu..." : "Lưu đề tài"}
               </CoordinatorActionButton>
             </>
           }
         >
-          <div className="space-y-3">
+          <div className="space-y-4">
+            <ModalHintBanner icon={icons.Lightbulb} title="Đề tài (Topic) là gì?">
+              Topic là đề bài/hướng dẫn thi cho vòng đó. Team Leader có thể tham khảo
+              khi làm project — khác với bài nộp (Demo/Report URL) ở mục Submit.
+            </ModalHintBanner>
             <FormError msg={formError} />
-            <input
-              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-              placeholder="Title *"
-              value={form.title}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, title: e.target.value }))
-              }
-            />
-            <textarea
-              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none min-h-20"
-              placeholder="Description"
-              value={form.description}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, description: e.target.value }))
-              }
-            />
-            <textarea
-              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none min-h-20"
-              placeholder="Requirements"
-              value={form.requirements}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, requirements: e.target.value }))
-              }
-            />
-            <input
-              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-              placeholder="Attachment URL"
-              value={form.attachmentUrl}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, attachmentUrl: e.target.value }))
-              }
-            />
+            <FormField
+              label="Tiêu đề đề tài"
+              icon={icons.Lightbulb}
+              required
+              hint="Tên ngắn gọn, VD: Smart Campus Assistant"
+            >
+              <input
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+                placeholder="Smart Campus Assistant"
+                value={form.title}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, title: e.target.value }))
+                }
+              />
+            </FormField>
+            <FormField
+              label="Mô tả"
+              icon={icons.Edit3}
+              hint="Giải thích đề bài, bối cảnh, mục tiêu"
+            >
+              <textarea
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none min-h-20"
+                placeholder="Xây dựng ứng dụng AI hỗ trợ sinh viên..."
+                value={form.description}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, description: e.target.value }))
+                }
+              />
+            </FormField>
+            <FormField
+              label="Yêu cầu kỹ thuật"
+              icon={icons.CheckCircle2}
+              hint="Stack, tính năng bắt buộc, tiêu chí đánh giá"
+            >
+              <textarea
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none min-h-20"
+                placeholder="React FE, .NET BE, có demo live..."
+                value={form.requirements}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, requirements: e.target.value }))
+                }
+              />
+            </FormField>
+            <FormField
+              label="Link tài liệu đính kèm"
+              icon={icons.Download}
+              hint="URL file PDF/Doc hướng dẫn chi tiết (tuỳ chọn)"
+            >
+              <input
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+                placeholder="https://example.com/topic-guide.pdf"
+                value={form.attachmentUrl}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, attachmentUrl: e.target.value }))
+                }
+              />
+            </FormField>
           </div>
         </ModalShell>
       )}
