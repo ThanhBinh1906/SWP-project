@@ -339,7 +339,9 @@ export function TopicsManagement() {
               className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
               placeholder="Title *"
               value={form.title}
-              onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, title: e.target.value }))
+              }
             />
             <textarea
               className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none min-h-20"

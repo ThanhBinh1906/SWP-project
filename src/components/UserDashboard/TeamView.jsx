@@ -19,6 +19,7 @@ import {
   School,
   Lock,
   Edit2,
+  X,
 } from "lucide-react";
 import teamService from "../../services/teamService";
 
@@ -203,6 +204,15 @@ function MemberCard({ index, member, errors, onChange, onRemove }) {
             error={errors?.phone}
           />
         </div>
+        <InputField
+          label="Trường"
+          required
+          icon={School}
+          placeholder="VD: FPT University"
+          value={member.university}
+          onChange={(e) => onChange(index, "university", e.target.value)}
+          error={errors?.university}
+        />
         <FPTCheckbox
           value={member.isFPTStudent}
           onChange={() => onChange(index, "isFPTStudent", !member.isFPTStudent)}
@@ -325,6 +335,10 @@ function TeamCreateForm({
         e.phone = "Bắt buộc";
         valid = false;
       }
+      if (!m.university.trim()) {
+        e.university = "Bắt buộc";
+        valid = false;
+      }
       return e;
     });
     setMemberErrors(me);
@@ -361,6 +375,7 @@ function TeamCreateForm({
               studentCode: m.studentCode.trim(),
               email: m.email.trim(),
               phone: m.phone.trim(),
+              university: m.university.trim(),
               isFPTStudent: m.isFPTStudent,
             }),
           ),
@@ -988,7 +1003,7 @@ function MemberModal({ teamId, member, onClose, onSaved }) {
             onClick={onClose}
             className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"
           >
-            <AlertCircle className="w-4 h-4" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
@@ -1149,7 +1164,7 @@ function EditTeamModal({ team, onClose, onSaved }) {
             onClick={onClose}
             className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"
           >
-            <AlertCircle className="w-4 h-4" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
@@ -1246,6 +1261,9 @@ function TeamInfoView({ team: initialTeam }) {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [actionError, setActionError] = useState("");
+
+  // Need eventId for refreshTeam
+  const eventId = useSelector((s) => s.event.activeEventId);
 
   useEffect(() => {
     if (deleteTarget) {
@@ -1447,7 +1465,16 @@ function TeamInfoView({ team: initialTeam }) {
             Chưa có thành viên nào.
           </p>
         ) : (
-          <table className="w-full text-xs">
+          <table className="w-full text-xs table-fixed">
+            <colgroup>
+              <col className="w-8" />
+              <col />
+              <col className="w-20" />
+              <col className="w-36" />
+              <col className="w-24" />
+              <col className="w-8" />
+              <col className="w-16" />
+            </colgroup>
             <thead>
               <tr
                 style={{
@@ -1459,7 +1486,7 @@ function TeamInfoView({ team: initialTeam }) {
                   (h, i) => (
                     <th
                       key={i}
-                      className="px-4 py-2.5 text-left font-semibold text-slate-500 uppercase tracking-wider text-[10px]"
+                      className="px-3 py-2.5 text-left font-semibold text-slate-500 uppercase tracking-wider text-[10px]"
                     >
                       {h}
                     </th>
@@ -1478,9 +1505,9 @@ function TeamInfoView({ team: initialTeam }) {
                         : "none",
                   }}
                 >
-                  <td className="px-4 py-3 text-slate-400">{i + 1}</td>
-                  <td className="px-4 py-3 font-semibold text-[#111827]">
-                    <div className="flex items-center gap-1.5">
+                  <td className="px-3 py-3 text-slate-400">{i + 1}</td>
+                  <td className="px-3 py-3 font-semibold text-[#111827]">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       {m.fullName}
                       {m.isLeader && (
                         <span
@@ -1496,17 +1523,19 @@ function TeamInfoView({ team: initialTeam }) {
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-slate-500">{m.studentCode}</td>
-                  <td className="px-4 py-3 text-slate-500">{m.email}</td>
-                  <td className="px-4 py-3 text-slate-500">{m.phone}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-3 text-slate-500">{m.studentCode}</td>
+                  <td className="px-3 py-3 text-slate-500 truncate max-w-0">
+                    {m.email}
+                  </td>
+                  <td className="px-3 py-3 text-slate-500">{m.phone}</td>
+                  <td className="px-3 py-3">
                     {m.isFPTStudent ? (
                       <span className="text-emerald-600 font-bold">✓</span>
                     ) : (
                       <span className="text-slate-300">—</span>
                     )}
                   </td>
-                  <td>
+                  <td className="px-3 py-3 whitespace-nowrap">
                     {!m.isLeader && (
                       <div className="flex gap-1.5">
                         <button
