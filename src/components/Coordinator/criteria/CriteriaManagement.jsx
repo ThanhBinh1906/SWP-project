@@ -20,6 +20,9 @@ import {
   getApiMessage,
   SetupRequiredBanner,
   validateRoundSelection,
+  FormField,
+  FilterSelect,
+  ModalHintBanner,
 } from "../coordinatorHelpers";
 
 const EMPTY_CRITERION = {
@@ -371,8 +374,9 @@ export function CriteriaManagement() {
         icon={icons.Filter}
       >
         <div className="grid gap-3 md:grid-cols-3">
-          <select
-            className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+          <FilterSelect
+            label="Sự kiện (Event)"
+            icon={icons.CalendarDays}
             value={selectedEventId}
             onChange={(e) => setSelectedEventId(e.target.value)}
           >
@@ -385,9 +389,10 @@ export function CriteriaManagement() {
                 </option>
               ))
             )}
-          </select>
-          <select
-            className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+          </FilterSelect>
+          <FilterSelect
+            label="Bảng thi (Track)"
+            icon={icons.GitBranch}
             value={selectedTrackId}
             onChange={(e) => setSelectedTrackId(e.target.value)}
             disabled={!tracks.length}
@@ -401,15 +406,16 @@ export function CriteriaManagement() {
                 </option>
               ))
             )}
-          </select>
-          <select
-            className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+          </FilterSelect>
+          <FilterSelect
+            label="Vòng thi (Round)"
+            icon={icons.Timer}
             value={selectedRoundId}
             onChange={(e) => setSelectedRoundId(e.target.value)}
             disabled={!rounds.length}
           >
             {rounds.length === 0 ? (
-              <option value="">Chưa có Round — tạo ở mục Rounds</option>
+              <option value="">Chưa có Round — tạo ở Competition Setup</option>
             ) : (
               rounds.map((r) => (
                 <option key={r.id} value={r.id}>
@@ -417,7 +423,7 @@ export function CriteriaManagement() {
                 </option>
               ))
             )}
-          </select>
+          </FilterSelect>
         </div>
       </CoordinatorPanel>
 
@@ -525,58 +531,89 @@ export function CriteriaManagement() {
 
       {modal === "criterion" && (
         <ModalShell
-          title="Add Criterion"
+          title="Thêm tiêu chí chấm điểm"
           onClose={() => setModal(null)}
           actions={
             <>
               <CoordinatorActionButton onClick={() => setModal(null)}>
-                Cancel
+                Hủy
               </CoordinatorActionButton>
               <CoordinatorActionButton
                 variant="primary"
                 disabled={saving}
                 onClick={handleAddCriterion}
               >
-                {saving ? "Saving..." : "Save"}
+                {saving ? "Đang lưu..." : "Lưu tiêu chí"}
               </CoordinatorActionButton>
             </>
           }
         >
-          <div className="grid gap-3">
+          <div className="grid gap-4">
+            <ModalHintBanner icon={icons.Scale} title="Tiêu chí (Criterion) là gì?">
+              Mỗi tiêu chí là một hạng mục Judge chấm điểm (vd: Innovation, Technical).
+              Tổng <strong>Weight</strong> tất cả tiêu chí phải ≤ <strong>1.0</strong> (100%).
+            </ModalHintBanner>
             <FormError msg={formError} />
-            <input
-              className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-              placeholder="Name *"
-              value={form.name}
-              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-            />
-            <textarea
-              className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none min-h-16"
-              placeholder="Description"
-              value={form.description}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, description: e.target.value }))
-              }
-            />
-            <input
-              type="number"
-              className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-              placeholder="Max score"
-              value={form.maxScore}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, maxScore: e.target.value }))
-              }
-            />
-            <input
-              type="number"
-              step="0.05"
-              className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-              placeholder="Weight, e.g. 0.30"
-              value={form.weight}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, weight: e.target.value }))
-              }
-            />
+            <FormField
+              label="Tên tiêu chí"
+              icon={icons.Scale}
+              required
+              hint="VD: Innovation, Technical, Presentation"
+            >
+              <input
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+                placeholder="Innovation"
+                value={form.name}
+                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+              />
+            </FormField>
+            <FormField
+              label="Mô tả"
+              icon={icons.Edit3}
+              hint="Giải thích Judge cần đánh giá gì ở tiêu chí này"
+            >
+              <textarea
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none min-h-16"
+                placeholder="Mức độ sáng tạo của giải pháp..."
+                value={form.description}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, description: e.target.value }))
+                }
+              />
+            </FormField>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <FormField
+                label="Điểm tối đa (Max Score)"
+                icon={icons.Trophy}
+                hint="Thang điểm cho tiêu chí này, thường là 10"
+              >
+                <input
+                  type="number"
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+                  placeholder="10"
+                  value={form.maxScore}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, maxScore: e.target.value }))
+                  }
+                />
+              </FormField>
+              <FormField
+                label="Trọng số (Weight)"
+                icon={icons.SlidersHorizontal}
+                hint="0.30 = 30%. Tổng tất cả tiêu chí ≤ 1.0"
+              >
+                <input
+                  type="number"
+                  step="0.05"
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+                  placeholder="0.30"
+                  value={form.weight}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, weight: e.target.value }))
+                  }
+                />
+              </FormField>
+            </div>
           </div>
         </ModalShell>
       )}

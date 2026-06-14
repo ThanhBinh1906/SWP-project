@@ -1,15 +1,12 @@
 import { useState } from "react";
-import {
-  judgeRounds,
-  judgeSubmissions,
-} from "../components/Judge/judgeMockData";
 import { JudgeOverview } from "../components/Judge/dashboard/JudgeOverview";
 import { ScoringHistory } from "../components/Judge/history/ScoringHistory";
 import { JudgeHeader } from "../components/Judge/layout/JudgeHeader";
 import { JudgePageTitle } from "../components/Judge/layout/JudgePageTitle";
 import { JudgeSidebar } from "../components/Judge/layout/JudgeSidebar";
 import { JudgeRounds } from "../components/Judge/rounds/JudgeRounds";
-import { SubmissionScoringList } from "../components/Judge/scoring/SubmissionScoringList";
+import { JudgeScoringWorkspace } from "../components/Judge/scoring/JudgeScoringWorkspace";
+import { judgeSubmissions } from "../components/Judge/judgeMockData";
 
 const viewTitles = {
   dashboard: {
@@ -22,7 +19,7 @@ const viewTitles = {
   },
   scoring: {
     title: "Submission Scoring",
-    sub: "Score assigned submissions without team-support relationship visibility",
+    sub: "Chấm điểm bài nộp qua API — round status phải là Scoring",
   },
   history: {
     title: "Scoring History",
@@ -30,75 +27,21 @@ const viewTitles = {
   },
 };
 
-function isSubmissionLocked(submission) {
-  const round = judgeRounds.find((item) => item.id === submission.roundId);
-  return (
-    submission.ranking?.calculatedAt != null ||
-    round?.ranking?.calculatedAt != null
-  );
-}
-
 export default function JudgeDashboard() {
-  const [activeNav, setActiveNav] = useState("dashboard");
+  const [activeNav, setActiveNav] = useState("scoring");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [submissions, setSubmissions] = useState(judgeSubmissions);
-  const [savingId, setSavingId] = useState(null);
-  const [submittingId, setSubmittingId] = useState(null);
   const title = viewTitles[activeNav] || viewTitles.dashboard;
-
-  const handleSaveDraft = (submissionId, scores, comments, totalScore) => {
-    const target = submissions.find((item) => item.id === submissionId);
-    if (!target || isSubmissionLocked(target)) return;
-    setSavingId(submissionId);
-    setSubmissions((current) =>
-      current.map((item) =>
-        item.id === submissionId
-          ? { ...item, scores, comments, totalScore, status: "Draft" }
-          : item,
-      ),
-    );
-    setTimeout(() => setSavingId(null), 350);
-  };
-
-  const handleSubmitScores = (submissionId, scores, comments, totalScore) => {
-    const target = submissions.find((item) => item.id === submissionId);
-    if (!target || isSubmissionLocked(target)) return;
-    setSubmittingId(submissionId);
-    setSubmissions((current) =>
-      current.map((item) =>
-        item.id === submissionId
-          ? {
-              ...item,
-              scores,
-              comments,
-              totalScore,
-              status: "Scored",
-              scoredAt: new Date().toLocaleString(),
-            }
-          : item,
-      ),
-    );
-    setTimeout(() => setSubmittingId(null), 350);
-  };
 
   const views = {
     dashboard: (
       <JudgeOverview
-        submissions={submissions}
+        submissions={judgeSubmissions}
         onOpenScoring={() => setActiveNav("scoring")}
       />
     ),
     rounds: <JudgeRounds onOpenScoring={() => setActiveNav("scoring")} />,
-    scoring: (
-      <SubmissionScoringList
-        submissions={submissions}
-        savingId={savingId}
-        submittingId={submittingId}
-        onSaveDraft={handleSaveDraft}
-        onSubmitScores={handleSubmitScores}
-      />
-    ),
-    history: <ScoringHistory submissions={submissions} />,
+    scoring: <JudgeScoringWorkspace />,
+    history: <ScoringHistory submissions={judgeSubmissions} />,
   };
 
   return (
@@ -130,7 +73,7 @@ export default function JudgeDashboard() {
           className="border-t bg-white px-4 py-4 text-center text-xs text-slate-500 sm:px-8"
           style={{ borderColor: "#E5E7EB" }}
         >
-          SEAL Hackathon Judge Console • RBL-safe scoring workspace
+          SEAL Hackathon Judge Console • API scoring workspace
         </footer>
       </div>
     </div>

@@ -8,7 +8,7 @@ const timeline = [
   { label: 'Judging begins', done: false, time: '18:00' },
 ];
 
-export function SubmitView() {
+export function SubmitView({ eventId }) {
   return (
     <div className="space-y-6">
       {/* Alert */}
@@ -16,15 +16,16 @@ export function SubmitView() {
         style={{ background: '#FFFBEB', border: '1px solid #FDE68A' }}>
         <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-xs font-bold text-amber-900 mb-0.5">Final Submission Deadline Approaching</p>
-          <p className="text-xs text-amber-700">Make sure your project is complete and all files are uploaded before the deadline. Late submissions will not be accepted.</p>
+          <p className="text-xs font-bold text-amber-900 mb-0.5">Điều kiện nộp bài</p>
+          <p className="text-xs text-amber-700">
+            Team phải được duyệt, có GitHub repo, và Round đang ở trạng thái <strong>Active</strong> trong khung thời gian cho phép.
+          </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* Submission form — wider */}
         <div className="lg:col-span-3">
-          <SubmissionZone />
+          <SubmissionZone eventId={eventId} />
         </div>
 
         {/* Timeline */}
