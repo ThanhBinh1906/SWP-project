@@ -19,7 +19,7 @@ const viewTitles = {
   },
   scoring: {
     title: "Submission Scoring",
-    sub: "Chấm điểm bài nộp qua API — round status phải là Scoring",
+    sub: "Chấm điểm bài nộp qua API, round status phải là Scoring",
   },
   history: {
     title: "Scoring History",
@@ -30,17 +30,25 @@ const viewTitles = {
 export default function JudgeDashboard() {
   const [activeNav, setActiveNav] = useState("scoring");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [scoringRoundId, setScoringRoundId] = useState("");
   const title = viewTitles[activeNav] || viewTitles.dashboard;
+
+  const openScoring = (roundId) => {
+    if (roundId) {
+      setScoringRoundId(String(roundId));
+    }
+    setActiveNav("scoring");
+  };
 
   const views = {
     dashboard: (
       <JudgeOverview
         submissions={judgeSubmissions}
-        onOpenScoring={() => setActiveNav("scoring")}
+        onOpenScoring={openScoring}
       />
     ),
-    rounds: <JudgeRounds onOpenScoring={() => setActiveNav("scoring")} />,
-    scoring: <JudgeScoringWorkspace />,
+    rounds: <JudgeRounds onOpenScoring={openScoring} />,
+    scoring: <JudgeScoringWorkspace initialRoundId={scoringRoundId} />,
     history: <ScoringHistory submissions={judgeSubmissions} />,
   };
 
