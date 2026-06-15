@@ -29,8 +29,48 @@ const EMPTY_CRITERION = {
   name: "",
   description: "",
   maxScore: 10,
-  weight: 0.1,
+  weight: "10%",
 };
+
+const WEIGHT_TOTAL_DECIMAL = 1;
+
+const parseWeightInput = (value) => {
+  if (value === null || value === undefined) return NaN;
+  const normalized = String(value).trim().replace(/%/g, "").replace(",", ".");
+  if (!normalized) return NaN;
+  return Number(normalized);
+};
+
+const percentToDecimal = (value) => {
+  const numeric = parseWeightInput(value);
+  if (!Number.isFinite(numeric)) return NaN;
+  return numeric > 1 ? numeric / 100 : numeric;
+};
+
+const decimalToPercent = (value) => {
+  const numeric = parseWeightInput(value);
+  if (!Number.isFinite(numeric)) return 0;
+  return numeric * 100;
+};
+
+const formatPercent = (value) => {
+  const percent = decimalToPercent(value);
+  return Number.isInteger(percent) ? String(percent) : percent.toFixed(2);
+};
+
+const normalizeCriterion = (criterion) => ({
+  ...criterion,
+  weight: percentToDecimal(criterion.weight),
+});
+
+const isBlankCell = (value) =>
+  value === null || value === undefined || String(value).trim() === "";
+
+const normalizeHeader = (value) =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]/g, "");
 
 export function CriteriaManagement() {
   const [events, setEvents] = useState([]);
@@ -57,6 +97,9 @@ export function CriteriaManagement() {
   const [form, setForm] = useState(EMPTY_CRITERION);
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [deleteTemplateTarget, setDeleteTemplateTarget] = useState(null);
+  const [editTarget, setEditTarget] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [actionError, setActionError] = useState("");
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -120,7 +163,7 @@ export function CriteriaManagement() {
     setApiError("");
     try {
       const res = await criterionService.getByRound(selectedRoundId);
-      setCriteria(res.data?.data || []);
+      setCriteria((res.data?.data || []).map(normalizeCriterion));
     } catch (err) {
       setApiError(getApiMessage(err, "Không thể tải tiêu chí."));
     } finally {
@@ -136,7 +179,7 @@ export function CriteriaManagement() {
     () => criteria.reduce((sum, item) => sum + (item.weight || 0), 0),
     [criteria],
   );
-  const valid = totalWeight <= 1.001;
+  const valid = Math.abs(totalWeight - WEIGHT_TOTAL_DECIMAL) <= 0.001;
 
   const roundCheck = validateRoundSelection({
     selectedEventId,
@@ -152,7 +195,56 @@ export function CriteriaManagement() {
     { key: "maxScore", label: "Max score" },
     { key: "weight", label: "Weight" },
     { key: "description", label: "Description" },
+    { key: "actions", label: "Actions" },
   ];
+
+  const handleEditCriterion = async () => {
+    if (!editTarget) return;
+    if (!form.name.trim()) {
+      setFormError("Tên tiêu chí không được để trống.");
+      return;
+    }
+    const weight = percentToDecimal(form.weight);
+    if (!Number.isFinite(weight) || weight < 0 || weight > 1) {
+      setFormError("Weight phải nằm trong khoảng 0% đến 100%.");
+      return;
+    }
+    setSaving(true);
+    setFormError("");
+    try {
+      await criterionService.update(selectedRoundId, editTarget.id, {
+        name: form.name.trim(),
+        description: form.description.trim() || null,
+        maxScore: Number(form.maxScore),
+        weight,
+      });
+      await fetchCriteria();
+      setModal(null);
+      setEditTarget(null);
+      setForm(EMPTY_CRITERION);
+    } catch (err) {
+      setFormError(getApiMessage(err, "Cập nhật tiêu chí thất bại."));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteCriterion = async () => {
+    if (!deleteTarget) return;
+    setSaving(true);
+    setActionError("");
+    try {
+      await criterionService.remove(selectedRoundId, deleteTarget.id);
+      await fetchCriteria();
+      setDeleteTarget(null);
+    } catch (err) {
+      setActionError(
+        getApiMessage(err, "Xóa thất bại. Có thể đã có điểm được ghi nhận."),
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleAddCriterion = async () => {
     const check = validateRoundSelection({
@@ -171,13 +263,18 @@ export function CriteriaManagement() {
       setFormError("Tên tiêu chí không được để trống.");
       return;
     }
+    const weight = percentToDecimal(form.weight);
+    if (!Number.isFinite(weight) || weight < 0 || weight > 1) {
+      setFormError("Weight phải nằm trong khoảng 0% đến 100%.");
+      return;
+    }
     setSaving(true);
     try {
       await criterionService.create(check.roundId, {
         name: form.name.trim(),
         description: form.description.trim() || null,
         maxScore: Number(form.maxScore),
-        weight: Number(form.weight),
+        weight,
       });
       await fetchCriteria();
       setModal(null);
@@ -237,55 +334,103 @@ export function CriteriaManagement() {
       try {
         const wb = XLSX.read(evt.target.result, { type: "binary" });
         const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
+        const sheetRows = XLSX.utils.sheet_to_json(ws, {
+          header: 1,
+          defval: "",
+          blankrows: false,
+        });
+        const headerIndex = sheetRows.findIndex((row) =>
+          row.some((cell) => !isBlankCell(cell)),
+        );
 
-        // Validate columns — case-insensitive match
-        const required = ["name", "maxscore", "weight"];
-        const rawKeys = Object.keys(rows[0] || {});
-        const keysLower = rawKeys.map((k) => k.toLowerCase().trim());
-        const missing = required.filter((r) => !keysLower.includes(r));
+        if (headerIndex < 0) {
+          setTemplateFileError("File Excel không có dữ liệu.");
+          return;
+        }
+
+        const headers = sheetRows[headerIndex].map(normalizeHeader);
+        const keyMap = headers.reduce((map, key, index) => {
+          if (key) map[key] = index;
+          return map;
+        }, {});
+        const weightColumn =
+          keyMap.weight ?? keyMap.percentage ?? keyMap.percent;
+        const required = [
+          { key: "name", label: "name", index: keyMap.name },
+          { key: "maxscore", label: "maxScore", index: keyMap.maxscore },
+          { key: "weight", label: "weight/percentage", index: weightColumn },
+        ];
+        const missing = required
+          .filter((column) => column.index === undefined)
+          .map((column) => column.label);
+
         if (missing.length) {
-          // Show original expected names
-          const missingDisplay = missing.map((m) =>
-            m === "maxscore" ? "maxScore" : m,
-          );
           setTemplateFileError(
-            `File thiếu cột: ${missingDisplay.join(", ")}. Cần có: name, description, maxScore, weight`,
+            `File thiếu cột: ${missing.join(", ")}. Cần có: name, description, maxScore, weight hoặc percentage`,
           );
           return;
         }
-        // Build key map (original case)
-        const keyMap = {};
-        rawKeys.forEach((k) => {
-          keyMap[k.toLowerCase().trim()] = k;
+
+        const descriptionIndex = keyMap.description;
+        const errors = [];
+        const items = [];
+
+        sheetRows.slice(headerIndex + 1).forEach((row, offset) => {
+          const rowNumber = headerIndex + offset + 2;
+          if (row.every((cell) => isBlankCell(cell))) return;
+
+          const rowErrors = [];
+          const name = String(row[keyMap.name] || "").trim();
+          const maxScore = Number(row[keyMap.maxscore]);
+          const weight = percentToDecimal(row[weightColumn]);
+
+          if (!name) {
+            rowErrors.push(`Dòng ${rowNumber}: cột "name" không được để trống.`);
+          }
+          if (!Number.isFinite(maxScore) || maxScore <= 0) {
+            rowErrors.push(`Dòng ${rowNumber}: cột "maxScore" phải là số > 0.`);
+          }
+          if (!Number.isFinite(weight) || weight < 0 || weight > 1) {
+            rowErrors.push(
+              `Dòng ${rowNumber}: cột "weight/percentage" phải là 20, 20%, hoặc 0.2.`,
+            );
+          }
+
+          if (rowErrors.length) {
+            errors.push(...rowErrors);
+            return;
+          }
+
+          items.push({
+            name,
+            description:
+              descriptionIndex === undefined
+                ? ""
+                : String(row[descriptionIndex] || "").trim(),
+            maxScore,
+            weight,
+          });
         });
 
-        // Parse items using keyMap for case-insensitive access
-        const items = rows.map((r) => ({
-          name: String(r[keyMap["name"]] || "").trim(),
-          description: String(r[keyMap["description"]] || "").trim(),
-          maxScore: Number(r[keyMap["maxscore"]] || 10),
-          weight: Number(r[keyMap["weight"]] || 0),
-        }));
-
-        // Validate name
-        const emptyName = items.findIndex((it) => !it.name);
-        if (emptyName >= 0) {
-          setTemplateFileError(
-            `Hàng ${emptyName + 2}: Cột "name" không được để trống.`,
-          );
+        if (errors.length) {
+          setTemplateFileError(errors.join(" "));
           return;
         }
 
-        // Validate weight sum = 100
+        if (!items.length) {
+          setTemplateFileError("File Excel không có dòng tiêu chí hợp lệ.");
+          return;
+        }
+
         const totalW = items.reduce((s, it) => s + it.weight, 0);
-        if (Math.abs(totalW - 100) > 0.01) {
+        if (Math.abs(totalW - WEIGHT_TOTAL_DECIMAL) > 0.001) {
           setTemplateWeightError(
-            `Tổng weight = ${totalW}. Phải đúng bằng 100.`,
+            `Tổng weight = ${formatPercent(totalW)}%. File phải có tổng đúng bằng 100%.`,
           );
         }
 
         setTemplateItems(items);
+        if (fileInputRef.current) fileInputRef.current.value = "";
       } catch {
         setTemplateFileError(
           "Không thể đọc file. Hãy dùng đúng định dạng .xlsx hoặc .xls.",
@@ -309,8 +454,8 @@ export function CriteriaManagement() {
       return;
     }
     const totalW = templateItems.reduce((s, it) => s + it.weight, 0);
-    if (Math.abs(totalW - 100) > 0.01) {
-      setFormError(`Tổng weight = ${totalW}, phải bằng 100.`);
+    if (Math.abs(totalW - WEIGHT_TOTAL_DECIMAL) > 0.001) {
+      setFormError(`Tổng weight = ${formatPercent(totalW)}%, phải bằng 100%.`);
       return;
     }
 
@@ -320,7 +465,10 @@ export function CriteriaManagement() {
       await criterionService.createTemplate({
         name: templateName.trim(),
         description: templateDesc.trim() || null,
-        items: templateItems,
+        items: templateItems.map((item) => ({
+          ...item,
+          weight: decimalToPercent(item.weight),
+        })),
       });
       // Refresh template list
       const res = await criterionService.getTemplates();
@@ -436,7 +584,7 @@ export function CriteriaManagement() {
 
       <CoordinatorPanel
         title="Weight validation"
-        subtitle="Total rubric weight must be ≤ 1.0"
+        subtitle="Tổng weight phải đúng bằng 100%"
         icon={icons.SlidersHorizontal}
         actions={
           <>
@@ -486,14 +634,14 @@ export function CriteriaManagement() {
         >
           <div className="mb-3 flex items-center justify-between">
             <p className="font-bold text-slate-900">
-              Total weight: {totalWeight.toFixed(2)}
+              Total weight: {formatPercent(totalWeight)}%
             </p>
             <CoordinatorBadge tone={valid ? "success" : "warning"}>
               {valid ? "Valid" : "Warning"}
             </CoordinatorBadge>
           </div>
           <CoordinatorProgressBar
-            value={Math.round(totalWeight * 100)}
+            value={Math.min(100, Math.round(decimalToPercent(totalWeight)))}
             color={valid ? "#059669" : "#D97706"}
           />
         </div>
@@ -520,8 +668,39 @@ export function CriteriaManagement() {
               if (key === "weight")
                 return (
                   <span className="font-bold text-slate-900">
-                    {Number(row.weight).toFixed(2)}
+                    {formatPercent(row.weight)}%
                   </span>
+                );
+              if (key === "actions")
+                return (
+                  <div className="flex gap-2">
+                    <CoordinatorActionButton
+                      icon={icons.Edit3}
+                      onClick={() => {
+                        setEditTarget(row);
+                        setForm({
+                          name: row.name,
+                          description: row.description || "",
+                          maxScore: row.maxScore,
+                          weight: `${formatPercent(row.weight)}%`,
+                        });
+                        setFormError("");
+                        setModal("edit");
+                      }}
+                    >
+                      Edit
+                    </CoordinatorActionButton>
+                    <CoordinatorActionButton
+                      variant="danger"
+                      icon={icons.Trash2}
+                      onClick={() => {
+                        setDeleteTarget(row);
+                        setActionError("");
+                      }}
+                    >
+                      Delete
+                    </CoordinatorActionButton>
+                  </div>
                 );
               return row[key] ?? "—";
             }}
@@ -549,9 +728,13 @@ export function CriteriaManagement() {
           }
         >
           <div className="grid gap-4">
-            <ModalHintBanner icon={icons.Scale} title="Tiêu chí (Criterion) là gì?">
-              Mỗi tiêu chí là một hạng mục Judge chấm điểm (vd: Innovation, Technical).
-              Tổng <strong>Weight</strong> tất cả tiêu chí phải ≤ <strong>1.0</strong> (100%).
+            <ModalHintBanner
+              icon={icons.Scale}
+              title="Tiêu chí (Criterion) là gì?"
+            >
+              Mỗi tiêu chí là một hạng mục Judge chấm điểm (vd: Innovation,
+              Technical). Tổng <strong>Weight</strong> tất cả tiêu chí phải bằng{" "}
+              <strong>100%</strong>.
             </ModalHintBanner>
             <FormError msg={formError} />
             <FormField
@@ -564,7 +747,9 @@ export function CriteriaManagement() {
                 className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
                 placeholder="Innovation"
                 value={form.name}
-                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, name: e.target.value }))
+                }
               />
             </FormField>
             <FormField
@@ -600,13 +785,12 @@ export function CriteriaManagement() {
               <FormField
                 label="Trọng số (Weight)"
                 icon={icons.SlidersHorizontal}
-                hint="0.30 = 30%. Tổng tất cả tiêu chí ≤ 1.0"
+                hint="Nhập 20 hoặc 20% (gửi BE là 0.2). Tổng tất cả tiêu chí = 100%"
               >
                 <input
-                  type="number"
-                  step="0.05"
+                  type="text"
                   className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-                  placeholder="0.30"
+                  placeholder="20%"
                   value={form.weight}
                   onChange={(e) =>
                     setForm((p) => ({ ...p, weight: e.target.value }))
@@ -754,7 +938,7 @@ export function CriteriaManagement() {
                 Hướng dẫn file Excel
               </p>
               <p className="text-xs text-slate-600">
-                File phải có 4 cột theo đúng thứ tự:
+                File cần có cột name, maxScore và weight hoặc percentage.
               </p>
               <div className="rounded-lg overflow-hidden border border-slate-200 text-xs">
                 <table className="w-full">
@@ -795,8 +979,8 @@ export function CriteriaManagement() {
                 </table>
               </div>
               <p className="text-xs text-slate-500">
-                ⚠️ Tổng cột <strong>weight</strong> phải đúng bằng{" "}
-                <strong>100</strong>.
+                ⚠️ Tổng cột <strong>weight/percentage</strong> phải đúng bằng{" "}
+                <strong>100%</strong>. Chấp nhận 20, 20%, hoặc 0.2.
               </p>
               <button
                 onClick={handleDownloadSample}
@@ -914,13 +1098,13 @@ export function CriteriaManagement() {
                                   templateItems.reduce(
                                     (s, x) => s + x.weight,
                                     0,
-                                  ) - 100,
-                                ) > 0.01
+                                  ) - WEIGHT_TOTAL_DECIMAL,
+                                ) > 0.001
                                   ? "#ef4444"
                                   : "#16a34a",
                             }}
                           >
-                            {it.weight}%
+                            {formatPercent(it.weight)}%
                           </span>
                         </td>
                       </tr>
@@ -943,13 +1127,15 @@ export function CriteriaManagement() {
                           color:
                             Math.abs(
                               templateItems.reduce((s, x) => s + x.weight, 0) -
-                                100,
-                            ) > 0.01
+                                WEIGHT_TOTAL_DECIMAL,
+                            ) > 0.001
                               ? "#ef4444"
                               : "#16a34a",
                         }}
                       >
-                        {templateItems.reduce((s, x) => s + x.weight, 0)}%
+                        {`${formatPercent(
+                          templateItems.reduce((s, x) => s + x.weight, 0),
+                        )}%`}
                       </td>
                     </tr>
                   </tbody>
@@ -986,6 +1172,138 @@ export function CriteriaManagement() {
             {deleteTemplateTarget.items?.length ?? 0} tiêu chí) sẽ bị xóa vĩnh
             viễn.
           </p>
+        </ModalShell>
+      )}
+      {/* Action error */}
+      {actionError && (
+        <div
+          className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm"
+          style={{
+            background: "rgba(239,68,68,0.06)",
+            border: "1px solid rgba(239,68,68,0.2)",
+            color: "#dc2626",
+          }}
+        >
+          <icons.X className="w-4 h-4 flex-shrink-0" />
+          {actionError}
+        </div>
+      )}
+
+      {/* Modal: Edit Criterion */}
+      {modal === "edit" && editTarget && (
+        <ModalShell
+          title={`Sửa tiêu chí: ${editTarget.name}`}
+          onClose={() => {
+            setModal(null);
+            setEditTarget(null);
+          }}
+          actions={
+            <>
+              <CoordinatorActionButton
+                onClick={() => {
+                  setModal(null);
+                  setEditTarget(null);
+                }}
+                disabled={saving}
+              >
+                Hủy
+              </CoordinatorActionButton>
+              <CoordinatorActionButton
+                variant="primary"
+                disabled={saving}
+                onClick={handleEditCriterion}
+              >
+                {saving ? "Đang lưu..." : "Lưu thay đổi"}
+              </CoordinatorActionButton>
+            </>
+          }
+        >
+          <div className="grid gap-3">
+            <FormError msg={formError} />
+            <input
+              className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+              placeholder="Tên tiêu chí *"
+              value={form.name}
+              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+            />
+            <textarea
+              className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none min-h-16"
+              placeholder="Mô tả"
+              value={form.description}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, description: e.target.value }))
+              }
+            />
+            <input
+              type="number"
+              className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+              placeholder="Max score"
+              value={form.maxScore}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, maxScore: e.target.value }))
+              }
+            />
+            <input
+              type="text"
+              className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+              placeholder="Weight, e.g. 20 or 20%"
+              value={form.weight}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, weight: e.target.value }))
+              }
+            />
+          </div>
+        </ModalShell>
+      )}
+
+      {/* Modal: Delete Criterion */}
+      {deleteTarget && (
+        <ModalShell
+          title={`Xóa tiêu chí: ${deleteTarget.name}?`}
+          onClose={() => {
+            setDeleteTarget(null);
+            setActionError("");
+          }}
+          actions={
+            <>
+              <CoordinatorActionButton
+                onClick={() => {
+                  setDeleteTarget(null);
+                  setActionError("");
+                }}
+                disabled={saving}
+              >
+                Hủy
+              </CoordinatorActionButton>
+              <CoordinatorActionButton
+                variant="danger"
+                disabled={saving}
+                onClick={handleDeleteCriterion}
+              >
+                {saving ? "Đang xóa..." : "Xác nhận xóa"}
+              </CoordinatorActionButton>
+            </>
+          }
+        >
+          <div className="space-y-3">
+            <p className="text-sm text-slate-600">
+              Tiêu chí <strong>{deleteTarget.name}</strong> sẽ bị xóa vĩnh viễn.
+              Chỉ xóa được nếu chưa có điểm nào được ghi nhận.
+            </p>
+            {actionError && (
+              <div
+                className="flex items-center gap-2 p-3 rounded-xl text-sm"
+                style={{
+                  background: "rgba(239,68,68,0.06)",
+                  border: "1px solid rgba(239,68,68,0.2)",
+                  color: "#dc2626",
+                }}
+              >
+                <icons.X className="w-4 h-4 flex-shrink-0" />
+                {actionError}
+              </div>
+            )}
+          </div>
         </ModalShell>
       )}
     </div>
