@@ -46,8 +46,8 @@ export function canListRoundSubmissions(user) {
   return hasAnyRole(user, ["Judge", "Coordinator"]);
 }
 
-export function getLoginRedirectPath(user) {
-  const roles = Array.isArray(user?.roles) ? user.roles : [];
+export function getRedirectPathByUser(user) {
+  const roles = getUserRoles(user);
 
   if (user?.systemRole === "Pending") return "/pending";
   if (user?.systemRole === "Rejected") return "/rejected";

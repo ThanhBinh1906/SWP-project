@@ -315,6 +315,16 @@ function StaffTab() {
   };
 
   // ---------------------------------------------------------------------------
+  const ensureMentorAssignedToTrack = async (trackId, mentorId) => {
+    try {
+      await trackService.assignMentor(trackId, mentorId);
+    } catch (err) {
+      if (!isMentorAlreadyAssignedToTrack(err)) {
+        throw err;
+      }
+    }
+  };
+
   const openAssignMentorTeams = async (mentor) => {
     setAssignMentorModal(mentor);
     setSelectedTrackId("");
@@ -340,7 +350,7 @@ function StaffTab() {
     setMentorAssignLoading(true);
     setMentorAssignError("");
     try {
-      await trackService.assignMentor(trackId, mentorId);
+      await ensureMentorAssignedToTrack(trackId, mentorId);
 
       const [teamsRes, mentorTeamsRes] = await Promise.all([
         teamService.getAdminTeams({
@@ -407,7 +417,10 @@ function StaffTab() {
     setMentorAssignLoading(true);
     setMentorAssignError("");
     try {
-      await trackService.assignMentor(selectedTrackId, assignMentorModal.accountId);
+      await ensureMentorAssignedToTrack(
+        selectedTrackId,
+        assignMentorModal.accountId,
+      );
       await trackService.assignMentorTeams(
         selectedTrackId,
         assignMentorModal.accountId,
@@ -857,6 +870,21 @@ function StaffTab() {
         </ModalShell>
       )}
     </div>
+  );
+}
+
+function isMentorAlreadyAssignedToTrack(err) {
+  const message = (err?.response?.data?.message || "").toLowerCase();
+  const normalizedMessage = message
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d");
+
+  return (
+    normalizedMessage.includes("da duoc phan cong vao track") ||
+    (normalizedMessage.includes("mentor") &&
+      normalizedMessage.includes("track") &&
+      normalizedMessage.includes("phan cong"))
   );
 }
 

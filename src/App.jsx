@@ -1,4 +1,4 @@
-import { getLoginRedirectPath, hasAnyRole } from "./utils/roleHelpers";
+import { getRedirectPathByUser, hasAnyRole } from "./utils/roleHelpers";
 import "./index.css";
 import {
   createBrowserRouter,
@@ -26,8 +26,8 @@ import Forbidden from "./page/error/NotPermissionPage";
 function PublicRoute({ children }) {
   const { isAuthenticated, user } = useSelector((s) => s.auth);
   if (!isAuthenticated) return children;
-  const dest = getLoginRedirectPath(user);
-  return dest === "/" ? children : <Navigate to={dest} replace />;
+  const dest = getRedirectPathByUser(user);
+  return dest !== "/" ? <Navigate to={dest} replace /> : children;
 }
 
 // ---- Protected Route ----
