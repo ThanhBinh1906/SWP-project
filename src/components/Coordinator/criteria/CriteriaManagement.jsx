@@ -385,7 +385,9 @@ export function CriteriaManagement() {
           const weight = percentToDecimal(row[weightColumn]);
 
           if (!name) {
-            rowErrors.push(`Dòng ${rowNumber}: cột "name" không được để trống.`);
+            rowErrors.push(
+              `Dòng ${rowNumber}: cột "name" không được để trống.`,
+            );
           }
           if (!Number.isFinite(maxScore) || maxScore <= 0) {
             rowErrors.push(`Dòng ${rowNumber}: cột "maxScore" phải là số > 0.`);
