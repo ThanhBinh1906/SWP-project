@@ -15,8 +15,8 @@ const viewTitles = {
     sub: "Browse all active and upcoming challenges",
   },
   submit: {
-    title: "Submit Project",
-    sub: "Upload your project files or link your repository",
+    title: "Nộp bài dự án",
+    sub: "Cập nhật link dự án, slide và mã nguồn GitHub",
   },
   team: {
     title: "Team Information",
@@ -137,7 +137,7 @@ export default function UserDashboard() {
         <main className="flex-1 px-8 py-7">
           <div key={activeNav} className="animate-fade-in">
             {activeNav === "challenges" && <ChallengesView />}
-            {activeNav === "submit" && <SubmitView />}
+            {activeNav === "submit" && <SubmitView eventId={activeEventId} />}
             {activeNav === "team" && <TeamView />}
           </div>
         </main>
