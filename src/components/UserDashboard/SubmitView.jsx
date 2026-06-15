@@ -10,7 +10,6 @@ import {
   Loader2,
 } from "lucide-react";
 import teamService from "../../services/teamService";
-import roundService from "../../services/roundService";
 import submissionService from "../../services/submissionService";
 import { getApiMessage } from "../Coordinator/coordinatorHelpers";
 
@@ -170,7 +169,7 @@ function PreviewLink({ href }) {
 
 function SubmissionForm({ eventId }) {
   const [team, setTeam] = useState(null);
-  const [rounds, setRounds] = useState([]);
+  const [activeRound, setActiveRound] = useState(null);
   const [submissions, setSubmissions] = useState([]);
   const [selectedRoundId, setSelectedRoundId] = useState("");
   const [form, setForm] = useState(EMPTY_FORM);
@@ -193,30 +192,24 @@ function SubmissionForm({ eventId }) {
       const myTeam = teamRes.data?.data;
       setTeam(myTeam || null);
 
-      if (!myTeam?.trackId) {
-        setRounds([]);
+      if (!myTeam) {
+        setActiveRound(null);
         setSubmissions([]);
         setSelectedRoundId("");
         return;
       }
 
-      const [roundsRes, subsRes] = await Promise.all([
-        roundService.getByTrack(myTeam.trackId),
+      const [activeRoundRes, subsRes] = await Promise.all([
+        teamService.getMyActiveRound(),
         submissionService.getByTeam(myTeam.id),
       ]);
 
-      const roundList = roundsRes.data?.data || [];
-      const openRounds = roundList.filter((round) => isRoundOpen(round));
+      const currentRound = activeRoundRes.data?.data || null;
       const submissionList = subsRes.data?.data || [];
 
-      setRounds(openRounds);
+      setActiveRound(currentRound);
       setSubmissions(submissionList);
-      setSelectedRoundId((current) => {
-        if (current && openRounds.some((round) => String(round.id) === current)) {
-          return current;
-        }
-        return openRounds.length > 0 ? String(openRounds[0].id) : "";
-      });
+      setSelectedRoundId(currentRound?.id ? String(currentRound.id) : "");
     } catch (err) {
       if (err?.response?.status === 404) {
         setTeam(null);
@@ -238,8 +231,11 @@ function SubmissionForm({ eventId }) {
   );
 
   const selectedRound = useMemo(
-    () => rounds.find((r) => String(r.id) === selectedRoundId),
-    [rounds, selectedRoundId],
+    () =>
+      activeRound && String(activeRound.id) === selectedRoundId
+        ? activeRound
+        : null,
+    [activeRound, selectedRoundId],
   );
 
   useEffect(() => {
@@ -296,6 +292,14 @@ function SubmissionForm({ eventId }) {
     }
     if (team.status !== "Approved") {
       setError("Team chưa được Coordinator duyệt. Không thể nộp bài.");
+      return;
+    }
+    if (!activeRound) {
+      setError("Chưa có vòng thi đang diễn ra.");
+      return;
+    }
+    if (!activeRound.topic) {
+      setError("Đề chưa được phát nên chưa thể nộp bài.");
       return;
     }
     if (!selectedRoundId) {
@@ -357,10 +361,18 @@ function SubmissionForm({ eventId }) {
     );
   }
 
-  if (rounds.length === 0) {
+  if (!activeRound) {
     return (
       <AlertBox title="Chưa có vòng thi đang mở">
         <p>Cần có Round trạng thái Active và thời gian hiện tại nằm trong khoảng startTime - endTime.</p>
+      </AlertBox>
+    );
+  }
+
+  if (!activeRound.topic) {
+    return (
+      <AlertBox title="Đề chưa được phát">
+        <p>Round đang diễn ra nhưng team chưa được phát đề nên chưa thể nộp bài.</p>
       </AlertBox>
     );
   }
@@ -426,18 +438,9 @@ function SubmissionForm({ eventId }) {
           <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
             Vòng thi đang mở
           </label>
-          <select
-            className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-            value={selectedRoundId}
-            onChange={(e) => setSelectedRoundId(e.target.value)}
-            disabled={saving}
-          >
-            {rounds.map((round) => (
-              <option key={round.id} value={round.id}>
-                {round.name}
-              </option>
-            ))}
-          </select>
+          <div className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-700">
+            {activeRound.name || `Round #${activeRound.id}`}
+          </div>
           {selectedRound && (
             <p className="mt-1.5 text-xs text-slate-400">
               {new Date(selectedRound.startTime).toLocaleString("vi-VN")} -{" "}

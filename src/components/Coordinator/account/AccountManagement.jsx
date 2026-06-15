@@ -9,6 +9,8 @@ import {
 } from "../CoordinatorUI";
 import { AlertCircle, Loader2 } from "lucide-react";
 import staffService from "../../../services/staffService";
+import teamService from "../../../services/teamService";
+import trackService from "../../../services/trackService";
 import { useSelector } from "react-redux";
 
 // ---------------------------------------------------------------------------
@@ -213,6 +215,16 @@ function StaffTab() {
   const [roundId, setRoundId] = useState("");
   const [assignError, setAssignError] = useState("");
 
+  // Assign mentor to teams modal
+  const [assignMentorModal, setAssignMentorModal] = useState(null); // staff object
+  const [tracks, setTracks] = useState([]);
+  const [selectedTrackId, setSelectedTrackId] = useState("");
+  const [trackTeams, setTrackTeams] = useState([]);
+  const [mentorTeams, setMentorTeams] = useState([]);
+  const [selectedTeamIds, setSelectedTeamIds] = useState([]);
+  const [mentorAssignLoading, setMentorAssignLoading] = useState(false);
+  const [mentorAssignError, setMentorAssignError] = useState("");
+
   // ---------------------------------------------------------------------------
   const fetchStaff = useCallback(async () => {
     setLoading(true);
@@ -303,6 +315,119 @@ function StaffTab() {
   };
 
   // ---------------------------------------------------------------------------
+  const openAssignMentorTeams = async (mentor) => {
+    setAssignMentorModal(mentor);
+    setSelectedTrackId("");
+    setTrackTeams([]);
+    setMentorTeams([]);
+    setSelectedTeamIds([]);
+    setMentorAssignError("");
+    setMentorAssignLoading(true);
+    try {
+      const res = await trackService.getByEvent(eventId);
+      setTracks(res.data?.data || []);
+    } catch (err) {
+      setMentorAssignError(
+        err?.response?.data?.message || "Không thể tải danh sách track.",
+      );
+    } finally {
+      setMentorAssignLoading(false);
+    }
+  };
+
+  const loadMentorTrackTeams = async (trackId, mentorId) => {
+    if (!trackId || !mentorId) return;
+    setMentorAssignLoading(true);
+    setMentorAssignError("");
+    try {
+      await trackService.assignMentor(trackId, mentorId);
+
+      const [teamsRes, mentorTeamsRes] = await Promise.all([
+        teamService.getAdminTeams({
+          pageNumber: 1,
+          pageSize: 200,
+          status: "Approved",
+          trackId,
+        }),
+        trackService.getMentorTeams(trackId, mentorId),
+      ]);
+
+      const teamData = teamsRes.data?.data;
+      const teams = teamData?.items || teamData || [];
+      const filteredTeams = teams.filter(
+        (team) => !team.trackId || String(team.trackId) === String(trackId),
+      );
+      const assignedTeams = mentorTeamsRes.data?.data || [];
+      const assignedIds = assignedTeams.map((team) =>
+        String(team.id ?? team.teamId),
+      );
+
+      setTrackTeams(filteredTeams);
+      setMentorTeams(assignedTeams);
+      setSelectedTeamIds(assignedIds);
+    } catch (err) {
+      setTrackTeams([]);
+      setMentorTeams([]);
+      setSelectedTeamIds([]);
+      setMentorAssignError(
+        err?.response?.data?.message ||
+          "Không thể tải danh sách team của mentor trong track này.",
+      );
+    } finally {
+      setMentorAssignLoading(false);
+    }
+  };
+
+  const handleTrackChangeForMentor = (trackId) => {
+    setSelectedTrackId(trackId);
+    setTrackTeams([]);
+    setMentorTeams([]);
+    setSelectedTeamIds([]);
+    if (trackId && assignMentorModal?.accountId) {
+      loadMentorTrackTeams(trackId, assignMentorModal.accountId);
+    }
+  };
+
+  const toggleTeamSelection = (teamId) => {
+    const id = String(teamId);
+    setSelectedTeamIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+
+  const handleAssignMentorTeams = async () => {
+    if (!selectedTrackId) {
+      setMentorAssignError("Vui lòng chọn track.");
+      return;
+    }
+    if (!assignMentorModal?.accountId) {
+      setMentorAssignError("Không tìm thấy mentor.");
+      return;
+    }
+    setMentorAssignLoading(true);
+    setMentorAssignError("");
+    try {
+      await trackService.assignMentor(selectedTrackId, assignMentorModal.accountId);
+      await trackService.assignMentorTeams(
+        selectedTrackId,
+        assignMentorModal.accountId,
+        { teamIds: selectedTeamIds },
+      );
+      await fetchStaff();
+      setAssignMentorModal(null);
+      setSelectedTrackId("");
+      setTrackTeams([]);
+      setMentorTeams([]);
+      setSelectedTeamIds([]);
+    } catch (err) {
+      setMentorAssignError(
+        err?.response?.data?.message || "Gán mentor cho team thất bại.",
+      );
+    } finally {
+      setMentorAssignLoading(false);
+    }
+  };
+
   const filtered = staff.filter((s) => s.eventRole === roleFilter);
 
   const columns =
@@ -415,6 +540,14 @@ function StaffTab() {
             if (key === "actions")
               return (
                 <div className="flex gap-2 flex-wrap">
+                  {row.eventRole === "Mentor" && (
+                    <CoordinatorActionButton
+                      icon={icons.Users}
+                      onClick={() => openAssignMentorTeams(row)}
+                    >
+                      Assign Teams
+                    </CoordinatorActionButton>
+                  )}
                   {row.eventRole === "Judge" && (
                     <CoordinatorActionButton
                       icon={icons.Scale}
@@ -588,6 +721,138 @@ function StaffTab() {
               />
             </div>
             <FormError msg={assignError} />
+          </div>
+        </ModalShell>
+      )}
+
+      {/* Modal: Assign Mentor to Teams */}
+      {assignMentorModal && (
+        <ModalShell
+          title={`Assign Teams: ${assignMentorModal.username}`}
+          onClose={() => {
+            setAssignMentorModal(null);
+            setMentorAssignError("");
+          }}
+          actions={
+            <>
+              <CoordinatorActionButton
+                onClick={() => setAssignMentorModal(null)}
+                disabled={mentorAssignLoading}
+              >
+                Huỷ
+              </CoordinatorActionButton>
+              <CoordinatorActionButton
+                variant="primary"
+                disabled={
+                  mentorAssignLoading ||
+                  !selectedTrackId ||
+                  selectedTeamIds.length === 0
+                }
+                onClick={handleAssignMentorTeams}
+              >
+                {mentorAssignLoading ? "Đang gán..." : "Gán team"}
+              </CoordinatorActionButton>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <FormError msg={mentorAssignError} />
+
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-600">
+                Track <span className="text-orange-500">*</span>
+              </label>
+              <select
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+                value={selectedTrackId}
+                onChange={(e) => handleTrackChangeForMentor(e.target.value)}
+                disabled={mentorAssignLoading}
+              >
+                <option value="">-- Chọn track --</option>
+                {tracks.map((track) => (
+                  <option
+                    key={track.id ?? track.trackId}
+                    value={track.id ?? track.trackId}
+                  >
+                    {track.name ||
+                      track.trackName ||
+                      `Track #${track.id ?? track.trackId}`}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-slate-400">
+                Mentor sẽ được assign vào track trước, sau đó mới gán team.
+              </p>
+            </div>
+
+            {selectedTrackId && (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                      Team trong track
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      Đã chọn {selectedTeamIds.length}/{trackTeams.length} team.
+                    </p>
+                  </div>
+                  {mentorAssignLoading && (
+                    <Loader2 className="h-4 w-4 animate-spin text-orange-500" />
+                  )}
+                </div>
+
+                {mentorTeams.length > 0 && (
+                  <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-700">
+                    Đang phụ trách:{" "}
+                    {mentorTeams
+                      .map((team) => team.teamName || team.name || team.id || team.teamId)
+                      .join(", ")}
+                  </div>
+                )}
+
+                {trackTeams.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-slate-400">
+                    Chưa có team Approved trong track này.
+                  </p>
+                ) : (
+                  <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+                    {trackTeams.map((team) => {
+                      const checked = selectedTeamIds.includes(String(team.id));
+                      return (
+                        <button
+                          key={team.id}
+                          type="button"
+                          onClick={() => toggleTeamSelection(team.id)}
+                          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-all"
+                          style={{
+                            background: checked ? "rgba(242,111,33,0.08)" : "#fff",
+                            border: `1px solid ${checked ? "#F26F21" : "#E5E7EB"}`,
+                          }}
+                        >
+                          <span
+                            className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border"
+                            style={{
+                              background: checked ? "#F26F21" : "#fff",
+                              borderColor: checked ? "#F26F21" : "#CBD5E1",
+                            }}
+                          >
+                            {checked && <icons.CheckCircle2 className="h-3 w-3 text-white" />}
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block truncate font-semibold text-slate-800">
+                              {team.teamName}
+                            </span>
+                            <span className="block truncate text-xs text-slate-400">
+                              {team.university || "Chưa có trường"}
+                            </span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </ModalShell>
       )}

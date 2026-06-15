@@ -1,27 +1,31 @@
+import { useCallback, useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import {
-  FileText,
-  Lock,
-  Clock,
   AlertCircle,
-  Download,
-  Hash,
   BookOpen,
   CheckSquare,
+  Clock,
+  Download,
+  FileText,
+  Hash,
+  Loader2,
 } from "lucide-react";
+import teamService from "../../services/teamService";
+import { getApiMessage } from "../Coordinator/coordinatorHelpers";
 
-function ChallengeCard({ problem }) {
+function ChallengeCard({ activeRound }) {
+  const problem = activeRound.topic;
+
   return (
     <div
-      className="rounded-2xl bg-white overflow-hidden"
+      className="overflow-hidden rounded-2xl bg-white"
       style={{
         border: "1px solid #FFD0B5",
         boxShadow: "0 4px 24px rgba(242,111,33,0.06)",
       }}
     >
-      {/* Header */}
       <div
-        className="px-8 py-5 flex items-center justify-between"
+        className="flex flex-col gap-3 px-8 py-5 sm:flex-row sm:items-center sm:justify-between"
         style={{
           background:
             "linear-gradient(135deg, rgba(242,111,33,0.08) 0%, rgba(242,111,33,0.02) 100%)",
@@ -30,72 +34,68 @@ function ChallengeCard({ problem }) {
       >
         <div className="flex items-center gap-3">
           <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl"
             style={{
               background: "rgba(242,111,33,0.12)",
               border: "1px solid rgba(242,111,33,0.25)",
             }}
           >
-            <FileText className="w-5 h-5" style={{ color: "#F26F21" }} />
+            <FileText className="h-5 w-5" style={{ color: "#F26F21" }} />
           </div>
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">
-              Problem Statement
+              Đề bài của team
             </p>
-            <div className="flex items-center gap-1 mt-0.5">
-              <Hash className="w-3.5 h-3.5" style={{ color: "#F26F21" }} />
+            <div className="mt-0.5 flex items-center gap-1">
+              <Hash className="h-3.5 w-3.5" style={{ color: "#F26F21" }} />
               <p className="text-sm font-bold" style={{ color: "#F26F21" }}>
-                Problem {problem.id}
+                Round: {activeRound.name || `#${activeRound.id}`}
               </p>
             </div>
           </div>
         </div>
+
         {problem.attachmentUrl && (
           <button
+            type="button"
             onClick={() => window.open(problem.attachmentUrl, "_blank")}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-150"
+            className="flex w-fit items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-150"
             style={{
               background: "rgba(242,111,33,0.08)",
               border: "1px solid rgba(242,111,33,0.25)",
               color: "#F26F21",
             }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.background = "rgba(242,111,33,0.16)")
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.background = "rgba(242,111,33,0.08)")
-            }
           >
-            <Download className="w-4 h-4" /> Tải PDF
+            <Download className="h-4 w-4" /> Tải PDF
           </button>
         )}
       </div>
 
-      {/* Body */}
       <div className="p-8">
         <h2
-          className="text-2xl font-black text-[#111827] leading-snug mb-8"
+          className="mb-8 text-2xl font-black leading-snug text-[#111827]"
           style={{ fontFamily: "'Montserrat', 'Inter', sans-serif" }}
         >
           {problem.title}
         </h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div
             className="rounded-2xl p-6"
             style={{ background: "#F9FAFB", border: "1px solid #E5E7EB" }}
           >
-            <div className="flex items-center gap-2 mb-3">
+            <div className="mb-3 flex items-center gap-2">
               <div
-                className="w-7 h-7 rounded-lg flex items-center justify-center"
+                className="flex h-7 w-7 items-center justify-center rounded-lg"
                 style={{ background: "#E5E7EB" }}
               >
-                <BookOpen className="w-3.5 h-3.5 text-slate-500" />
+                <BookOpen className="h-3.5 w-3.5 text-slate-500" />
               </div>
               <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
                 Mô tả
               </p>
             </div>
-            <p className="text-sm text-slate-600 leading-relaxed">
+            <p className="text-sm leading-relaxed text-slate-600">
               {problem.description}
             </p>
           </div>
@@ -108,13 +108,13 @@ function ChallengeCard({ problem }) {
                 border: "1px solid rgba(242,111,33,0.18)",
               }}
             >
-              <div className="flex items-center gap-2 mb-3">
+              <div className="mb-3 flex items-center gap-2">
                 <div
-                  className="w-7 h-7 rounded-lg flex items-center justify-center"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg"
                   style={{ background: "rgba(242,111,33,0.12)" }}
                 >
                   <CheckSquare
-                    className="w-3.5 h-3.5"
+                    className="h-3.5 w-3.5"
                     style={{ color: "#F26F21" }}
                   />
                 </div>
@@ -125,7 +125,7 @@ function ChallengeCard({ problem }) {
                   Yêu cầu kỹ thuật
                 </p>
               </div>
-              <p className="text-sm text-slate-600 leading-relaxed">
+              <p className="text-sm leading-relaxed text-slate-600">
                 {problem.requirements}
               </p>
             </div>
@@ -136,134 +136,105 @@ function ChallengeCard({ problem }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// States
-// ---------------------------------------------------------------------------
-function ProblemLocked() {
+function StateMessage({ icon: Icon = AlertCircle, title, description }) {
   return (
-    <div className="w-full flex flex-col items-center justify-center py-24 gap-8">
-      <div className="relative flex items-center justify-center">
-        <div
-          className="absolute w-36 h-36 rounded-full"
-          style={{ background: "rgba(242,111,33,0.06)" }}
-        />
-        <div
-          className="absolute w-24 h-24 rounded-full"
-          style={{ background: "rgba(242,111,33,0.1)" }}
-        />
-        <div
-          className="relative w-16 h-16 rounded-2xl flex items-center justify-center"
-          style={{
-            background: "rgba(242,111,33,0.12)",
-            border: "1.5px solid rgba(242,111,33,0.3)",
-          }}
-        >
-          <Lock className="w-8 h-8" style={{ color: "#F26F21" }} />
-        </div>
-      </div>
-      <div className="text-center space-y-2 max-w-sm">
-        <h2
-          className="text-2xl font-black text-[#111827]"
-          style={{ fontFamily: "'Montserrat', 'Inter', sans-serif" }}
-        >
-          Đề bài chưa được mở
-        </h2>
-        <p className="text-sm text-slate-500 leading-relaxed">
-          Ban tổ chức sẽ công bố đề bài vào thời điểm chính thức bắt đầu vòng
-          thi.
-        </p>
-      </div>
+    <div className="py-16 text-center">
       <div
-        className="flex items-center gap-2 px-5 py-2.5 rounded-xl"
-        style={{
-          background: "rgba(242,111,33,0.06)",
-          border: "1px solid rgba(242,111,33,0.18)",
-        }}
-      >
-        <Clock className="w-4 h-4" style={{ color: "#F26F21" }} />
-        <span className="text-sm font-semibold" style={{ color: "#F26F21" }}>
-          Vui lòng chờ thông báo từ Ban tổ chức
-        </span>
-      </div>
-      <div className="flex items-center gap-2">
-        {[0, 1, 2].map((i) => (
-          <div
-            key={i}
-            className="w-1.5 h-1.5 rounded-full animate-bounce"
-            style={{
-              background: "#F26F21",
-              opacity: 0.4,
-              animationDelay: `${i * 0.2}s`,
-            }}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function NoProblemAssigned() {
-  return (
-    <div className="text-center py-16">
-      <div
-        className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3"
+        className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl"
         style={{
           background: "rgba(242,111,33,0.08)",
           border: "1px solid rgba(242,111,33,0.15)",
         }}
       >
-        <FileText className="w-7 h-7" style={{ color: "#F26F21" }} />
+        <Icon className="h-7 w-7" style={{ color: "#F26F21" }} />
       </div>
-      <p className="text-sm font-semibold text-slate-600">
-        Team chưa được phân đề bài.
-      </p>
-      <p className="text-xs text-slate-400 mt-1">
-        Coordinator sẽ phân đề sau khi round bắt đầu.
-      </p>
+      <p className="text-sm font-semibold text-slate-600">{title}</p>
+      {description && (
+        <p className="mt-1 text-xs text-slate-400">{description}</p>
+      )}
     </div>
   );
 }
 
-function NoTeam() {
-  return (
-    <div className="text-center py-16">
-      <div
-        className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3"
-        style={{
-          background: "rgba(242,111,33,0.08)",
-          border: "1px solid rgba(242,111,33,0.15)",
-        }}
-      >
-        <AlertCircle className="w-7 h-7" style={{ color: "#F26F21" }} />
-      </div>
-      <p className="text-sm font-semibold text-slate-600">Bạn chưa có team.</p>
-      <p className="text-xs text-slate-400 mt-1">
-        Vui lòng đăng ký team trước khi xem đề bài.
-      </p>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
 export function ChallengesView() {
   const { myTeam, fetched } = useSelector((s) => s.team);
+  const [activeRound, setActiveRound] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  // Chưa fetch xong
+  const loadActiveRound = useCallback(async () => {
+    if (!myTeam) return;
+
+    setLoading(true);
+    setError("");
+    try {
+      const res = await teamService.getMyActiveRound();
+      setActiveRound(res.data?.data || null);
+    } catch (err) {
+      setError(getApiMessage(err, "Không thể tải vòng thi đang diễn ra."));
+      setActiveRound(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [myTeam]);
+
+  useEffect(() => {
+    loadActiveRound();
+  }, [loadActiveRound]);
+
   if (!fetched) return null;
 
-  // Chưa có team
-  if (!myTeam) return <NoTeam />;
+  if (!myTeam) {
+    return (
+      <StateMessage
+        title="Bạn chưa có team."
+        description="Vui lòng đăng ký team trước khi xem đề bài."
+      />
+    );
+  }
 
-  // Có team nhưng chưa có topic → chờ Coordinator phân đề
-  if (!myTeam.topic) return <NoProblemAssigned />;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center gap-2 py-16 text-sm text-slate-400">
+        <Loader2 className="h-5 w-5 animate-spin text-[#F26F21]" />
+        Đang tải vòng thi đang diễn ra...
+      </div>
+    );
+  }
 
-  // Có topic → hiển thị đề bài
+  if (error) {
+    return (
+      <StateMessage
+        title="Không thể tải đề bài."
+        description={error}
+      />
+    );
+  }
+
+  if (!activeRound) {
+    return (
+      <StateMessage
+        icon={Clock}
+        title="Chưa có vòng thi đang diễn ra."
+        description="Vui lòng quay lại khi round của team được mở."
+      />
+    );
+  }
+
+  if (!activeRound.topic) {
+    return (
+      <StateMessage
+        icon={FileText}
+        title="Đề chưa được phát."
+        description="Round đang diễn ra nhưng team chưa được phát đề."
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <FileText className="w-4 h-4" style={{ color: "#F26F21" }} />
+        <FileText className="h-4 w-4" style={{ color: "#F26F21" }} />
         <h2
           className="text-sm font-bold uppercase tracking-widest"
           style={{ color: "#F26F21" }}
@@ -271,7 +242,7 @@ export function ChallengesView() {
           Đề bài của team
         </h2>
       </div>
-      <ChallengeCard problem={myTeam.topic} />
+      <ChallengeCard activeRound={activeRound} />
     </div>
   );
 }

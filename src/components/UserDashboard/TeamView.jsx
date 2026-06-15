@@ -915,6 +915,7 @@ function MemberModal({ teamId, member, onClose, onSaved }) {
           studentCode: member.studentCode,
           email: member.email,
           phone: member.phone,
+          university: member.university || "",
           isFPTStudent: member.isFPTStudent,
         }
       : { ...EMPTY_MEMBER },

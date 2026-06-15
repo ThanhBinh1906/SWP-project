@@ -3,6 +3,7 @@ import api from "./axiosInstance";
 const teamService = {
   createTeam: (data) => api.post("/api/teams", data),
   getMyTeam: () => api.get("/api/teams/my-team"),
+  getMyActiveRound: () => api.get("/api/teams/my-active-round"),
   getById: (id) => api.get(`/api/teams/${id}`),
   updateTeam: (id, data) => api.put(`/api/teams/${id}`, data),
 

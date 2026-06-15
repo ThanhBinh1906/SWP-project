@@ -15,6 +15,7 @@ import eventService from "../../services/eventService";
 // ---------------------------------------------------------------------------
 const EVENT_STATUS_OPTIONS = ["Draft", "Registration", "Active", "Completed"];
 const ROUND_STATUS_OPTIONS = ["Upcoming", "Active", "Scoring", "Closed"];
+const isEventActive = (status) => status === "Active";
 
 const eventStatusTone = (s) =>
   s === "Ongoing"
@@ -448,8 +449,14 @@ export function CompetitionSetup() {
     setRoundFormError("");
     setRoundModal("edit");
   };
-  const openRoundStatus = (round, trackId) => {
-    setSelectedRound({ ...round, trackId });
+  const openRoundStatus = (round, trackId, event) => {
+    setSelectedRound({
+      ...round,
+      trackId,
+      eventId: event?.id,
+      eventName: event?.name,
+      eventStatus: event?.status,
+    });
     setRoundStatusValue(round.status);
     setRoundFormError("");
     setRoundModal("status");
@@ -533,6 +540,15 @@ export function CompetitionSetup() {
   // STATUS update round
   const handleRoundStatusUpdate = async () => {
     if (!roundStatusValue) return;
+    if (
+      roundStatusValue === "Active" &&
+      !isEventActive(selectedRound?.eventStatus)
+    ) {
+      setRoundFormError(
+        `Không thể Active round khi Event "${selectedRound?.eventName || ""}" chưa Active.`,
+      );
+      return;
+    }
     setRoundSaving(true);
     try {
       await eventService.updateRoundStatus(selectedRound.roundId, roundStatusValue);
@@ -899,7 +915,7 @@ export function CompetitionSetup() {
                                             <CoordinatorActionButton
                                               icon={icons.SlidersHorizontal}
                                               onClick={() =>
-                                                openRoundStatus(round, track.id)
+                                                openRoundStatus(round, track.id, event)
                                               }
                                             >
                                               Status
@@ -1305,13 +1321,35 @@ export function CompetitionSetup() {
                 {selectedRound?.status}
               </CoordinatorBadge>
             </p>
+            <p className="text-sm text-slate-500">
+              Event:{" "}
+              <span className="font-semibold text-slate-700">
+                {selectedRound?.eventName || "Unknown"}
+              </span>{" "}
+              <CoordinatorBadge
+                tone={isEventActive(selectedRound?.eventStatus) ? "success" : "warning"}
+              >
+                {selectedRound?.eventStatus || "Unknown"}
+              </CoordinatorBadge>
+            </p>
+            {!isEventActive(selectedRound?.eventStatus) && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+                Round không thể Active khi Event chưa Active.
+              </div>
+            )}
             <select
               className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
               value={roundStatusValue}
               onChange={(e) => setRoundStatusValue(e.target.value)}
             >
               {ROUND_STATUS_OPTIONS.map((s) => (
-                <option key={s}>{s}</option>
+                <option
+                  key={s}
+                  value={s}
+                  disabled={s === "Active" && !isEventActive(selectedRound?.eventStatus)}
+                >
+                  {s}
+                </option>
               ))}
             </select>
             <FormError msg={roundFormError} />
