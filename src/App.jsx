@@ -1,4 +1,4 @@
-import { hasAnyRole } from "./utils/roleHelpers";
+import { getLoginRedirectPath, hasAnyRole } from "./utils/roleHelpers";
 import "./index.css";
 import {
   createBrowserRouter,
@@ -22,22 +22,12 @@ import NotFound from "./page/error/NotFoundPage";
 import Forbidden from "./page/error/NotPermissionPage";
 
 // ---- Role → dashboard map ----
-const ROLE_DASHBOARD = {
-  Leader: "/dashboard",
-  Coordinator: "/coordinator/dashboard",
-  Mentor: "/mentor/dashboard",
-  Judge: "/judge/dashboard",
-};
-
 // ---- Public Route — redirect nếu đã đăng nhập ----
 function PublicRoute({ children }) {
   const { isAuthenticated, user } = useSelector((s) => s.auth);
   if (!isAuthenticated) return children;
-  if (user?.systemRole === "Pending") return <Navigate to="/pending" replace />;
-  if (user?.systemRole === "Rejected")
-    return <Navigate to="/rejected" replace />;
-  const dest = ROLE_DASHBOARD[user?.systemRole];
-  return dest ? <Navigate to={dest} replace /> : children;
+  const dest = getLoginRedirectPath(user);
+  return dest === "/" ? children : <Navigate to={dest} replace />;
 }
 
 // ---- Protected Route ----

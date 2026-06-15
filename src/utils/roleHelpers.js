@@ -45,3 +45,19 @@ export function canDisqualifySubmission(user) {
 export function canListRoundSubmissions(user) {
   return hasAnyRole(user, ["Judge", "Coordinator"]);
 }
+
+export function getLoginRedirectPath(user) {
+  const roles = Array.isArray(user?.roles) ? user.roles : [];
+
+  if (user?.systemRole === "Pending") return "/pending";
+  if (user?.systemRole === "Rejected") return "/rejected";
+
+  if (roles.includes("Coordinator")) return "/coordinator/dashboard";
+  if (roles.includes("Mentor")) return "/mentor/dashboard";
+  if (roles.includes("Judge")) return "/judge/dashboard";
+  if (roles.includes("Leader")) return "/dashboard";
+
+  if (user?.systemRole === "Inactive") return "/pending";
+
+  return "/";
+}

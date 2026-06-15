@@ -5,18 +5,10 @@ import Modal from "./Modal";
 import PasswordInput, { authLabelClass } from "./PasswordInput";
 import authService from "../../services/authService";
 import { loginSuccess } from "../../store/authSlice";
+import { getLoginRedirectPath } from "../../utils/roleHelpers";
 
 const inputClass =
   "w-full px-4 py-2 rounded-lg bg-[#0F121E] border border-white/[0.18] text-white text-sm placeholder:text-slate-400 focus:outline-none focus:border-[#F26F21] focus:ring-2 focus:ring-[#F26F21]/30 hover:border-white/[0.3] transition-all";
-
-const ROLE_ROUTES = {
-  Coordinator: "/coordinator/dashboard",
-  Leader: "/dashboard",
-  Mentor: "/mentor/dashboard",
-  Judge: "/judge/dashboard",
-  Pending: "/pending",
-  Inactive: "/pending",
-};
 
 export default function LoginModal({ open, onClose }) {
   const [email, setEmail] = useState("");
@@ -47,18 +39,7 @@ export default function LoginModal({ open, onClose }) {
       };
       dispatch(loginSuccess(user));
       handleClose();
-      const roles = user.roles;
-      const dest =
-        ROLE_ROUTES[user.systemRole] ||
-        (roles.includes("Coordinator")
-          ? "/coordinator/dashboard"
-          : roles.includes("Judge")
-            ? "/judge/dashboard"
-            : roles.includes("Leader")
-              ? "/dashboard"
-              : roles.includes("Mentor")
-                ? "/mentor/dashboard"
-                : "/");
+      const dest = getLoginRedirectPath(user);
       navigate(dest);
     } catch (err) {
       const status = err.response?.status;
