@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertCircle, ExternalLink, Loader2 } from "lucide-react";
 import criterionService from "../../../services/criterionService";
+import roundService from "../../../services/roundService";
 import scoreService from "../../../services/scoreService";
 import submissionService from "../../../services/submissionService";
 import { getApiMessage } from "../../Coordinator/coordinatorHelpers";
-import { judgeRounds } from "../judgeMockData";
 import { EmptyState } from "../shared/EmptyState";
 import { JudgeActionButton } from "../shared/JudgeActionButton";
 import { JudgeBadge } from "../shared/JudgeBadge";
@@ -17,10 +17,10 @@ function normalizeWeight(weight) {
   return numeric > 1 ? numeric / 100 : numeric;
 }
 
-function mapMockRoundsToOptions(rounds) {
+function mapAssignedRoundsToOptions(rounds) {
   return rounds.map((round) => ({
-    roundId: round.roundId ?? round.id,
-    name: round.name || round.roundName || `Round ${round.roundId ?? round.id}`,
+    roundId: round.id,
+    name: round.name || `Round ${round.id}`,
     trackName: round.trackName || "Track",
     eventName: round.eventName || "Event",
     status: round.status,
@@ -109,7 +109,7 @@ function RoundSelector({
   return (
     <JudgePanel
       title="Chọn vòng chấm điểm"
-      subtitle="Tạm dùng mock round cho Judge đến khi có API lấy round được phân công"
+      subtitle="Dữ liệu round được tải từ /api/rounds/assigned"
       icon={judgeIcons.Filter}
     >
       <div className="grid gap-3 md:grid-cols-[1fr_auto]">
@@ -345,19 +345,29 @@ export function JudgeScoringWorkspace({ initialRoundId = "" }) {
     setLoadingRounds(true);
     setError("");
 
-    const nextRoundOptions = mapMockRoundsToOptions(judgeRounds);
-    setRoundOptions(nextRoundOptions);
-    setSelectedRoundId((current) => {
-      if (initialRoundId) return String(initialRoundId);
-      if (current && nextRoundOptions.some((round) => String(round.roundId) === current)) {
-        return current;
-      }
-      const scoringRound =
-        nextRoundOptions.find((round) => round.status === "Scoring") ||
-        nextRoundOptions[0];
-      return scoringRound ? String(scoringRound.roundId) : "";
-    });
-    setLoadingRounds(false);
+    try {
+      const res = await roundService.getAssigned();
+      const nextRoundOptions = mapAssignedRoundsToOptions(res.data?.data || []);
+
+      setRoundOptions(nextRoundOptions);
+      setSelectedRoundId((current) => {
+        if (initialRoundId) return String(initialRoundId);
+        if (current && nextRoundOptions.some((round) => String(round.roundId) === current)) {
+          return current;
+        }
+        const openRound =
+          nextRoundOptions.find((round) => round.status === "Active") ||
+          nextRoundOptions.find((round) => round.status === "Scoring") ||
+          nextRoundOptions[0];
+        return openRound ? String(openRound.roundId) : "";
+      });
+    } catch (err) {
+      setRoundOptions([]);
+      setSelectedRoundId("");
+      setError(getApiMessage(err, "Không thể tải danh sách round được phân công."));
+    } finally {
+      setLoadingRounds(false);
+    }
   }, [initialRoundId]);
 
   useEffect(() => {
@@ -549,7 +559,7 @@ export function JudgeScoringWorkspace({ initialRoundId = "" }) {
           <EmptyState
             icon={judgeIcons.Gavel}
             title="Chưa có round"
-            description="Chưa có round mẫu để chọn chấm điểm."
+            description="Hiện tại tài khoản judge chưa được gán vào round nào."
           />
         ) : !selectedRoundId ? (
           <EmptyState
