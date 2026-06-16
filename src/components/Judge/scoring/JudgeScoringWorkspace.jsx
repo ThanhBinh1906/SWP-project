@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertCircle, ExternalLink, Loader2 } from "lucide-react";
+import { AlertCircle, ChevronDown, ExternalLink, Loader2 } from "lucide-react";
 import criterionService from "../../../services/criterionService";
 import roundService from "../../../services/roundService";
 import scoreService from "../../../services/scoreService";
@@ -165,6 +165,8 @@ function SubmissionScoringCard({
   comments,
   errors,
   submitting,
+  expanded,
+  onToggleExpanded,
   onScoreChange,
   onCommentChange,
   onSubmit,
@@ -174,10 +176,22 @@ function SubmissionScoringCard({
   const disabled = submitting || submission.isDisqualified || !criteria.length;
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onToggleExpanded(submission.id)}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
+              title={expanded ? "Thu gọn bài nộp" : "Mở form chấm điểm"}
+              aria-label={expanded ? "Thu gọn bài nộp" : "Mở form chấm điểm"}
+              aria-expanded={expanded}
+            >
+              <ChevronDown
+                className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`}
+              />
+            </button>
             <p className="font-mono text-xs font-semibold text-slate-500">
               Submission: {String(submission.id).slice(0, 8)}...
             </p>
@@ -215,6 +229,8 @@ function SubmissionScoringCard({
         </div>
       </div>
 
+      {expanded && (
+        <div className="border-t border-slate-100 px-4 pb-4 pt-5">
       <div className="hidden">
         <div>
           <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
@@ -321,6 +337,8 @@ function SubmissionScoringCard({
           {submitting ? "Đang gửi..." : status === "Scored" ? "Cập nhật điểm" : "Gửi điểm"}
         </JudgeActionButton>
       </div>
+        </div>
+      )}
     </article>
   );
 }
@@ -338,6 +356,7 @@ export function JudgeScoringWorkspace({ initialRoundId = "" }) {
   const [loadingRounds, setLoadingRounds] = useState(true);
   const [loadingData, setLoadingData] = useState(false);
   const [submittingId, setSubmittingId] = useState("");
+  const [expandedSubmissionIds, setExpandedSubmissionIds] = useState({});
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -416,6 +435,12 @@ export function JudgeScoringWorkspace({ initialRoundId = "" }) {
         roundOptions.find((round) => String(round.roundId) === selectedRoundId) || null,
       );
       setSubmissions(nextSubmissions);
+      setExpandedSubmissionIds((current) =>
+        nextSubmissions.reduce((next, submission, index) => {
+          next[submission.id] = current[submission.id] ?? index === 0;
+          return next;
+        }, {}),
+      );
       setCriteria(nextCriteria);
       setScoreRecords(nextScoreRecords);
       setScores(buildScoreState(nextSubmissions, nextScoreRecords));
@@ -462,6 +487,13 @@ export function JudgeScoringWorkspace({ initialRoundId = "" }) {
         ...(prev[submissionId] || {}),
         [criterionId]: value,
       },
+    }));
+  };
+
+  const handleToggleSubmission = (submissionId) => {
+    setExpandedSubmissionIds((prev) => ({
+      ...prev,
+      [submissionId]: !prev[submissionId],
     }));
   };
 
@@ -591,6 +623,8 @@ export function JudgeScoringWorkspace({ initialRoundId = "" }) {
                 comments={comments}
                 errors={fieldErrors}
                 submitting={submittingId === submission.id}
+                expanded={!!expandedSubmissionIds[submission.id]}
+                onToggleExpanded={handleToggleSubmission}
                 onScoreChange={handleScoreChange}
                 onCommentChange={handleCommentChange}
                 onSubmit={handleSubmitScores}
