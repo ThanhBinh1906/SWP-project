@@ -8,18 +8,37 @@ import {
   icons,
 } from "../CoordinatorUI";
 import { UserPlus, AlertCircle, Loader2, CheckCircle } from "lucide-react";
+import mentorService from "../../../services/mentorService";
 import teamService from "../../../services/teamService";
 
 const extIcons = { ...icons, UserPlus, AlertCircle, Loader2, CheckCircle };
 
 const STATUS_FILTERS = ["All", "Pending", "Approved", "Disqualified"];
+const MAX_MENTOR_PAGE_SIZE = 50;
 
-// TODO: thay bằng GET /api/mentors khi BE có endpoint
-const MOCK_MENTORS = [
-  { id: "m1", name: "Linh Tran" },
-  { id: "m2", name: "Huy Vo" },
-  { id: "m3", name: "Mai Do" },
-];
+function getListFromApiData(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  return [];
+}
+
+function getMentorId(mentor) {
+  return mentor.id ?? mentor.accountId ?? mentor.mentorId ?? "";
+}
+
+function getMentorName(mentor) {
+  return (
+    mentor.fullName ||
+    mentor.name ||
+    mentor.username ||
+    mentor.email ||
+    `Mentor #${String(getMentorId(mentor)).slice(0, 8)}`
+  );
+}
+
+function getMentorEmail(mentor) {
+  return mentor.email || mentor.userEmail || "";
+}
 
 function FormError({ msg }) {
   if (!msg) return null;
@@ -117,6 +136,9 @@ export function TeamsManagement() {
   const [actionError, setActionError] = useState("");
   const [disqualifyReason, setDisqualifyReason] = useState("");
   const [selectedMentorId, setSelectedMentorId] = useState("");
+  const [mentors, setMentors] = useState([]);
+  const [mentorsLoading, setMentorsLoading] = useState(false);
+  const [mentorsError, setMentorsError] = useState("");
 
   // ---------------------------------------------------------------------------
   const fetchTeams = useCallback(
@@ -150,6 +172,41 @@ export function TeamsManagement() {
   useEffect(() => {
     fetchTeams(1);
   }, [fetchTeams]);
+
+  const fetchMentors = useCallback(async () => {
+    setMentorsLoading(true);
+    setMentorsError("");
+    try {
+      const allMentors = [];
+      let pageNumber = 1;
+      let totalPages = 1;
+
+      do {
+        const res = await mentorService.getAll({
+          pageNumber,
+          pageSize: MAX_MENTOR_PAGE_SIZE,
+        });
+        const data = res.data?.data;
+        const items = getListFromApiData(data);
+        allMentors.push(...items);
+
+        const hasNextPage = Boolean(data?.hasNextPage);
+        totalPages =
+          Number(data?.totalPages || data?.totalPage || 0) ||
+          (hasNextPage ? pageNumber + 1 : pageNumber);
+        pageNumber += 1;
+      } while (pageNumber <= totalPages);
+
+      setMentors(allMentors.filter((mentor) => getMentorId(mentor)));
+    } catch (err) {
+      setMentors([]);
+      setMentorsError(
+        err?.response?.data?.message || "Không thể tải danh sách mentor.",
+      );
+    } finally {
+      setMentorsLoading(false);
+    }
+  }, []);
 
   const handlePageChange = (p) => fetchTeams(p);
 
@@ -201,11 +258,13 @@ export function TeamsManagement() {
     setActionError("");
     try {
       await teamService.assignMentor(assignMentorTeam.id, selectedMentorId);
-      const mentor = MOCK_MENTORS.find((m) => m.id === selectedMentorId);
+      const mentor = mentors.find(
+        (m) => String(getMentorId(m)) === String(selectedMentorId),
+      );
       setTeams((prev) =>
         prev.map((t) =>
           t.id === assignMentorTeam.id
-            ? { ...t, mentorId: selectedMentorId, mentorName: mentor?.name }
+            ? { ...t, mentorId: selectedMentorId, mentorName: getMentorName(mentor || {}) }
             : t,
         ),
       );
@@ -264,6 +323,7 @@ export function TeamsManagement() {
             setAssignMentorTeam(row);
             setSelectedMentorId("");
             setActionError("");
+            fetchMentors();
           }}
         >
           {row.mentorId ? (
@@ -501,6 +561,7 @@ export function TeamsManagement() {
           onClose={() => {
             setAssignMentorTeam(null);
             setActionError("");
+            setMentorsError("");
           }}
           actions={
             <>
@@ -512,7 +573,9 @@ export function TeamsManagement() {
               <CoordinatorActionButton
                 variant="primary"
                 disabled={
-                  !selectedMentorId || actionLoading === assignMentorTeam.id
+                  mentorsLoading ||
+                  !selectedMentorId ||
+                  actionLoading === assignMentorTeam.id
                 }
                 onClick={handleAssignMentorConfirm}
               >
@@ -531,36 +594,68 @@ export function TeamsManagement() {
               </strong>
               :
             </p>
-            {/* TODO: thay MOCK_MENTORS bằng GET /api/mentors */}
             <div className="space-y-2">
-              {MOCK_MENTORS.map((m) => (
-                <button
-                  key={m.id}
-                  onClick={() => setSelectedMentorId(m.id)}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all duration-150 text-left"
-                  style={{
-                    background:
-                      selectedMentorId === m.id
-                        ? "rgba(242,111,33,0.08)"
-                        : "#F9FAFB",
-                    border: `1px solid ${selectedMentorId === m.id ? "#F26F21" : "#E5E7EB"}`,
-                  }}
-                >
-                  <div
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                    style={{ background: "#F26F21" }}
-                  >
-                    {m.name.charAt(0)}
-                  </div>
-                  <span className="font-semibold text-slate-700">{m.name}</span>
-                  {selectedMentorId === m.id && (
-                    <CheckCircle
-                      className="w-4 h-4 ml-auto"
-                      style={{ color: "#F26F21" }}
-                    />
-                  )}
-                </button>
-              ))}
+              {mentorsLoading ? (
+                <div className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 py-8 text-sm text-slate-500">
+                  <Loader2 className="h-4 w-4 animate-spin text-orange-500" />
+                  Đang tải mentor...
+                </div>
+              ) : mentorsError ? (
+                <div className="space-y-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+                  <p>{mentorsError}</p>
+                  <CoordinatorActionButton onClick={fetchMentors}>
+                    Thử lại
+                  </CoordinatorActionButton>
+                </div>
+              ) : mentors.length === 0 ? (
+                <p className="rounded-xl border border-slate-200 bg-slate-50 py-8 text-center text-sm text-slate-400">
+                  Chưa có mentor để chọn.
+                </p>
+              ) : (
+                mentors.map((m) => {
+                  const mentorId = String(getMentorId(m));
+                  const mentorName = getMentorName(m);
+                  const mentorEmail = getMentorEmail(m);
+                  const selected = selectedMentorId === mentorId;
+
+                  return (
+                    <button
+                      key={mentorId}
+                      onClick={() => setSelectedMentorId(mentorId)}
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all duration-150 text-left"
+                      style={{
+                        background: selected
+                          ? "rgba(242,111,33,0.08)"
+                          : "#F9FAFB",
+                        border: `1px solid ${selected ? "#F26F21" : "#E5E7EB"}`,
+                      }}
+                    >
+                      <div
+                        className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                        style={{ background: "#F26F21" }}
+                      >
+                        {mentorName.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="min-w-0">
+                        <span className="block truncate font-semibold text-slate-700">
+                          {mentorName}
+                        </span>
+                        {mentorEmail && (
+                          <span className="block truncate text-xs text-slate-400">
+                            {mentorEmail}
+                          </span>
+                        )}
+                      </span>
+                      {selected && (
+                        <CheckCircle
+                          className="w-4 h-4 ml-auto"
+                          style={{ color: "#F26F21" }}
+                        />
+                      )}
+                    </button>
+                  );
+                })
+              )}
             </div>
             <FormError msg={actionError} />
           </div>

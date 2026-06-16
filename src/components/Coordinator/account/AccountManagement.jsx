@@ -16,6 +16,7 @@ import { useSelector } from "react-redux";
 // ---------------------------------------------------------------------------
 const TABS = ["Participants", "Mentors & Judges"];
 const EVENT_ROLE_OPTIONS = ["Mentor", "Judge"];
+const MAX_ADMIN_TEAM_PAGE_SIZE = 50;
 // TODO: confirm judgeType options với BE
 const JUDGE_TYPE_OPTIONS = ["Chuyên môn", "Doanh nghiệp", "Học thuật"];
 
@@ -25,6 +26,12 @@ const EMPTY_STAFF_FORM = {
   eventRole: "Mentor",
   judgeType: "",
 };
+
+function getListFromApiData(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  return [];
+}
 
 function FormError({ msg }) {
   if (!msg) return null;
@@ -325,6 +332,33 @@ function StaffTab() {
     }
   };
 
+  const fetchApprovedTeamsByTrack = async (trackId) => {
+    const allTeams = [];
+    let pageNumber = 1;
+    let totalPages = 1;
+
+    do {
+      const teamsRes = await teamService.getAdminTeams({
+        pageNumber,
+        pageSize: MAX_ADMIN_TEAM_PAGE_SIZE,
+        status: "Approved",
+        trackId,
+      });
+
+      const teamData = teamsRes.data?.data;
+      const items = getListFromApiData(teamData);
+      allTeams.push(...items);
+
+      const hasNextPage = Boolean(teamData?.hasNextPage);
+      totalPages =
+        Number(teamData?.totalPages || teamData?.totalPage || 0) ||
+        (hasNextPage ? pageNumber + 1 : pageNumber);
+      pageNumber += 1;
+    } while (pageNumber <= totalPages);
+
+    return allTeams;
+  };
+
   const openAssignMentorTeams = async (mentor) => {
     setAssignMentorModal(mentor);
     setSelectedTrackId("");
@@ -350,31 +384,37 @@ function StaffTab() {
     setMentorAssignLoading(true);
     setMentorAssignError("");
     try {
-      await ensureMentorAssignedToTrack(trackId, mentorId);
-
-      const [teamsRes, mentorTeamsRes] = await Promise.all([
-        teamService.getAdminTeams({
-          pageNumber: 1,
-          pageSize: 200,
-          status: "Approved",
-          trackId,
-        }),
-        trackService.getMentorTeams(trackId, mentorId),
-      ]);
-
-      const teamData = teamsRes.data?.data;
-      const teams = teamData?.items || teamData || [];
+      const teams = await fetchApprovedTeamsByTrack(trackId);
       const filteredTeams = teams.filter(
         (team) => !team.trackId || String(team.trackId) === String(trackId),
       );
-      const assignedTeams = mentorTeamsRes.data?.data || [];
+
+      let assignedTeams = [];
+      try {
+        const mentorTeamsRes = await trackService.getMentorTeams(trackId, mentorId);
+        assignedTeams = getListFromApiData(mentorTeamsRes.data?.data);
+      } catch (mentorTeamsErr) {
+        setMentorAssignError(
+          getApiMessage(
+            mentorTeamsErr,
+            "Đã tải danh sách team Approved, nhưng chưa tải được team mentor đang phụ trách.",
+          ),
+        );
+      }
+
       const assignedIds = assignedTeams.map((team) =>
         String(team.id ?? team.teamId),
+      );
+      const currentMentorTeamIds = filteredTeams
+        .filter((team) => String(team.mentorId || "") === String(mentorId))
+        .map((team) => String(team.id));
+      const nextSelectedIds = Array.from(
+        new Set([...assignedIds, ...currentMentorTeamIds]),
       );
 
       setTrackTeams(filteredTeams);
       setMentorTeams(assignedTeams);
-      setSelectedTeamIds(assignedIds);
+      setSelectedTeamIds(nextSelectedIds);
     } catch (err) {
       setTrackTeams([]);
       setMentorTeams([]);
@@ -400,6 +440,14 @@ function StaffTab() {
 
   const toggleTeamSelection = (teamId) => {
     const id = String(teamId);
+    const team = trackTeams.find((item) => String(item.id) === id);
+    if (
+      team?.mentorId &&
+      String(team.mentorId) !== String(assignMentorModal?.accountId)
+    ) {
+      return;
+    }
+
     setSelectedTeamIds((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
     );
@@ -417,15 +465,35 @@ function StaffTab() {
     setMentorAssignLoading(true);
     setMentorAssignError("");
     try {
-      await ensureMentorAssignedToTrack(
-        selectedTrackId,
-        assignMentorModal.accountId,
-      );
-      await trackService.assignMentorTeams(
-        selectedTrackId,
-        assignMentorModal.accountId,
-        { teamIds: selectedTeamIds },
-      );
+      const assignableTeamIds = selectedTeamIds.filter((teamId) => {
+        const team = trackTeams.find((item) => String(item.id) === String(teamId));
+        return (
+          !team?.mentorId ||
+          String(team.mentorId) === String(assignMentorModal.accountId)
+        );
+      });
+
+      try {
+        await trackService.assignMentorTeams(
+          selectedTrackId,
+          assignMentorModal.accountId,
+          { teamIds: assignableTeamIds },
+        );
+      } catch (assignTeamsErr) {
+        if (!isMentorMissingTrackAssignment(assignTeamsErr)) {
+          throw assignTeamsErr;
+        }
+
+        await ensureMentorAssignedToTrack(
+          selectedTrackId,
+          assignMentorModal.accountId,
+        );
+        await trackService.assignMentorTeams(
+          selectedTrackId,
+          assignMentorModal.accountId,
+          { teamIds: assignableTeamIds },
+        );
+      }
       await fetchStaff();
       setAssignMentorModal(null);
       setSelectedTrackId("");
@@ -830,23 +898,57 @@ function StaffTab() {
                 ) : (
                   <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
                     {trackTeams.map((team) => {
-                      const checked = selectedTeamIds.includes(String(team.id));
+                      const teamId = String(team.id);
+                      const currentMentorId = String(assignMentorModal?.accountId || "");
+                      const teamMentorId = String(team.mentorId || "");
+                      const assignedToCurrentMentor =
+                        teamMentorId && teamMentorId === currentMentorId;
+                      const assignedToOtherMentor =
+                        teamMentorId && teamMentorId !== currentMentorId;
+                      const checked =
+                        selectedTeamIds.includes(teamId) || assignedToCurrentMentor;
+                      const statusText = assignedToCurrentMentor
+                        ? "Đang thuộc mentor này"
+                        : assignedToOtherMentor
+                          ? "Đã có mentor khác"
+                          : team.university || "Chưa có trường";
+
                       return (
                         <button
                           key={team.id}
                           type="button"
                           onClick={() => toggleTeamSelection(team.id)}
-                          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-all"
+                          disabled={mentorAssignLoading || assignedToOtherMentor}
+                          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-all disabled:cursor-not-allowed"
                           style={{
-                            background: checked ? "rgba(242,111,33,0.08)" : "#fff",
-                            border: `1px solid ${checked ? "#F26F21" : "#E5E7EB"}`,
+                            background: assignedToOtherMentor
+                              ? "#F1F5F9"
+                              : checked
+                                ? "rgba(242,111,33,0.08)"
+                                : "#fff",
+                            border: `1px solid ${
+                              assignedToOtherMentor
+                                ? "#CBD5E1"
+                                : checked
+                                  ? "#F26F21"
+                                  : "#E5E7EB"
+                            }`,
+                            opacity: assignedToOtherMentor ? 0.72 : 1,
                           }}
                         >
                           <span
                             className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border"
                             style={{
-                              background: checked ? "#F26F21" : "#fff",
-                              borderColor: checked ? "#F26F21" : "#CBD5E1",
+                              background: assignedToOtherMentor
+                                ? "#E2E8F0"
+                                : checked
+                                  ? "#F26F21"
+                                  : "#fff",
+                              borderColor: assignedToOtherMentor
+                                ? "#94A3B8"
+                                : checked
+                                  ? "#F26F21"
+                                  : "#CBD5E1",
                             }}
                           >
                             {checked && <icons.CheckCircle2 className="h-3 w-3 text-white" />}
@@ -855,8 +957,16 @@ function StaffTab() {
                             <span className="block truncate font-semibold text-slate-800">
                               {team.teamName}
                             </span>
-                            <span className="block truncate text-xs text-slate-400">
-                              {team.university || "Chưa có trường"}
+                            <span
+                              className={`block truncate text-xs ${
+                                assignedToOtherMentor
+                                  ? "font-semibold text-slate-500"
+                                  : assignedToCurrentMentor
+                                    ? "font-semibold text-emerald-600"
+                                    : "text-slate-400"
+                              }`}
+                            >
+                              {statusText}
                             </span>
                           </span>
                         </button>
@@ -874,6 +984,7 @@ function StaffTab() {
 }
 
 function isMentorAlreadyAssignedToTrack(err) {
+  const status = err?.response?.status;
   const message = (err?.response?.data?.message || "").toLowerCase();
   const normalizedMessage = message
     .normalize("NFD")
@@ -881,10 +992,29 @@ function isMentorAlreadyAssignedToTrack(err) {
     .replace(/đ/g, "d");
 
   return (
+    status === 409 ||
     normalizedMessage.includes("da duoc phan cong vao track") ||
     (normalizedMessage.includes("mentor") &&
       normalizedMessage.includes("track") &&
       normalizedMessage.includes("phan cong"))
+  );
+}
+
+function isMentorMissingTrackAssignment(err) {
+  const message = (err?.response?.data?.message || "").toLowerCase();
+  const normalizedMessage = message
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d");
+
+  return (
+    normalizedMessage.includes("chua duoc phan cong vao track") ||
+    normalizedMessage.includes("chua duoc assign vao track") ||
+    (normalizedMessage.includes("mentor") &&
+      normalizedMessage.includes("track") &&
+      (normalizedMessage.includes("chua") ||
+        normalizedMessage.includes("not assigned") ||
+        normalizedMessage.includes("not found")))
   );
 }
 
