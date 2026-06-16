@@ -74,15 +74,6 @@ export default function UserDashboard() {
       }}
     >
       <div
-        className="fixed inset-0 pointer-events-none"
-        aria-hidden="true"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(242,111,33,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(242,111,33,0.02) 1px, transparent 1px)",
-          backgroundSize: "48px 48px",
-        }}
-      />
-      <div
         className="fixed top-0 left-64 right-0 h-96 pointer-events-none"
         aria-hidden="true"
         style={{

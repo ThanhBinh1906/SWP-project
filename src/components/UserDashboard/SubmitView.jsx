@@ -125,33 +125,33 @@ function SubmissionField({
 }) {
   return (
     <div>
-      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-700">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       <div
         className={`mt-1.5 flex items-center gap-2 rounded-xl border px-3 py-2.5 ${
-          error ? "border-red-300 bg-red-50/40" : "border-slate-300 bg-white"
+          error ? "border-red-300 bg-red-50/40" : "border-slate-400 bg-white"
         }`}
       >
-        <Icon className="h-4 w-4 flex-shrink-0 text-slate-500" />
+        <Icon className="h-4 w-4 flex-shrink-0 text-slate-700" />
         <input
           type="url"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           disabled={disabled}
-          className="min-w-0 flex-1 bg-transparent text-sm outline-none disabled:cursor-not-allowed"
+          className="min-w-0 flex-1 bg-transparent text-sm font-medium text-slate-950 outline-none placeholder:text-slate-500 disabled:cursor-not-allowed disabled:text-slate-500"
         />
       </div>
       <FieldError>{error}</FieldError>
-      {hint && !error && <p className="mt-1.5 text-xs text-slate-400">{hint}</p>}
+      {hint && !error && <p className="mt-1.5 text-xs text-slate-600">{hint}</p>}
     </div>
   );
 }
 
 function PreviewLink({ href }) {
   if (!isValidUrl(href)) {
-    return <p className="mt-1 truncate text-slate-400">Chưa sẵn sàng</p>;
+    return <p className="mt-1 truncate font-medium text-slate-600">Chưa sẵn sàng</p>;
   }
 
   return (
@@ -402,7 +402,7 @@ function SubmissionForm({ eventId }) {
           </div>
           <div>
             <h3 className="text-sm font-bold text-[#111827]">Form nộp bài</h3>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] font-medium text-slate-700">
               Đội: {team.teamName} - Bảng ID: {team.trackId}
             </p>
           </div>
@@ -435,14 +435,14 @@ function SubmissionForm({ eventId }) {
         )}
 
         <div>
-          <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+          <label className="text-[10px] font-bold uppercase tracking-widest text-slate-700">
             Vòng thi đang mở
           </label>
-          <div className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-700">
+          <div className="mt-1.5 w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-900">
             {activeRound.name || `Round #${activeRound.id}`}
           </div>
           {selectedRound && (
-            <p className="mt-1.5 text-xs text-slate-400">
+            <p className="mt-1.5 text-xs font-medium text-slate-600">
               {new Date(selectedRound.startTime).toLocaleString("vi-VN")} -{" "}
               {new Date(selectedRound.endTime).toLocaleString("vi-VN")}
             </p>
@@ -501,17 +501,17 @@ function SubmissionForm({ eventId }) {
           />
         </div>
 
-        <div className="grid gap-2 rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs text-slate-600 sm:grid-cols-3">
+        <div className="grid gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-800 sm:grid-cols-3">
           <div className="min-w-0">
-            <p className="font-bold uppercase text-slate-500">Dự án</p>
+            <p className="font-bold uppercase text-slate-700">Dự án</p>
             <PreviewLink href={form.projectLink} />
           </div>
           <div className="min-w-0">
-            <p className="font-bold uppercase text-slate-500">Slide</p>
+            <p className="font-bold uppercase text-slate-700">Slide</p>
             <PreviewLink href={form.slideLink} />
           </div>
           <div className="min-w-0">
-            <p className="font-bold uppercase text-slate-500">Mã nguồn</p>
+            <p className="font-bold uppercase text-slate-700">Mã nguồn</p>
             <PreviewLink href={form.githubLink} />
           </div>
         </div>
