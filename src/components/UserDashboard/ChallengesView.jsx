@@ -15,6 +15,9 @@ import { getApiMessage } from "../Coordinator/coordinatorHelpers";
 
 function ChallengeCard({ activeRound }) {
   const problem = activeRound.topic;
+  const roundId = activeRound.roundId ?? activeRound.id;
+  const roundName =
+    activeRound.roundName || activeRound.name || (roundId ? `#${roundId}` : "");
 
   return (
     <div
@@ -49,7 +52,7 @@ function ChallengeCard({ activeRound }) {
             <div className="mt-0.5 flex items-center gap-1">
               <Hash className="h-3.5 w-3.5" style={{ color: "#F26F21" }} />
               <p className="text-sm font-bold" style={{ color: "#F26F21" }}>
-                Round: {activeRound.name || `#${activeRound.id}`}
+                Round: {roundName}
               </p>
             </div>
           </div>

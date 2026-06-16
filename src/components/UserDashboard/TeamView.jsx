@@ -36,6 +36,16 @@ const EMPTY_MEMBER = {
   isFPTStudent: false,
 };
 
+function isValidGithubUrl(value) {
+  if (!value?.trim()) return false;
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === "https:" && url.hostname.toLowerCase() === "github.com";
+  } catch {
+    return false;
+  }
+}
+
 // ---------------------------------------------------------------------------
 function InputField({ label, required, icon: Icon, error, locked, ...props }) {
   const [focused, setFocused] = useState(false);
@@ -1134,6 +1144,11 @@ function EditTeamModal({ team, onClose, onSaved }) {
     const e = {};
     if (!form.teamName.trim()) e.teamName = "Tên team không được để trống.";
     if (!form.university.trim()) e.university = "Trường không được để trống.";
+    if (!form.githubRepoLink.trim()) {
+      e.githubRepoLink = "GitHub Repo là bắt buộc để nộp bài.";
+    } else if (!isValidGithubUrl(form.githubRepoLink)) {
+      e.githubRepoLink = "GitHub Repo phải bắt đầu bằng https://github.com/.";
+    }
     setErrors(e);
     return !Object.keys(e).length;
   };
@@ -1204,11 +1219,13 @@ function EditTeamModal({ team, onClose, onSaved }) {
           />
           <InputField
             label="GitHub Repo"
+            required
             icon={Github}
             type="url"
-            placeholder="https://github.com/... (tuỳ chọn)"
+            placeholder="https://github.com/owner/repository"
             value={form.githubRepoLink}
             onChange={(e) => handleChange("githubRepoLink", e.target.value)}
+            error={errors.githubRepoLink}
           />
         </div>
 
@@ -1224,8 +1241,8 @@ function EditTeamModal({ team, onClose, onSaved }) {
             className="w-3.5 h-3.5 flex-shrink-0"
             style={{ color: "#F26F21" }}
           />
-          Chỉ có thể sửa khi team còn Pending. Sau khi Approved sẽ không thể
-          thay đổi.
+          Link GitHub là bắt buộc để nộp bài. Hãy cập nhật đúng repo của team
+          trước khi vào Form nộp bài.
         </div>
 
         <div className="flex justify-end gap-2 pt-1">
@@ -1365,25 +1382,23 @@ function TeamInfoView({ team: initialTeam, onRefresh }) {
           <h4 className="text-xs font-bold text-[#374151] uppercase tracking-widest">
             Thông tin Team
           </h4>
-          {team.status === "Pending" && (
-            <button
-              onClick={() => setEditTeamModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150"
-              style={{
-                background: "rgba(242,111,33,0.08)",
-                border: "1px solid rgba(242,111,33,0.2)",
-                color: "#F26F21",
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.background = "rgba(242,111,33,0.15)")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.background = "rgba(242,111,33,0.08)")
-              }
-            >
-              <Edit2 className="w-3.5 h-3.5" /> Sửa thông tin
-            </button>
-          )}
+          <button
+            onClick={() => setEditTeamModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150"
+            style={{
+              background: "rgba(242,111,33,0.08)",
+              border: "1px solid rgba(242,111,33,0.2)",
+              color: "#F26F21",
+            }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.background = "rgba(242,111,33,0.15)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.background = "rgba(242,111,33,0.08)")
+            }
+          >
+            <Edit2 className="w-3.5 h-3.5" /> Sửa thông tin
+          </button>
         </div>
         <div className="space-y-2">
           <InfoRow label="Tên team" value={team.teamName} />
@@ -1392,9 +1407,11 @@ function TeamInfoView({ team: initialTeam, onRefresh }) {
             label="Track"
             value={team.trackId ? `Track #${team.trackId}` : "Chưa phân"}
           />
-          {team.githubRepoLink && (
-            <InfoRow label="GitHub" value={team.githubRepoLink} isLink />
-          )}
+          <InfoRow
+            label="GitHub"
+            value={team.githubRepoLink || "Chưa cập nhật"}
+            isLink={!!team.githubRepoLink}
+          />
           <InfoRow
             label="Trạng thái"
             value={

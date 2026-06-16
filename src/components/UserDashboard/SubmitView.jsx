@@ -44,6 +44,7 @@ function isValidGithubUrl(value) {
 }
 
 function isRoundOpen(round, now = new Date()) {
+  if (typeof round?.canSubmit === "boolean") return round.canSubmit;
   if (round?.status !== "Active") return false;
 
   const startTime = new Date(round.startTime);
@@ -56,22 +57,19 @@ function isRoundOpen(round, now = new Date()) {
   return startTime <= now && now <= endTime;
 }
 
-function getSubmissionGithubLink(submission, team) {
-  return (
-    submission?.githubRepoLink ||
-    submission?.githubUrl ||
-    submission?.sourceCodeUrl ||
-    submission?.sourceUrl ||
-    team?.githubRepoLink ||
-    ""
-  );
+function getActiveRoundId(round) {
+  return round?.roundId ?? round?.id ?? "";
+}
+
+function getActiveRoundName(round) {
+  const roundId = getActiveRoundId(round);
+  return round?.roundName || round?.name || (roundId ? `Round #${roundId}` : "");
 }
 
 function buildSubmissionPayload(form) {
   return {
     demoUrl: normalizeUrl(form.projectLink),
     reportUrl: normalizeUrl(form.slideLink),
-    githubRepoLink: normalizeUrl(form.githubLink),
   };
 }
 
@@ -209,7 +207,8 @@ function SubmissionForm({ eventId }) {
 
       setActiveRound(currentRound);
       setSubmissions(submissionList);
-      setSelectedRoundId(currentRound?.id ? String(currentRound.id) : "");
+      const currentRoundId = getActiveRoundId(currentRound);
+      setSelectedRoundId(currentRoundId ? String(currentRoundId) : "");
     } catch (err) {
       if (err?.response?.status === 404) {
         setTeam(null);
@@ -232,7 +231,7 @@ function SubmissionForm({ eventId }) {
 
   const selectedRound = useMemo(
     () =>
-      activeRound && String(activeRound.id) === selectedRoundId
+      activeRound && String(getActiveRoundId(activeRound)) === selectedRoundId
         ? activeRound
         : null,
     [activeRound, selectedRoundId],
@@ -242,7 +241,7 @@ function SubmissionForm({ eventId }) {
     setForm({
       projectLink: existingSubmission?.demoUrl || "",
       slideLink: existingSubmission?.reportUrl || "",
-      githubLink: getSubmissionGithubLink(existingSubmission, team),
+      githubLink: team?.githubRepoLink || "",
     });
     setFieldErrors({});
     setError("");
@@ -272,7 +271,7 @@ function SubmissionForm({ eventId }) {
     }
 
     if (!form.githubLink.trim()) {
-      nextErrors.githubLink = "Vui lòng nhập link GitHub source code.";
+      nextErrors.githubLink = "Vui lòng cập nhật link GitHub trong Team Information trước khi nộp bài.";
     } else if (!isValidGithubUrl(form.githubLink)) {
       nextErrors.githubLink = "Link GitHub phải bắt đầu bằng https://github.com/.";
     }
@@ -439,7 +438,7 @@ function SubmissionForm({ eventId }) {
             Vòng thi đang mở
           </label>
           <div className="mt-1.5 w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-900">
-            {activeRound.name || `Round #${activeRound.id}`}
+            {getActiveRoundName(activeRound)}
           </div>
           {selectedRound && (
             <p className="mt-1.5 text-xs font-medium text-slate-600">
@@ -493,11 +492,11 @@ function SubmissionForm({ eventId }) {
             required
             icon={Github}
             value={form.githubLink}
-            onChange={(value) => updateField("githubLink", value)}
+            onChange={() => {}}
             placeholder="https://github.com/owner/repository"
             error={fieldErrors.githubLink}
-            disabled={submitDisabled}
-            hint="Bắt buộc là URL GitHub, ví dụ https://github.com/org/repo."
+            disabled
+            hint="Link GitHub được lấy từ Team Information. Hãy cập nhật ở Team Information nếu cần thay đổi."
           />
         </div>
 
