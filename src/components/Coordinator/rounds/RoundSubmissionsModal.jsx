@@ -81,31 +81,16 @@ export function RoundSubmissionsModal({ round, onClose }) {
                     <p className="font-mono text-xs text-slate-500">
                       Team: {String(sub.teamId).slice(0, 12)}...
                     </p>
-                    <p className="mt-1">
-                      Demo:{" "}
-                      {sub.demoUrl ? (
-                        <a
-                          href={sub.demoUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-[#F26F21] hover:underline"
-                        >
-                          {sub.demoUrl}
-                        </a>
-                      ) : (
-                        "—"
-                      )}
-                    </p>
                     <p>
-                      Report:{" "}
-                      {sub.reportUrl ? (
+                      Presentation:{" "}
+                      {sub.presentationUrl || sub.reportUrl ? (
                         <a
-                          href={sub.reportUrl}
+                          href={sub.presentationUrl || sub.reportUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-[#F26F21] hover:underline"
+                          className="break-all text-[#F26F21] hover:underline"
                         >
-                          {sub.reportUrl}
+                          {sub.presentationUrl || sub.reportUrl}
                         </a>
                       ) : (
                         "—"

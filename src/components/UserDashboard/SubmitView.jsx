@@ -6,7 +6,6 @@ import {
   ExternalLink,
   FileText,
   Github,
-  Link,
   Loader2,
 } from "lucide-react";
 import teamService from "../../services/teamService";
@@ -14,8 +13,7 @@ import submissionService from "../../services/submissionService";
 import { getApiMessage } from "../Coordinator/coordinatorHelpers";
 
 const EMPTY_FORM = {
-  projectLink: "",
-  slideLink: "",
+  presentationUrl: "",
   githubLink: "",
 };
 
@@ -68,8 +66,7 @@ function getActiveRoundName(round) {
 
 function buildSubmissionPayload(form) {
   return {
-    demoUrl: normalizeUrl(form.projectLink),
-    reportUrl: normalizeUrl(form.slideLink),
+    presentationUrl: normalizeUrl(form.presentationUrl),
   };
 }
 
@@ -239,8 +236,8 @@ function SubmissionForm({ eventId }) {
 
   useEffect(() => {
     setForm({
-      projectLink: existingSubmission?.demoUrl || "",
-      slideLink: existingSubmission?.reportUrl || "",
+      presentationUrl:
+        existingSubmission?.presentationUrl || existingSubmission?.reportUrl || "",
       githubLink: team?.githubRepoLink || "",
     });
     setFieldErrors({});
@@ -258,16 +255,10 @@ function SubmissionForm({ eventId }) {
   const validateForm = () => {
     const nextErrors = {};
 
-    if (!form.projectLink.trim()) {
-      nextErrors.projectLink = "Vui lòng nhập link dự án.";
-    } else if (!isValidUrl(form.projectLink)) {
-      nextErrors.projectLink = "Link dự án phải là URL http(s) hợp lệ.";
-    }
-
-    if (!form.slideLink.trim()) {
-      nextErrors.slideLink = "Vui lòng nhập link slide.";
-    } else if (!isValidUrl(form.slideLink)) {
-      nextErrors.slideLink = "Link slide phải là URL http(s) hợp lệ.";
+    if (!form.presentationUrl.trim()) {
+      nextErrors.presentationUrl = "Vui lòng nhập link presentation.";
+    } else if (!isValidUrl(form.presentationUrl)) {
+      nextErrors.presentationUrl = "Link presentation phải là URL http(s) hợp lệ.";
     }
 
     if (!form.githubLink.trim()) {
@@ -464,27 +455,15 @@ function SubmissionForm({ eventId }) {
 
         <div className="grid gap-4">
           <SubmissionField
-            label="Link dự án"
-            required
-            icon={Link}
-            value={form.projectLink}
-            onChange={(value) => updateField("projectLink", value)}
-            placeholder="https://your-demo.example.com"
-            error={fieldErrors.projectLink}
-            disabled={submitDisabled}
-            hint="Link demo, ứng dụng đã deploy, trang sản phẩm hoặc trang giới thiệu dự án."
-          />
-
-          <SubmissionField
-            label="Slide"
+            label="Link presentation"
             required
             icon={FileText}
-            value={form.slideLink}
-            onChange={(value) => updateField("slideLink", value)}
-            placeholder="https://docs.google.com/presentation/... or https://drive.google.com/..."
-            error={fieldErrors.slideLink}
+            value={form.presentationUrl}
+            onChange={(value) => updateField("presentationUrl", value)}
+            placeholder="https://docs.google.com/presentation/... hoặc https://drive.google.com/..."
+            error={fieldErrors.presentationUrl}
             disabled={submitDisabled}
-            hint="Dán link slide public. Project hiện tại chưa có flow upload file slide."
+            hint="Dán link presentation public theo yêu cầu nộp bài mới."
           />
 
           <SubmissionField
@@ -500,14 +479,10 @@ function SubmissionForm({ eventId }) {
           />
         </div>
 
-        <div className="grid gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-800 sm:grid-cols-3">
+        <div className="grid gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-800 sm:grid-cols-2">
           <div className="min-w-0">
-            <p className="font-bold uppercase text-slate-700">Dự án</p>
-            <PreviewLink href={form.projectLink} />
-          </div>
-          <div className="min-w-0">
-            <p className="font-bold uppercase text-slate-700">Slide</p>
-            <PreviewLink href={form.slideLink} />
+            <p className="font-bold uppercase text-slate-700">Presentation</p>
+            <PreviewLink href={form.presentationUrl} />
           </div>
           <div className="min-w-0">
             <p className="font-bold uppercase text-slate-700">Mã nguồn</p>

@@ -221,17 +221,14 @@ function SubmissionScoringCard({
           )}
         </div>
 
-        <div className="grid gap-2 text-sm sm:grid-cols-2 lg:min-w-[260px]">
+        <div className="grid gap-2 text-sm lg:min-w-[260px]">
           <div className="rounded-xl bg-slate-50 p-3">
-            <p className="text-xs font-bold uppercase text-slate-500">Demo / Project</p>
+            <p className="text-xs font-bold uppercase text-slate-500">Presentation</p>
             <div className="mt-1">
-              <SubmissionLink href={submission.demoUrl} label="Mở demo" />
-            </div>
-          </div>
-          <div className="rounded-xl bg-slate-50 p-3">
-            <p className="text-xs font-bold uppercase text-slate-500">Slide / Report</p>
-            <div className="mt-1">
-              <SubmissionLink href={submission.reportUrl} label="Mở slide" />
+              <SubmissionLink
+                href={submission.presentationUrl || submission.reportUrl}
+                label="Mở presentation"
+              />
             </div>
           </div>
         </div>
