@@ -68,7 +68,7 @@ function buildCommentState(submissions, scoreRecordMap) {
 }
 
 function calculateDraftTotal(submissionId, criteria, scores) {
-  return criteria.reduce((total, criterion) => {
+  const weightedRatio = criteria.reduce((total, criterion) => {
     const rawScore = Number(scores[submissionId]?.[criterion.id]);
     if (!Number.isFinite(rawScore)) return total;
 
@@ -77,6 +77,14 @@ function calculateDraftTotal(submissionId, criteria, scores) {
 
     return total + (rawScore / maxScore) * normalizeWeight(criterion.weight);
   }, 0);
+
+  return weightedRatio * 10;
+}
+
+function formatTotalScore(score) {
+  const numeric = Number(score || 0);
+  if (!Number.isFinite(numeric)) return "0";
+  return Number(numeric.toFixed(2));
 }
 
 function validateSubmissionScores(submissionId, criteria, scores) {
@@ -237,7 +245,7 @@ function SubmissionScoringCard({
             Tổng tạm tính
           </p>
           <p className="text-2xl font-black text-slate-900">
-            {Number(draftTotal.toFixed(4))}
+            {formatTotalScore(draftTotal)} / 10
           </p>
         </div>
         <JudgeActionButton
@@ -325,7 +333,7 @@ function SubmissionScoringCard({
             Tổng tạm tính
           </p>
           <p className="text-2xl font-black text-slate-900">
-            {Number(draftTotal.toFixed(4))}
+            {formatTotalScore(draftTotal)} / 10
           </p>
         </div>
         <JudgeActionButton
