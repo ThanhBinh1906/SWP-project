@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { judgeIcons } from "../shared/judgeIcons";
+import NotificationBell from "../../shared/NotificationBell";
 
 const DEADLINE = new Date("2026-05-25T18:00:00+07:00");
 
@@ -26,9 +27,8 @@ function useCountdown(target) {
 }
 
 export function JudgeHeader({ onMenuClick }) {
-  const { Bell, Clock, Menu } = judgeIcons;
+  const { Clock, Menu } = judgeIcons;
   const { hours, minutes, seconds } = useCountdown(DEADLINE);
-  const [hasNotification, setHasNotification] = useState(true);
 
   return (
     <header className="flex items-center justify-between gap-4 border-b px-4 py-4 sm:px-8" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
@@ -52,15 +52,7 @@ export function JudgeHeader({ onMenuClick }) {
           <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#F26F21" }}>Scoring closes</span>
         </div>
 
-        <button
-          className="relative flex h-10 w-10 items-center justify-center rounded-xl transition-all"
-          style={{ background: "#F9FAFB", border: "1px solid #E5E7EB" }}
-          onClick={() => setHasNotification(false)}
-          aria-label="Judge notifications"
-        >
-          <Bell className="h-4 w-4 text-slate-500" />
-          {hasNotification && <span className="absolute right-2 top-2 h-2 w-2 rounded-full" style={{ background: "#F26F21" }} />}
-        </button>
+        <NotificationBell ariaLabel="Judge notifications" />
       </div>
     </header>
   );

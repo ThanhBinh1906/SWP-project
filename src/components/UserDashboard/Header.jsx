@@ -1,6 +1,7 @@
-import { Bell, Clock, ChevronDown, Menu } from "lucide-react";
+import { Clock, Menu } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
+import NotificationBell from "../shared/NotificationBell";
 
 // Deadline: 48 hours from a fixed reference (demo)
 const DEADLINE = new Date(Date.now() + 48 * 60 * 60 * 1000);
@@ -31,7 +32,6 @@ function useCountdown(target) {
 
 export function Header({ onMenuClick }) {
   const { hours, minutes, seconds } = useCountdown(DEADLINE);
-  const [hasNotif, setHasNotif] = useState(true);
   const { user } = useSelector((s) => s.auth); // lấy user thật từ Redux
   return (
     <header
@@ -94,19 +94,7 @@ export function Header({ onMenuClick }) {
           </span>
         </div>
 
-        {/* Bell */}
-        <button
-          className="relative w-10 h-10 rounded-xl flex items-center justify-center bg-[#F9FAFB] border border-[#E5E7EB] hover:bg-[#FFF6F0] hover:border-[#FFD0B5] transition-all duration-200 active:scale-[0.95]"
-          onClick={() => setHasNotif(false)}
-        >
-          <Bell className="w-4 h-4" style={{ color: "#6B7280" }} />
-          {hasNotif && (
-            <span
-              className="absolute top-2 right-2 w-2 h-2 rounded-full"
-              style={{ background: "#F26F21" }}
-            />
-          )}
-        </button>
+        <NotificationBell ariaLabel="Leader notifications" />
       </div>
     </header>
   );
