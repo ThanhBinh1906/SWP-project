@@ -7,37 +7,21 @@ import {
   ModalShell,
   icons,
 } from "../CoordinatorUI";
-import { UserPlus, AlertCircle, Loader2, CheckCircle } from "lucide-react";
-import mentorService from "../../../services/mentorService";
+import { AlertCircle, Loader2 } from "lucide-react";
 import teamService from "../../../services/teamService";
 
-const extIcons = { ...icons, UserPlus, AlertCircle, Loader2, CheckCircle };
-
 const STATUS_FILTERS = ["All", "Pending", "Approved", "Disqualified"];
-const MAX_MENTOR_PAGE_SIZE = 50;
 
-function getListFromApiData(data) {
-  if (Array.isArray(data)) return data;
-  if (Array.isArray(data?.items)) return data.items;
-  return [];
-}
-
-function getMentorId(mentor) {
-  return mentor.id ?? mentor.accountId ?? mentor.mentorId ?? "";
-}
-
-function getMentorName(mentor) {
+function getTeamMentorLabel(team) {
   return (
-    mentor.fullName ||
-    mentor.name ||
-    mentor.username ||
-    mentor.email ||
-    `Mentor #${String(getMentorId(mentor)).slice(0, 8)}`
+    team.mentorName ||
+    team.mentorFullName ||
+    team.mentorUsername ||
+    team.mentor?.fullName ||
+    team.mentor?.username ||
+    team.mentor?.email ||
+    (team.mentorId ? `Mentor #${String(team.mentorId).slice(0, 8)}...` : "N/A")
   );
-}
-
-function getMentorEmail(mentor) {
-  return mentor.email || mentor.userEmail || "";
 }
 
 function FormError({ msg }) {
@@ -129,16 +113,11 @@ export function TeamsManagement() {
   // Modals
   const [detailTeam, setDetailTeam] = useState(null);
   const [disqualifyTeam, setDisqualifyTeam] = useState(null);
-  const [assignMentorTeam, setAssignMentorTeam] = useState(null);
 
   // Action states
   const [actionLoading, setActionLoading] = useState("");
   const [actionError, setActionError] = useState("");
   const [disqualifyReason, setDisqualifyReason] = useState("");
-  const [selectedMentorId, setSelectedMentorId] = useState("");
-  const [mentors, setMentors] = useState([]);
-  const [mentorsLoading, setMentorsLoading] = useState(false);
-  const [mentorsError, setMentorsError] = useState("");
 
   // ---------------------------------------------------------------------------
   const fetchTeams = useCallback(
@@ -172,41 +151,6 @@ export function TeamsManagement() {
   useEffect(() => {
     fetchTeams(1);
   }, [fetchTeams]);
-
-  const fetchMentors = useCallback(async () => {
-    setMentorsLoading(true);
-    setMentorsError("");
-    try {
-      const allMentors = [];
-      let pageNumber = 1;
-      let totalPages = 1;
-
-      do {
-        const res = await mentorService.getAll({
-          pageNumber,
-          pageSize: MAX_MENTOR_PAGE_SIZE,
-        });
-        const data = res.data?.data;
-        const items = getListFromApiData(data);
-        allMentors.push(...items);
-
-        const hasNextPage = Boolean(data?.hasNextPage);
-        totalPages =
-          Number(data?.totalPages || data?.totalPage || 0) ||
-          (hasNextPage ? pageNumber + 1 : pageNumber);
-        pageNumber += 1;
-      } while (pageNumber <= totalPages);
-
-      setMentors(allMentors.filter((mentor) => getMentorId(mentor)));
-    } catch (err) {
-      setMentors([]);
-      setMentorsError(
-        err?.response?.data?.message || "Không thể tải danh sách mentor.",
-      );
-    } finally {
-      setMentorsLoading(false);
-    }
-  }, []);
 
   const handlePageChange = (p) => fetchTeams(p);
 
@@ -253,30 +197,6 @@ export function TeamsManagement() {
     }
   };
 
-  const handleAssignMentorConfirm = async () => {
-    setActionLoading(assignMentorTeam.id);
-    setActionError("");
-    try {
-      await teamService.assignMentor(assignMentorTeam.id, selectedMentorId);
-      const mentor = mentors.find(
-        (m) => String(getMentorId(m)) === String(selectedMentorId),
-      );
-      setTeams((prev) =>
-        prev.map((t) =>
-          t.id === assignMentorTeam.id
-            ? { ...t, mentorId: selectedMentorId, mentorName: getMentorName(mentor || {}) }
-            : t,
-        ),
-      );
-      setAssignMentorTeam(null);
-      setSelectedMentorId("");
-    } catch (err) {
-      setActionError(err?.response?.data?.message || "Assign mentor thất bại.");
-    } finally {
-      setActionLoading("");
-    }
-  };
-
   // ---------------------------------------------------------------------------
   // Client-side search filter (trên data đã fetch)
   const filtered = teams.filter(
@@ -316,26 +236,13 @@ export function TeamsManagement() {
 
     if (key === "mentor")
       return (
-        <button
-          className="text-sm transition-colors duration-150"
-          style={{ color: row.mentorId ? "#374151" : "#F26F21" }}
-          onClick={() => {
-            setAssignMentorTeam(row);
-            setSelectedMentorId("");
-            setActionError("");
-            fetchMentors();
-          }}
+        <span
+          className={`text-sm font-semibold ${
+            row.mentorId ? "text-slate-700" : "text-slate-400"
+          }`}
         >
-          {row.mentorId ? (
-            <span>
-              {row.mentorName || `Mentor #${row.mentorId.slice(0, 8)}...`}
-            </span>
-          ) : (
-            <span className="flex items-center gap-1 text-xs font-semibold">
-              <UserPlus className="w-3.5 h-3.5" /> Assign
-            </span>
-          )}
-        </button>
+          {getTeamMentorLabel(row)}
+        </span>
       );
 
     if (key === "status")
@@ -478,6 +385,7 @@ export function TeamsManagement() {
               label="Track"
               value={detailTeam.trackId ? `#${detailTeam.trackId}` : "—"}
             />
+            <InfoRow label="Mentor" value={getTeamMentorLabel(detailTeam)} />
             <InfoRow
               label="GitHub"
               value={detailTeam.githubRepoLink}
@@ -554,113 +462,6 @@ export function TeamsManagement() {
         </ModalShell>
       )}
 
-      {/* Modal: Assign Mentor */}
-      {assignMentorTeam && (
-        <ModalShell
-          title={`Assign Mentor: ${assignMentorTeam.teamName}`}
-          onClose={() => {
-            setAssignMentorTeam(null);
-            setActionError("");
-            setMentorsError("");
-          }}
-          actions={
-            <>
-              <CoordinatorActionButton
-                onClick={() => setAssignMentorTeam(null)}
-              >
-                Huỷ
-              </CoordinatorActionButton>
-              <CoordinatorActionButton
-                variant="primary"
-                disabled={
-                  mentorsLoading ||
-                  !selectedMentorId ||
-                  actionLoading === assignMentorTeam.id
-                }
-                onClick={handleAssignMentorConfirm}
-              >
-                {actionLoading === assignMentorTeam.id
-                  ? "Đang xử lý..."
-                  : "Assign"}
-              </CoordinatorActionButton>
-            </>
-          }
-        >
-          <div className="space-y-3">
-            <p className="text-sm text-slate-500">
-              Chọn mentor cho team{" "}
-              <strong className="text-slate-800">
-                {assignMentorTeam.teamName}
-              </strong>
-              :
-            </p>
-            <div className="space-y-2">
-              {mentorsLoading ? (
-                <div className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 py-8 text-sm text-slate-500">
-                  <Loader2 className="h-4 w-4 animate-spin text-orange-500" />
-                  Đang tải mentor...
-                </div>
-              ) : mentorsError ? (
-                <div className="space-y-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
-                  <p>{mentorsError}</p>
-                  <CoordinatorActionButton onClick={fetchMentors}>
-                    Thử lại
-                  </CoordinatorActionButton>
-                </div>
-              ) : mentors.length === 0 ? (
-                <p className="rounded-xl border border-slate-200 bg-slate-50 py-8 text-center text-sm text-slate-400">
-                  Chưa có mentor để chọn.
-                </p>
-              ) : (
-                mentors.map((m) => {
-                  const mentorId = String(getMentorId(m));
-                  const mentorName = getMentorName(m);
-                  const mentorEmail = getMentorEmail(m);
-                  const selected = selectedMentorId === mentorId;
-
-                  return (
-                    <button
-                      key={mentorId}
-                      onClick={() => setSelectedMentorId(mentorId)}
-                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all duration-150 text-left"
-                      style={{
-                        background: selected
-                          ? "rgba(242,111,33,0.08)"
-                          : "#F9FAFB",
-                        border: `1px solid ${selected ? "#F26F21" : "#E5E7EB"}`,
-                      }}
-                    >
-                      <div
-                        className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                        style={{ background: "#F26F21" }}
-                      >
-                        {mentorName.charAt(0).toUpperCase()}
-                      </div>
-                      <span className="min-w-0">
-                        <span className="block truncate font-semibold text-slate-700">
-                          {mentorName}
-                        </span>
-                        {mentorEmail && (
-                          <span className="block truncate text-xs text-slate-400">
-                            {mentorEmail}
-                          </span>
-                        )}
-                      </span>
-                      {selected && (
-                        <CheckCircle
-                          className="w-4 h-4 ml-auto"
-                          style={{ color: "#F26F21" }}
-                        />
-                      )}
-                    </button>
-                  );
-                })
-              )}
-            </div>
-            <FormError msg={actionError} />
-          </div>
-        </ModalShell>
-      )}
     </div>
   );
 }

@@ -312,7 +312,7 @@ export function ModalShell({ title, children, onClose, actions }) {
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4 animate-fade-in">
-      <div className="flex max-h-[80vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl animate-modal-scale">
+      <div className="flex max-h-[80vh] min-w-0 w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl animate-modal-scale">
         <div className="flex flex-shrink-0 items-start justify-between gap-4 px-6 pt-6 pb-5">
           <h3 className="text-lg font-bold text-slate-900">{title}</h3>
           <button
@@ -323,7 +323,9 @@ export function ModalShell({ title, children, onClose, actions }) {
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="overflow-y-auto px-6">{children}</div>
+        <div className="modal-scrollbar min-w-0 overflow-x-hidden overflow-y-auto px-6 pb-2">
+          {children}
+        </div>
         {actions && (
           <div className="mt-6 flex flex-shrink-0 justify-end gap-2 border-t border-slate-100 bg-white px-6 py-4">
             {actions}

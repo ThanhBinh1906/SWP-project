@@ -290,31 +290,25 @@ export function TopicsManagement() {
             </CoordinatorActionButton>
           }
         >
-          <div className="space-y-3 text-sm text-slate-600">
-            <p>
-              <span className="font-bold text-slate-900">Title:</span>{" "}
-              {selected.title}
-            </p>
-            <p>
-              <span className="font-bold text-slate-900">Description:</span>{" "}
+          <div className="min-w-0 space-y-4 overflow-x-hidden pb-2 text-sm text-slate-600">
+            <TopicDetailRow label="Title">{selected.title}</TopicDetailRow>
+            <TopicDetailRow label="Description">
               {selected.description || "—"}
-            </p>
-            <p>
-              <span className="font-bold text-slate-900">Requirements:</span>{" "}
+            </TopicDetailRow>
+            <TopicDetailRow label="Requirements">
               {selected.requirements || "—"}
-            </p>
+            </TopicDetailRow>
             {selected.attachmentUrl && (
-              <p>
-                <span className="font-bold text-slate-900">Attachment:</span>{" "}
+              <TopicDetailRow label="Attachment">
                 <a
                   href={selected.attachmentUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#F26F21] hover:underline"
+                  className="block max-w-full break-all text-[#F26F21] hover:underline"
                 >
                   {selected.attachmentUrl}
                 </a>
-              </p>
+              </TopicDetailRow>
             )}
           </div>
         </ModalShell>
@@ -339,7 +333,7 @@ export function TopicsManagement() {
             </>
           }
         >
-          <div className="space-y-4">
+          <div className="min-w-0 space-y-4 overflow-x-hidden pb-2">
             <ModalHintBanner icon={icons.Lightbulb} title="Đề tài (Topic) là gì?">
               Topic là đề bài/hướng dẫn thi cho vòng đó. Team Leader có thể tham khảo
               khi làm project — khác với bài nộp (Demo/Report URL) ở mục Submit.
@@ -352,7 +346,7 @@ export function TopicsManagement() {
               hint="Tên ngắn gọn, VD: Smart Campus Assistant"
             >
               <input
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+                className="min-w-0 max-w-full w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
                 placeholder="Smart Campus Assistant"
                 value={form.title}
                 onChange={(e) =>
@@ -366,7 +360,7 @@ export function TopicsManagement() {
               hint="Giải thích đề bài, bối cảnh, mục tiêu"
             >
               <textarea
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none min-h-20"
+                className="min-h-20 min-w-0 max-h-40 max-w-full w-full resize-y rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
                 placeholder="Xây dựng ứng dụng AI hỗ trợ sinh viên..."
                 value={form.description}
                 onChange={(e) =>
@@ -380,7 +374,7 @@ export function TopicsManagement() {
               hint="Stack, tính năng bắt buộc, tiêu chí đánh giá"
             >
               <textarea
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none min-h-20"
+                className="min-h-20 min-w-0 max-h-40 max-w-full w-full resize-y rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
                 placeholder="React FE, .NET BE, có demo live..."
                 value={form.requirements}
                 onChange={(e) =>
@@ -394,7 +388,7 @@ export function TopicsManagement() {
               hint="URL file PDF/Doc hướng dẫn chi tiết (tuỳ chọn)"
             >
               <input
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+                className="min-w-0 max-w-full w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
                 placeholder="https://example.com/topic-guide.pdf"
                 value={form.attachmentUrl}
                 onChange={(e) =>
@@ -405,6 +399,19 @@ export function TopicsManagement() {
           </div>
         </ModalShell>
       )}
+    </div>
+  );
+}
+
+function TopicDetailRow({ label, children }) {
+  return (
+    <div className="min-w-0">
+      <p className="mb-1 text-xs font-bold uppercase tracking-wider text-slate-500">
+        {label}
+      </p>
+      <div className="max-w-full break-words leading-6 text-slate-700">
+        {children}
+      </div>
     </div>
   );
 }
