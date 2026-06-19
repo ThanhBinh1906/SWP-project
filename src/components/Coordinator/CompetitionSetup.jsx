@@ -13,17 +13,27 @@ import eventService from "../../services/eventService";
 // ---------------------------------------------------------------------------
 // Constants & helpers (preserved from originals)
 // ---------------------------------------------------------------------------
-const EVENT_STATUS_OPTIONS = ["Draft", "Registration", "Active", "Completed"];
+const EVENT_STATUS_OPTIONS = ["Registration", "Active", "Completed"];
+const EVENT_STATUS_ORDER = {
+  Registration: 0,
+  Active: 1,
+  Completed: 2,
+};
 const ROUND_STATUS_OPTIONS = ["Upcoming", "Active", "Scoring", "Closed"];
 const isEventActive = (status) => status === "Active";
+const isRoundAfterUpcoming = (status) =>
+  ["Active", "Scoring", "Closed"].includes(status);
+const getEventStatusOrder = (status) => EVENT_STATUS_ORDER[status] ?? 0;
+const isEventStatusRollback = (fromStatus, toStatus) =>
+  getEventStatusOrder(toStatus) < getEventStatusOrder(fromStatus);
 
 const eventStatusTone = (s) =>
-  s === "Ongoing"
+  s === "Active" || s === "Ongoing"
     ? "success"
-    : s === "Open"
+    : s === "Registration" || s === "Open"
       ? "orange"
-      : s === "Draft"
-        ? "warning"
+      : s === "Completed"
+        ? "neutral"
         : "neutral";
 
 const roundStatusTone = (s) =>
@@ -31,22 +41,51 @@ const roundStatusTone = (s) =>
     ? "orange"
     : s === "Scoring"
       ? "purple"
-      : s === "Completed"
+      : s === "Closed" || s === "Completed"
         ? "success"
         : "neutral";
+
+function isRoundClosed(status) {
+  return status === "Closed" || status === "Completed";
+}
+
+function getRoundOrder(round, fallbackIndex) {
+  const order = Number(round?.orderIndex ?? round?.order ?? round?.sequence);
+  return Number.isFinite(order) && order > 0 ? order : fallbackIndex + 1;
+}
+
+function getBlockingPreviousRound(rounds, currentRound) {
+  const currentIndex = rounds.findIndex(
+    (round) => String(round.roundId) === String(currentRound?.roundId),
+  );
+  if (currentIndex <= 0) return null;
+
+  const currentOrder = getRoundOrder(currentRound, currentIndex);
+  return rounds.find((round, index) => {
+    if (String(round.roundId) === String(currentRound?.roundId)) return false;
+    const roundOrder = getRoundOrder(round, index);
+    return roundOrder < currentOrder && !isRoundClosed(round.status);
+  });
+}
+
+function getEffectiveRoundStatus(rounds, round) {
+  if (round?.status === "Active" && getBlockingPreviousRound(rounds, round)) {
+    return "Upcoming";
+  }
+  return round?.status;
+}
 
 const EVENT_EMPTY = {
   name: "",
   description: "",
   startDate: "",
   endDate: "",
-  status: "Draft",
+  status: "Registration",
 };
 const TRACK_EMPTY = { name: "", description: "", maxTeams: "", eventId: "" };
 const ROUND_EMPTY = {
   trackId: "",
   name: "",
-  orderIndex: "",
   startTime: "",
   endTime: "",
   advancingSlots: "",
@@ -304,6 +343,12 @@ export function CompetitionSetup() {
       setEventFormError(err);
       return;
     }
+    if (isEventStatusRollback(selectedEvent?.status, eventForm.status)) {
+      setEventFormError(
+        `Không thể chuyển Event từ ${selectedEvent?.status} về ${eventForm.status}. Trạng thái Event chỉ được đi tới, không được quay lại.`,
+      );
+      return;
+    }
     setEventSaving(true);
     try {
       await eventService.update(selectedEvent.id, {
@@ -441,7 +486,6 @@ export function CompetitionSetup() {
     setRoundForm({
       trackId: String(trackId),
       name: round.name,
-      orderIndex: String(round.orderIndex ?? ""),
       startTime: round.startTime?.slice(0, 16) || "",
       endTime: round.endTime?.slice(0, 16) || "",
       advancingSlots: String(round.advancingSlots),
@@ -450,6 +494,7 @@ export function CompetitionSetup() {
     setRoundModal("edit");
   };
   const openRoundStatus = (round, trackId, event) => {
+    const trackRounds = roundsByTrack[trackId]?.data || [];
     setSelectedRound({
       ...round,
       trackId,
@@ -457,7 +502,7 @@ export function CompetitionSetup() {
       eventName: event?.name,
       eventStatus: event?.status,
     });
-    setRoundStatusValue(round.status);
+    setRoundStatusValue(getEffectiveRoundStatus(trackRounds, round));
     setRoundFormError("");
     setRoundModal("status");
   };
@@ -496,7 +541,6 @@ export function CompetitionSetup() {
       await eventService.createRound({
         trackId: Number(roundForm.trackId),
         name: roundForm.name.trim(),
-        orderIndex: Number(roundForm.orderIndex) || 1,
         startTime: new Date(roundForm.startTime).toISOString(),
         endTime: new Date(roundForm.endTime).toISOString(),
         advancingSlots: Number(roundForm.advancingSlots),
@@ -521,7 +565,6 @@ export function CompetitionSetup() {
     try {
       await eventService.updateRound(selectedRound.roundId, {
         name: roundForm.name.trim(),
-        orderIndex: Number(roundForm.orderIndex) || 1,
         startTime: new Date(roundForm.startTime).toISOString(),
         endTime: new Date(roundForm.endTime).toISOString(),
         advancingSlots: Number(roundForm.advancingSlots),
@@ -540,12 +583,21 @@ export function CompetitionSetup() {
   // STATUS update round
   const handleRoundStatusUpdate = async () => {
     if (!roundStatusValue) return;
+    const trackRounds = roundsByTrack[selectedRound?.trackId]?.data || [];
+    const blockingRound = getBlockingPreviousRound(trackRounds, selectedRound);
+
     if (
-      roundStatusValue === "Active" &&
+      isRoundAfterUpcoming(roundStatusValue) &&
       !isEventActive(selectedRound?.eventStatus)
     ) {
       setRoundFormError(
-        `Không thể Active round khi Event "${selectedRound?.eventName || ""}" chưa Active.`,
+        `Không thể chuyển round sang ${roundStatusValue} khi Event "${selectedRound?.eventName || ""}" chưa Active. Event chưa Active thì round chỉ được ở Upcoming.`,
+      );
+      return;
+    }
+    if (roundStatusValue === "Active" && blockingRound) {
+      setRoundFormError(
+        `Không thể Active "${selectedRound?.name || "round này"}" vì round trước "${blockingRound.name}" trong cùng track chưa Closed.`,
       );
       return;
     }
@@ -566,6 +618,16 @@ export function CompetitionSetup() {
   // =========================================================================
   // RENDER
   // =========================================================================
+  const selectedRoundTrackRounds = roundsByTrack[selectedRound?.trackId]?.data || [];
+  const selectedRoundBlockingPrevious = getBlockingPreviousRound(
+    selectedRoundTrackRounds,
+    selectedRound,
+  );
+  const selectedRoundEffectiveStatus = getEffectiveRoundStatus(
+    selectedRoundTrackRounds,
+    selectedRound,
+  );
+
   return (
     <div className="space-y-4">
       {/* ─── Header panel ─── */}
@@ -839,13 +901,19 @@ export function CompetitionSetup() {
                                     </div>
                                   ) : (
                                     <div className="space-y-2">
-                                      {roundsState.data.map((round, idx) => (
+                                      {roundsState.data.map((round, idx) => {
+                                        const displayStatus = getEffectiveRoundStatus(
+                                          roundsState.data,
+                                          round,
+                                        );
+
+                                        return (
                                         <div
                                           key={round.roundId}
                                           className="grid gap-3 rounded-xl border border-slate-100 p-3 lg:grid-cols-[auto_1fr_160px_auto]"
                                           style={{
                                             background:
-                                              round.status === "Active"
+                                              displayStatus === "Active"
                                                 ? "rgba(242,111,33,0.02)"
                                                 : "#fff",
                                           }}
@@ -856,7 +924,7 @@ export function CompetitionSetup() {
                                               className="flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold text-white flex-shrink-0"
                                               style={{
                                                 background:
-                                                  round.status === "Active"
+                                                  displayStatus === "Active"
                                                     ? "#F26F21"
                                                     : "#94A3B8",
                                               }}
@@ -865,10 +933,10 @@ export function CompetitionSetup() {
                                             </div>
                                             <CoordinatorBadge
                                               tone={roundStatusTone(
-                                                round.status,
+                                                displayStatus,
                                               )}
                                             >
-                                              {round.status}
+                                              {displayStatus}
                                             </CoordinatorBadge>
                                           </div>
 
@@ -896,7 +964,7 @@ export function CompetitionSetup() {
                                               round.progressPercentage ?? 0
                                             }
                                             color={
-                                              round.status === "Active"
+                                              displayStatus === "Active"
                                                 ? "#F26F21"
                                                 : "#64748B"
                                             }
@@ -922,7 +990,8 @@ export function CompetitionSetup() {
                                             </CoordinatorActionButton>
                                           </div>
                                         </div>
-                                      ))}
+                                        );
+                                      })}
                                     </div>
                                   )}
                                 </div>
@@ -1041,9 +1110,24 @@ export function CompetitionSetup() {
                 }
               >
                 {EVENT_STATUS_OPTIONS.map((s) => (
-                  <option key={s}>{s}</option>
+                  <option
+                    key={s}
+                    value={s}
+                    disabled={
+                      eventModal === "edit" &&
+                      isEventStatusRollback(selectedEvent?.status, s)
+                    }
+                  >
+                    {s}
+                  </option>
                 ))}
               </select>
+              <p className="mt-1.5 text-xs leading-relaxed text-slate-500">
+                Event tạo mới mặc định ở <strong>Registration</strong>. Sau khi
+                chuyển lên <strong>Active</strong> hoặc{" "}
+                <strong>Completed</strong>, Coordinator không thể quay lại
+                trạng thái trước đó.
+              </p>
             </div>
           </div>
         </ModalShell>
@@ -1228,37 +1312,20 @@ export function CompetitionSetup() {
                 onChange={(e) => handleRoundFormChange("name", e.target.value)}
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
-                  Order
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-                  placeholder="1"
-                  value={roundForm.orderIndex}
-                  onChange={(e) =>
-                    handleRoundFormChange("orderIndex", e.target.value)
-                  }
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
-                  Suất đi tiếp <span className="text-orange-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-                  placeholder="10"
-                  value={roundForm.advancingSlots}
-                  onChange={(e) =>
-                    handleRoundFormChange("advancingSlots", e.target.value)
-                  }
-                />
-              </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
+                Suất đi tiếp <span className="text-orange-500">*</span>
+              </label>
+              <input
+                type="number"
+                min="1"
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+                placeholder="10"
+                value={roundForm.advancingSlots}
+                onChange={(e) =>
+                  handleRoundFormChange("advancingSlots", e.target.value)
+                }
+              />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -1317,8 +1384,8 @@ export function CompetitionSetup() {
           <div className="space-y-3">
             <p className="text-sm text-slate-500">
               Trạng thái hiện tại:{" "}
-              <CoordinatorBadge tone={roundStatusTone(selectedRound?.status)}>
-                {selectedRound?.status}
+              <CoordinatorBadge tone={roundStatusTone(selectedRoundEffectiveStatus)}>
+                {selectedRoundEffectiveStatus}
               </CoordinatorBadge>
             </p>
             <p className="text-sm text-slate-500">
@@ -1334,7 +1401,17 @@ export function CompetitionSetup() {
             </p>
             {!isEventActive(selectedRound?.eventStatus) && (
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
-                Round không thể Active khi Event chưa Active.
+                Event chưa Active nên round chỉ được ở trạng thái{" "}
+                <strong>Upcoming</strong>. Không thể chọn Active, Scoring hoặc
+                Closed lúc này.
+              </div>
+            )}
+            {selectedRoundBlockingPrevious && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+                Round này chỉ được Active sau khi round trước trong cùng track là{" "}
+                <strong>Closed</strong>. Round đang chặn:{" "}
+                <strong>{selectedRoundBlockingPrevious.name}</strong> (
+                {selectedRoundBlockingPrevious.status}).
               </div>
             )}
             <select
@@ -1346,7 +1423,11 @@ export function CompetitionSetup() {
                 <option
                   key={s}
                   value={s}
-                  disabled={s === "Active" && !isEventActive(selectedRound?.eventStatus)}
+                  disabled={
+                    (isRoundAfterUpcoming(s) &&
+                      !isEventActive(selectedRound?.eventStatus)) ||
+                    (s === "Active" && !!selectedRoundBlockingPrevious)
+                  }
                 >
                   {s}
                 </option>

@@ -12,16 +12,46 @@ import axiosInstance from "../../../services/axiosInstance";
 import { RoundSubmissionsModal } from "./RoundSubmissionsModal";
 
 // ---------------------------------------------------------------------------
-const STATUS_OPTIONS = ["Upcoming", "Active", "Scoring", "Completed"];
+const STATUS_OPTIONS = ["Upcoming", "Active", "Scoring", "Closed"];
 
 const statusTone = (s) =>
   s === "Active"
     ? "orange"
     : s === "Scoring"
       ? "purple"
-      : s === "Completed"
+      : s === "Closed" || s === "Completed"
         ? "success"
         : "neutral";
+
+function isRoundClosed(status) {
+  return status === "Closed" || status === "Completed";
+}
+
+function getRoundOrder(round, fallbackIndex) {
+  const order = Number(round?.orderIndex ?? round?.order ?? round?.sequence);
+  return Number.isFinite(order) && order > 0 ? order : fallbackIndex + 1;
+}
+
+function getBlockingPreviousRound(rounds, currentRound) {
+  const currentIndex = rounds.findIndex(
+    (round) => String(round.roundId) === String(currentRound?.roundId),
+  );
+  if (currentIndex <= 0) return null;
+
+  const currentOrder = getRoundOrder(currentRound, currentIndex);
+  return rounds.find((round, index) => {
+    if (String(round.roundId) === String(currentRound?.roundId)) return false;
+    const roundOrder = getRoundOrder(round, index);
+    return roundOrder < currentOrder && !isRoundClosed(round.status);
+  });
+}
+
+function getEffectiveRoundStatus(rounds, round) {
+  if (round?.status === "Active" && getBlockingPreviousRound(rounds, round)) {
+    return "Upcoming";
+  }
+  return round?.status;
+}
 
 function formatDateTime(iso) {
   if (!iso) return "—";
@@ -48,7 +78,6 @@ function FormError({ msg }) {
 const EMPTY_FORM = {
   trackId: "",
   name: "",
-  orderIndex: "",
   startTime: "",
   endTime: "",
   advancingSlots: "",
@@ -100,7 +129,6 @@ export function RoundsManagement() {
     setForm({
       trackId: String(trackId),
       name: round.name,
-      orderIndex: String(round.orderIndex ?? ""),
       startTime: round.startTime?.slice(0, 16) || "",
       endTime: round.endTime?.slice(0, 16) || "",
       advancingSlots: String(round.advancingSlots),
@@ -109,9 +137,12 @@ export function RoundsManagement() {
     setModal("edit");
   };
 
-  const openStatus = (round) => {
-    setSelectedRound(round);
-    setStatusValue(round.status);
+  const openStatus = (round, trackId) => {
+    const currentTrack = tracks.find(
+      (track) => String(track.trackId) === String(trackId),
+    );
+    setSelectedRound({ ...round, trackId });
+    setStatusValue(getEffectiveRoundStatus(currentTrack?.rounds || [], round));
     setFormError("");
     setModal("status");
   };
@@ -151,7 +182,6 @@ export function RoundsManagement() {
       await axiosInstance.post("/api/rounds", {
         trackId: Number(form.trackId),
         name: form.name.trim(),
-        orderIndex: Number(form.orderIndex) || 1,
         startTime: new Date(form.startTime).toISOString(),
         endTime: new Date(form.endTime).toISOString(),
         advancingSlots: Number(form.advancingSlots),
@@ -176,7 +206,6 @@ export function RoundsManagement() {
     try {
       await axiosInstance.put(`/api/rounds/${selectedRound.roundId}`, {
         name: form.name.trim(),
-        orderIndex: Number(form.orderIndex) || 1,
         startTime: new Date(form.startTime).toISOString(),
         endTime: new Date(form.endTime).toISOString(),
         advancingSlots: Number(form.advancingSlots),
@@ -193,6 +222,21 @@ export function RoundsManagement() {
   // STATUS
   const handleStatusUpdate = async () => {
     if (!statusValue) return;
+    const currentTrack = tracks.find(
+      (track) => String(track.trackId) === String(selectedRound?.trackId),
+    );
+    const blockingRound = getBlockingPreviousRound(
+      currentTrack?.rounds || [],
+      selectedRound,
+    );
+
+    if (statusValue === "Active" && blockingRound) {
+      setFormError(
+        `Không thể Active "${selectedRound?.name || "round này"}" vì round trước "${blockingRound.name}" trong cùng track chưa Closed.`,
+      );
+      return;
+    }
+
     setSaving(true);
     try {
       await axiosInstance.put(`/api/rounds/${selectedRound.roundId}/status`, {
@@ -271,35 +315,18 @@ export function RoundsManagement() {
             onChange={(e) => handleFormChange("name", e.target.value)}
           />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
-              Order
-            </label>
-            <input
-              type="number"
-              min="1"
-              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-              placeholder="1"
-              value={form.orderIndex}
-              onChange={(e) => handleFormChange("orderIndex", e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
-              Suất đi tiếp <span className="text-orange-500">*</span>
-            </label>
-            <input
-              type="number"
-              min="1"
-              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-              placeholder="10"
-              value={form.advancingSlots}
-              onChange={(e) =>
-                handleFormChange("advancingSlots", e.target.value)
-              }
-            />
-          </div>
+        <div>
+          <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
+            Suất đi tiếp <span className="text-orange-500">*</span>
+          </label>
+          <input
+            type="number"
+            min="1"
+            className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+            placeholder="10"
+            value={form.advancingSlots}
+            onChange={(e) => handleFormChange("advancingSlots", e.target.value)}
+          />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -330,6 +357,18 @@ export function RoundsManagement() {
   );
 
   // ---------------------------------------------------------------------------
+  const selectedTrackForStatus = tracks.find(
+    (track) => String(track.trackId) === String(selectedRound?.trackId),
+  );
+  const selectedBlockingPreviousRound = getBlockingPreviousRound(
+    selectedTrackForStatus?.rounds || [],
+    selectedRound,
+  );
+  const selectedEffectiveStatus = getEffectiveRoundStatus(
+    selectedTrackForStatus?.rounds || [],
+    selectedRound,
+  );
+
   return (
     <div className="space-y-6">
       <CoordinatorPanel
@@ -397,13 +436,19 @@ export function RoundsManagement() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {track.rounds.map((round, idx) => (
+                    {track.rounds.map((round, idx) => {
+                      const displayStatus = getEffectiveRoundStatus(
+                        track.rounds,
+                        round,
+                      );
+
+                      return (
                       <div
                         key={round.roundId}
                         className="grid gap-4 rounded-2xl border border-slate-100 p-4 lg:grid-cols-[auto_1fr_180px_auto]"
                         style={{
                           background:
-                            round.status === "Active"
+                            displayStatus === "Active"
                               ? "rgba(242,111,33,0.02)"
                               : "#fff",
                         }}
@@ -414,15 +459,15 @@ export function RoundsManagement() {
                             className="flex h-10 w-10 items-center justify-center rounded-xl text-sm font-bold text-white flex-shrink-0"
                             style={{
                               background:
-                                round.status === "Active"
+                                displayStatus === "Active"
                                   ? "#F26F21"
                                   : "#94A3B8",
                             }}
                           >
                             {idx + 1}
                           </div>
-                          <CoordinatorBadge tone={statusTone(round.status)}>
-                            {round.status}
+                          <CoordinatorBadge tone={statusTone(displayStatus)}>
+                            {displayStatus}
                           </CoordinatorBadge>
                         </div>
 
@@ -448,7 +493,7 @@ export function RoundsManagement() {
                           label="Progress"
                           value={round.progressPercentage ?? 0}
                           color={
-                            round.status === "Active" ? "#F26F21" : "#64748B"
+                            displayStatus === "Active" ? "#F26F21" : "#64748B"
                           }
                         />
 
@@ -462,7 +507,7 @@ export function RoundsManagement() {
                           </CoordinatorActionButton>
                           <CoordinatorActionButton
                             icon={icons.SlidersHorizontal}
-                            onClick={() => openStatus(round)}
+                            onClick={() => openStatus(round, track.trackId)}
                           >
                             Status
                           </CoordinatorActionButton>
@@ -474,7 +519,8 @@ export function RoundsManagement() {
                           </CoordinatorActionButton>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -508,8 +554,8 @@ export function RoundsManagement() {
           <div className="space-y-3">
             <p className="text-sm text-slate-500">
               Trạng thái hiện tại:{" "}
-              <CoordinatorBadge tone={statusTone(selectedRound?.status)}>
-                {selectedRound?.status}
+              <CoordinatorBadge tone={statusTone(selectedEffectiveStatus)}>
+                {selectedEffectiveStatus}
               </CoordinatorBadge>
             </p>
             <select
@@ -518,9 +564,23 @@ export function RoundsManagement() {
               onChange={(e) => setStatusValue(e.target.value)}
             >
               {STATUS_OPTIONS.map((s) => (
-                <option key={s}>{s}</option>
+                <option
+                  key={s}
+                  value={s}
+                  disabled={s === "Active" && !!selectedBlockingPreviousRound}
+                >
+                  {s}
+                </option>
               ))}
             </select>
+            {selectedBlockingPreviousRound && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+                Round này chỉ được Active sau khi round trước trong cùng track là{" "}
+                <strong>Closed</strong>. Round đang chặn:{" "}
+                <strong>{selectedBlockingPreviousRound.name}</strong> (
+                {selectedBlockingPreviousRound.status}).
+              </div>
+            )}
             <FormError msg={formError} />
           </div>
         </ModalShell>

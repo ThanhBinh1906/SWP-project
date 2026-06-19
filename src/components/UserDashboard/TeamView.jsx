@@ -25,7 +25,8 @@ import {
 import teamService from "../../services/teamService";
 
 const MIN_MEMBERS = 0; // members ngoài leader, có thể 0
-const MAX_MEMBERS = 3; // tối đa 3 member thêm vào (leader + 3 = 4)
+const MAX_TEAM_MEMBERS = 5; // tổng số thành viên gồm leader
+const MAX_MEMBERS = MAX_TEAM_MEMBERS - 1; // số member thêm vào ngoài leader
 
 const EMPTY_MEMBER = {
   fullName: "",
@@ -640,7 +641,7 @@ function TeamCreateForm({
           <SectionTitle
             number="3"
             title="Thành viên khác"
-            subtitle={`(${members.length}/${MAX_MEMBERS}) — tuỳ chọn`}
+            subtitle={`(${members.length + 1}/${MAX_TEAM_MEMBERS}) — đã tính leader`}
           />
           {members.length < MAX_MEMBERS && (
             <button
@@ -684,7 +685,7 @@ function TeamCreateForm({
 
         {members.length >= MAX_MEMBERS && (
           <p className="text-xs text-center text-slate-400">
-            Đã đạt tối đa {MAX_MEMBERS} thành viên (chưa tính leader)
+            Đã đạt tối đa {MAX_TEAM_MEMBERS} thành viên trong đội (leader + {MAX_MEMBERS} thành viên khác)
           </p>
         )}
       </div>
