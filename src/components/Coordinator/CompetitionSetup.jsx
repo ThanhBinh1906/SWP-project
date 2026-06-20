@@ -7,8 +7,15 @@ import {
   ModalShell,
   icons,
 } from "./CoordinatorUI";
-import { AlertCircle, Loader2, ChevronDown, ChevronRight } from "lucide-react";
+import {
+  AlertCircle,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  Loader2,
+} from "lucide-react";
 import eventService from "../../services/eventService";
+import { CloneCompetitionModal } from "./competition/CloneCompetitionModal";
 
 // ---------------------------------------------------------------------------
 // Constants & helpers (preserved from originals)
@@ -122,6 +129,7 @@ function FormError({ msg }) {
 // CompetitionSetup — unified 3-level accordion: Event → Track → Round
 // ---------------------------------------------------------------------------
 export function CompetitionSetup() {
+  const [cloneSourceEvent, setCloneSourceEvent] = useState(null);
   // === EVENTS ===
   const [events, setEvents] = useState([]);
   const [eventsLoading, setEventsLoading] = useState(true);
@@ -178,6 +186,15 @@ export function CompetitionSetup() {
       setEventsLoading(false);
     }
   }, []);
+
+  const closeCloneModal = async () => {
+    setCloneSourceEvent(null);
+    await fetchEvents();
+  };
+
+  const completeClone = async () => {
+    await fetchEvents();
+  };
 
   const fetchTracksForEvent = useCallback(async (eventId) => {
     setTracksByEvent((prev) => ({
@@ -727,7 +744,7 @@ export function CompetitionSetup() {
                   </div>
 
                   <div
-                    className="flex items-center gap-2 flex-shrink-0"
+                    className="flex flex-shrink-0 flex-wrap items-center justify-end gap-2"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <CoordinatorActionButton
@@ -735,6 +752,12 @@ export function CompetitionSetup() {
                       onClick={() => openEditEvent(event)}
                     >
                       Edit
+                    </CoordinatorActionButton>
+                    <CoordinatorActionButton
+                      icon={Copy}
+                      onClick={() => setCloneSourceEvent(event)}
+                    >
+                      Copy
                     </CoordinatorActionButton>
                     <CoordinatorActionButton
                       variant="danger"
@@ -1007,6 +1030,14 @@ export function CompetitionSetup() {
             );
           })}
         </div>
+      )}
+
+      {cloneSourceEvent && (
+        <CloneCompetitionModal
+          sourceEvent={cloneSourceEvent}
+          onClose={closeCloneModal}
+          onCompleted={completeClone}
+        />
       )}
 
       {/* =============================================================== */}

@@ -302,7 +302,14 @@ export function CoordinatorTable({
     </div>
   );
 }
-export function ModalShell({ title, children, onClose, actions }) {
+export function ModalShell({
+  title,
+  children,
+  onClose,
+  actions,
+  maxWidthClass = "max-w-xl",
+  maxHeightClass = "max-h-[80vh]",
+}) {
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => {
@@ -312,7 +319,9 @@ export function ModalShell({ title, children, onClose, actions }) {
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4 animate-fade-in">
-      <div className="flex max-h-[80vh] min-w-0 w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl animate-modal-scale">
+      <div
+        className={`flex min-w-0 w-full ${maxWidthClass} ${maxHeightClass} flex-col overflow-hidden rounded-2xl bg-white shadow-2xl animate-modal-scale`}
+      >
         <div className="flex flex-shrink-0 items-start justify-between gap-4 px-6 pt-6 pb-5">
           <h3 className="text-lg font-bold text-slate-900">{title}</h3>
           <button

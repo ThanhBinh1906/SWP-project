@@ -641,7 +641,7 @@ function TeamCreateForm({
           <SectionTitle
             number="3"
             title="Thành viên khác"
-            subtitle={`(${members.length + 1}/${MAX_TEAM_MEMBERS}) — đã tính leader`}
+            subtitle={`(${members.length}/${MAX_MEMBERS}) — chưa tính leader`}
           />
           {members.length < MAX_MEMBERS && (
             <button
@@ -685,7 +685,7 @@ function TeamCreateForm({
 
         {members.length >= MAX_MEMBERS && (
           <p className="text-xs text-center text-slate-400">
-            Đã đạt tối đa {MAX_TEAM_MEMBERS} thành viên trong đội (leader + {MAX_MEMBERS} thành viên khác)
+            Đã đạt tối đa {MAX_MEMBERS} thành viên khác (leader + {MAX_MEMBERS} = {MAX_TEAM_MEMBERS})
           </p>
         )}
       </div>

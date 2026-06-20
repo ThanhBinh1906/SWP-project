@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../services/axiosInstance";
+import { loginSuccess, logoutSuccess } from "./authSlice";
 
 export const fetchMyTeam = createAsyncThunk(
   "team/fetchMyTeam",
@@ -16,6 +17,13 @@ export const fetchMyTeam = createAsyncThunk(
     }
   },
 );
+
+const resetTeamState = (state) => {
+  state.myTeam = null;
+  state.loading = false;
+  state.error = null;
+  state.fetched = false;
+};
 
 const teamSlice = createSlice({
   name: "team",
@@ -37,6 +45,8 @@ const teamSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      .addCase(loginSuccess, resetTeamState)
+      .addCase(logoutSuccess, resetTeamState)
       .addCase(fetchMyTeam.pending, (state) => {
         state.loading = true;
         state.error = null;
