@@ -6,7 +6,9 @@ const criterionService = {
   importTemplate: (roundId, templateId) =>
     api.post(`/api/rounds/${roundId}/criteria/import`, { templateId }),
   getTemplates: () => api.get("/api/criterion-templates"),
+  getTemplateById: (id) => api.get(`/api/criterion-templates/${id}`),
   createTemplate: (data) => api.post("/api/criterion-templates", data),
+  updateTemplate: (id, data) => api.put(`/api/criterion-templates/${id}`, data),
   deleteTemplate: (id) => api.delete(`/api/criterion-templates/${id}`),
   update: (roundId, criterionId, data) =>
     api.put(`/api/rounds/${roundId}/criteria/${criterionId}`, data),

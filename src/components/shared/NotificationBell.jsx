@@ -32,6 +32,30 @@ function formatNotificationTime(value) {
 
 function getNotificationTone(type) {
   const normalizedType = String(type || "").toLowerCase();
+  if (normalizedType === "team_approved") {
+    return {
+      label: "Đội đã duyệt",
+      bg: "#ECFDF5",
+      color: "#047857",
+      border: "#A7F3D0",
+    };
+  }
+  if (normalizedType === "team_disqualified") {
+    return {
+      label: "Đội bị loại",
+      bg: "#FEF2F2",
+      color: "#B91C1C",
+      border: "#FECACA",
+    };
+  }
+  if (normalizedType === "judge_assigned") {
+    return {
+      label: "Phân công chấm",
+      bg: "#FFF6F0",
+      color: "#C2410C",
+      border: "#FED7AA",
+    };
+  }
   if (normalizedType.includes("team")) {
     return {
       label: "Đội thi",

@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
+import { fetchActiveEvent } from "../../store/eventSlice";
 import { CoordinatorHeader } from "./CoordinatorHeader";
 import { CoordinatorPageTitle } from "./CoordinatorPageTitle";
 import { CoordinatorSidebar } from "./CoordinatorSidebar";
@@ -64,10 +66,15 @@ const views = {
 };
 
 export default function CoordinatorDashboard() {
+  const dispatch = useDispatch();
   const [activeNav, setActiveNav] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const ActiveView = views[activeNav] || DashboardOverview;
   const title = viewTitles[activeNav] || viewTitles.dashboard;
+
+  useEffect(() => {
+    dispatch(fetchActiveEvent());
+  }, [dispatch]);
 
   return (
     <div

@@ -6,7 +6,6 @@ import { JudgePageTitle } from "../components/Judge/layout/JudgePageTitle";
 import { JudgeSidebar } from "../components/Judge/layout/JudgeSidebar";
 import { JudgeRounds } from "../components/Judge/rounds/JudgeRounds";
 import { JudgeScoringWorkspace } from "../components/Judge/scoring/JudgeScoringWorkspace";
-import { judgeSubmissions } from "../components/Judge/judgeMockData";
 
 const viewTitles = {
   dashboard: {
@@ -43,13 +42,12 @@ export default function JudgeDashboard() {
   const views = {
     dashboard: (
       <JudgeOverview
-        submissions={judgeSubmissions}
         onOpenScoring={openScoring}
       />
     ),
     rounds: <JudgeRounds onOpenScoring={openScoring} />,
     scoring: <JudgeScoringWorkspace initialRoundId={scoringRoundId} />,
-    history: <ScoringHistory submissions={judgeSubmissions} />,
+    history: <ScoringHistory submissions={[]} />,
   };
 
   return (

@@ -1,18 +1,16 @@
-import { judgeRounds } from "../judgeMockData";
 import { JudgeStatCard } from "../shared/JudgeStatCard";
 import { judgeIcons } from "../shared/judgeIcons";
 
-export function JudgeStatsCards({ submissions }) {
-  const completed = submissions.filter((item) => item.status === "Scored" || item.status === "Locked").length;
-  const pending = submissions.filter((item) => item.status === "Not scored" || item.status === "Draft").length;
-  const locked = judgeRounds.filter((round) => round.ranking?.calculatedAt != null).length;
-  const activeRound = judgeRounds.find((round) => round.status === "Scoring");
+export function JudgeStatsCards({ rounds, totalSubmissions }) {
+  const scoringRound = rounds.find((round) => round.status === "Scoring");
+  const activeCount = rounds.filter((round) => round.status === "Active").length;
+  const closedCount = rounds.filter((round) => round.status === "Closed").length;
 
   const stats = [
-    { label: "Assigned Rounds", value: judgeRounds.length, icon: judgeIcons.CalendarDays, tone: "orange", helper: "Available in this event" },
-    { label: "Active Scoring", value: activeRound ? activeRound.name : "None", icon: judgeIcons.Timer, tone: "purple", helper: "Current scoring window" },
-    { label: "Completed Scores", value: `${completed}/${submissions.length}`, icon: judgeIcons.CheckCircle2, tone: "green", helper: `${pending} remaining` },
-    { label: "Locked Rounds", value: locked, icon: judgeIcons.Lock, tone: "red", helper: "Finalized by ranking" },
+    { label: "Assigned Rounds", value: rounds.length, icon: judgeIcons.CalendarDays, tone: "orange", helper: "Từ API rounds/assigned" },
+    { label: "Active Scoring", value: scoringRound ? scoringRound.name : "None", icon: judgeIcons.Timer, tone: "purple", helper: "Current scoring window" },
+    { label: "Submissions", value: totalSubmissions, icon: judgeIcons.CheckCircle2, tone: "green", helper: "Trong các Round được gán" },
+    { label: "Active / Closed", value: `${activeCount} / ${closedCount}`, icon: judgeIcons.Lock, tone: "red", helper: "Trạng thái Round" },
   ];
 
   return (

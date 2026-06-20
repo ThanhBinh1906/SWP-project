@@ -9,6 +9,7 @@ const staffService = {
     ),
   assignRound: (roundId, judgeId) =>
     api.post(`/api/rounds/${roundId}/judges`, { judgeId }),
+  getRoundJudges: (roundId) => api.get(`/api/rounds/${roundId}/judges`),
 };
 
 export default staffService;

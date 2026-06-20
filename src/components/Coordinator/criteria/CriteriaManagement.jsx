@@ -97,6 +97,8 @@ export function CriteriaManagement() {
   const [form, setForm] = useState(EMPTY_CRITERION);
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [deleteTemplateTarget, setDeleteTemplateTarget] = useState(null);
+  const [templateEditor, setTemplateEditor] = useState(null);
+  const [templateEditorLoading, setTemplateEditorLoading] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [actionError, setActionError] = useState("");
@@ -216,7 +218,7 @@ export function CriteriaManagement() {
         name: form.name.trim(),
         description: form.description.trim() || null,
         maxScore: Number(form.maxScore),
-        weight,
+        weight: decimalToPercent(weight),
       });
       await fetchCriteria();
       setModal(null);
@@ -274,7 +276,7 @@ export function CriteriaManagement() {
         name: form.name.trim(),
         description: form.description.trim() || null,
         maxScore: Number(form.maxScore),
-        weight,
+        weight: decimalToPercent(weight),
       });
       await fetchCriteria();
       setModal(null);
@@ -499,6 +501,78 @@ export function CriteriaManagement() {
       setDeleteTemplateTarget(null);
     } catch (err) {
       setFormError(getApiMessage(err, "Xóa template thất bại."));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openTemplateEditor = async (template) => {
+    setTemplateEditorLoading(true);
+    setFormError("");
+    setModal("editTemplate");
+    try {
+      const response = await criterionService.getTemplateById(template.id);
+      const detail = response.data?.data || response.data || template;
+      setTemplateEditor({
+        id: detail.id || template.id,
+        name: detail.name || "",
+        description: detail.description || "",
+        items: (detail.items || []).map((item) => ({
+          name: item.name || "",
+          description: item.description || "",
+          maxScore: String(item.maxScore ?? ""),
+          weight: String(item.weight ?? ""),
+        })),
+      });
+    } catch (err) {
+      setFormError(getApiMessage(err, "Không thể tải chi tiết template."));
+      setTemplateEditor(null);
+    } finally {
+      setTemplateEditorLoading(false);
+    }
+  };
+
+  const updateTemplateItem = (index, field, value) => {
+    setTemplateEditor((previous) => ({
+      ...previous,
+      items: previous.items.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [field]: value } : item,
+      ),
+    }));
+    setFormError("");
+  };
+
+  const handleUpdateTemplate = async () => {
+    if (!templateEditor?.name.trim()) return setFormError("Tên template không được để trống.");
+    if (!templateEditor.items.length) return setFormError("Template phải có ít nhất một tiêu chí.");
+    const totalWeight = templateEditor.items.reduce(
+      (total, item) => total + Number(item.weight || 0),
+      0,
+    );
+    if (Math.abs(totalWeight - 100) > 0.01)
+      return setFormError(`Tổng weight hiện tại là ${totalWeight}%, phải bằng 100%.`);
+    if (templateEditor.items.some((item) => !item.name.trim() || Number(item.maxScore) <= 0 || Number(item.weight) <= 0))
+      return setFormError("Tên, max score và weight của mỗi tiêu chí phải hợp lệ.");
+
+    setSaving(true);
+    setFormError("");
+    try {
+      await criterionService.updateTemplate(templateEditor.id, {
+        name: templateEditor.name.trim(),
+        description: templateEditor.description.trim() || null,
+        items: templateEditor.items.map((item) => ({
+          name: item.name.trim(),
+          description: item.description.trim() || null,
+          maxScore: Number(item.maxScore),
+          weight: Number(item.weight),
+        })),
+      });
+      const response = await criterionService.getTemplates();
+      setTemplates(response.data?.data || []);
+      setModal(null);
+      setTemplateEditor(null);
+    } catch (err) {
+      setFormError(getApiMessage(err, "Không thể cập nhật template."));
     } finally {
       setSaving(false);
     }
@@ -787,7 +861,7 @@ export function CriteriaManagement() {
               <FormField
                 label="Trọng số (Weight)"
                 icon={icons.SlidersHorizontal}
-                hint="Nhập 20 hoặc 20% (gửi BE là 0.2). Tổng tất cả tiêu chí = 100%"
+                hint="Nhập 20 hoặc 20%. FE gửi BE là 20, BE tự lưu decimal 0.2."
               >
                 <input
                   type="text"
@@ -860,6 +934,17 @@ export function CriteriaManagement() {
                           style={{ color: "#F26F21" }}
                         />
                       )}
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openTemplateEditor(t);
+                        }}
+                        className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-orange-50 hover:text-orange-600"
+                        title="Xem và chỉnh sửa template"
+                      >
+                        <icons.Edit3 className="h-3.5 w-3.5" />
+                      </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1145,6 +1230,33 @@ export function CriteriaManagement() {
               </div>
             )}
           </div>
+        </ModalShell>
+      )}
+      {modal === "editTemplate" && (
+        <ModalShell
+          title="Xem và chỉnh sửa Criterion Template"
+          onClose={() => { setModal(null); setTemplateEditor(null); }}
+          maxWidthClass="max-w-5xl"
+          actions={<><CoordinatorActionButton disabled={saving} onClick={() => { setModal(null); setTemplateEditor(null); }}>Hủy</CoordinatorActionButton><CoordinatorActionButton variant="primary" disabled={saving || templateEditorLoading || !templateEditor} onClick={handleUpdateTemplate}>{saving ? "Đang lưu..." : "Lưu thay đổi"}</CoordinatorActionButton></>}
+        >
+          {templateEditorLoading ? <LoadingState label="Đang tải template..." /> : (
+            <div className="space-y-4">
+              <FormError msg={formError} />
+              {templateEditor && <>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <FormField label="Tên template" required><input className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm" value={templateEditor.name} onChange={(event) => setTemplateEditor((previous) => ({ ...previous, name: event.target.value }))} /></FormField>
+                  <FormField label="Mô tả"><input className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm" value={templateEditor.description} onChange={(event) => setTemplateEditor((previous) => ({ ...previous, description: event.target.value }))} /></FormField>
+                </div>
+                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                  <table className="min-w-[850px] w-full text-sm">
+                    <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="px-3 py-2 text-left">Tiêu chí</th><th className="px-3 py-2 text-left">Mô tả</th><th className="px-3 py-2 text-left">Max score</th><th className="px-3 py-2 text-left">Weight (%)</th></tr></thead>
+                    <tbody className="divide-y divide-slate-100">{templateEditor.items.map((item, index) => <tr key={index}><td className="p-2"><input className="w-full rounded-lg border border-slate-300 px-2 py-2" value={item.name} onChange={(event) => updateTemplateItem(index, "name", event.target.value)} /></td><td className="p-2"><input className="w-full rounded-lg border border-slate-300 px-2 py-2" value={item.description} onChange={(event) => updateTemplateItem(index, "description", event.target.value)} /></td><td className="p-2"><input type="number" min="0.01" className="w-full rounded-lg border border-slate-300 px-2 py-2" value={item.maxScore} onChange={(event) => updateTemplateItem(index, "maxScore", event.target.value)} /></td><td className="p-2"><input type="number" min="0.01" max="100" className="w-full rounded-lg border border-slate-300 px-2 py-2" value={item.weight} onChange={(event) => updateTemplateItem(index, "weight", event.target.value)} /></td></tr>)}</tbody>
+                  </table>
+                </div>
+                <p className="text-right text-sm font-bold text-slate-700">Tổng weight: {templateEditor.items.reduce((sum, item) => sum + Number(item.weight || 0), 0)}%</p>
+              </>}
+            </div>
+          )}
         </ModalShell>
       )}
       {deleteTemplateTarget && (

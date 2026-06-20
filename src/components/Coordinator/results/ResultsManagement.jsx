@@ -3,6 +3,7 @@ import eventService from "../../../services/eventService";
 import rankingService from "../../../services/rankingService";
 import roundService from "../../../services/roundService";
 import trackService from "../../../services/trackService";
+import { PrizeManagement } from "./PrizeManagement";
 import {
   CoordinatorActionButton,
   CoordinatorBadge,
@@ -513,6 +514,8 @@ export function ResultsManagement() {
           />
         )}
       </CoordinatorPanel>
+
+      <PrizeManagement trackId={selectedTrackId} roundId={selectedRoundId} />
 
       {(detailLoading || detailRanking || detailError) && (
         <ModalShell

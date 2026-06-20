@@ -8,6 +8,7 @@ const teamService = {
   updateTeam: (id, data) => api.put(`/api/teams/${id}`, data),
 
   getAdminTeams: (params) => api.get("/api/admin/teams", { params }),
+  getGroupedTeams: (params) => api.get("/api/admin/teams/grouped", { params }),
   approveTeam: (id) => api.put(`/api/teams/${id}/approve`),
   disqualifyTeam: (id, reason) =>
     api.put(`/api/teams/${id}/disqualify`, { reason }),

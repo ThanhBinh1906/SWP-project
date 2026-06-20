@@ -204,7 +204,7 @@ function ParticipantsTab() {
 // TAB 2: Mentors & Judges
 // ---------------------------------------------------------------------------
 function StaffTab() {
-  const eventId = useSelector((s) => s.event.activeEventId) || 1;
+  const eventId = useSelector((s) => s.event.activeEventId);
 
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -221,6 +221,11 @@ function StaffTab() {
   const [assignRoundModal, setAssignRoundModal] = useState(null); // staff object
   const [roundId, setRoundId] = useState("");
   const [assignError, setAssignError] = useState("");
+  const [roundJudgesModal, setRoundJudgesModal] = useState(false);
+  const [judgeLookupRoundId, setJudgeLookupRoundId] = useState("");
+  const [roundJudges, setRoundJudges] = useState([]);
+  const [roundJudgesLoading, setRoundJudgesLoading] = useState(false);
+  const [roundJudgesError, setRoundJudgesError] = useState("");
 
   // Assign mentor to teams modal
   const [assignMentorModal, setAssignMentorModal] = useState(null); // staff object
@@ -234,6 +239,11 @@ function StaffTab() {
 
   // ---------------------------------------------------------------------------
   const fetchStaff = useCallback(async () => {
+    if (!eventId) {
+      setStaff([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setApiError("");
     try {
@@ -329,6 +339,26 @@ function StaffTab() {
       if (!isMentorAlreadyAssignedToTrack(err)) {
         throw err;
       }
+    }
+  };
+
+  const loadRoundJudges = async () => {
+    if (!judgeLookupRoundId.trim()) {
+      setRoundJudgesError("Vui lòng nhập Round ID.");
+      return;
+    }
+    setRoundJudgesLoading(true);
+    setRoundJudgesError("");
+    try {
+      const response = await staffService.getRoundJudges(judgeLookupRoundId.trim());
+      setRoundJudges(response.data?.data || []);
+    } catch (err) {
+      setRoundJudges([]);
+      setRoundJudgesError(
+        err?.response?.data?.message || "Không thể tải danh sách Judge của Round.",
+      );
+    } finally {
+      setRoundJudgesLoading(false);
     }
   };
 
@@ -551,18 +581,39 @@ function StaffTab() {
             </button>
           ))}
         </div>
-        <CoordinatorActionButton
-          variant="primary"
-          icon={icons.Plus}
-          onClick={() => {
-            setCreateModal(true);
-            setFormError("");
-            setForm(EMPTY_STAFF_FORM);
-          }}
-        >
-          Add Staff
-        </CoordinatorActionButton>
+        <div className="flex flex-wrap gap-2">
+          {roleFilter === "Judge" && (
+            <CoordinatorActionButton
+              icon={icons.Eye}
+              onClick={() => {
+                setRoundJudgesModal(true);
+                setRoundJudges([]);
+                setRoundJudgesError("");
+              }}
+            >
+              Judges by Round
+            </CoordinatorActionButton>
+          )}
+          <CoordinatorActionButton
+            variant="primary"
+            icon={icons.Plus}
+            disabled={!eventId}
+            onClick={() => {
+              setCreateModal(true);
+              setFormError("");
+              setForm(EMPTY_STAFF_FORM);
+            }}
+          >
+            Add Staff
+          </CoordinatorActionButton>
+        </div>
       </div>
+
+      {!eventId && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          Chưa có Event Registration hoặc Active. Không thể tải và quản lý staff.
+        </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center py-12 gap-2 text-sm text-slate-400">
@@ -666,6 +717,43 @@ function StaffTab() {
       )}
 
       {/* Modal: Create Staff */}
+      {roundJudgesModal && (
+        <ModalShell
+          title="Judge đã được gán theo Round"
+          onClose={() => setRoundJudgesModal(false)}
+          actions={<CoordinatorActionButton variant="primary" onClick={() => setRoundJudgesModal(false)}>Đóng</CoordinatorActionButton>}
+        >
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <input
+                type="number"
+                min="1"
+                className="min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none"
+                placeholder="Round ID"
+                value={judgeLookupRoundId}
+                onChange={(event) => setJudgeLookupRoundId(event.target.value)}
+              />
+              <CoordinatorActionButton disabled={roundJudgesLoading} onClick={loadRoundJudges}>
+                {roundJudgesLoading ? "Đang tải..." : "Tải danh sách"}
+              </CoordinatorActionButton>
+            </div>
+            {roundJudgesError && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{roundJudgesError}</div>}
+            {!roundJudgesLoading && !roundJudgesError && roundJudges.length === 0 ? (
+              <p className="py-6 text-center text-sm text-slate-500">Chưa có Judge hoặc chưa chọn Round.</p>
+            ) : (
+              <div className="space-y-2">
+                {roundJudges.map((judge) => (
+                  <div key={judge.judgeId} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-3">
+                    <div><p className="font-bold text-slate-900">{judge.username}</p><p className="text-xs text-slate-500">{judge.email}</p></div>
+                    <CoordinatorBadge tone="purple">{judge.judgeType || "Judge"}</CoordinatorBadge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </ModalShell>
+      )}
+
       {createModal && (
         <ModalShell
           title="Thêm Mentor / Judge"

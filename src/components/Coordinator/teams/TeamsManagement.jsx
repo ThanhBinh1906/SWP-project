@@ -9,8 +9,10 @@ import {
 } from "../CoordinatorUI";
 import { AlertCircle, Loader2 } from "lucide-react";
 import teamService from "../../../services/teamService";
+import eventService from "../../../services/eventService";
+import trackService from "../../../services/trackService";
 
-const STATUS_FILTERS = ["All", "Pending", "Approved", "Disqualified"];
+const STATUS_FILTERS = ["All", "Pending", "Approved", "Rejected", "Disqualified"];
 
 function getTeamMentorLabel(team) {
   return (
@@ -109,9 +111,14 @@ export function TeamsManagement() {
   // Filters
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [events, setEvents] = useState([]);
+  const [tracks, setTracks] = useState([]);
+  const [selectedEventId, setSelectedEventId] = useState("");
+  const [selectedTrackId, setSelectedTrackId] = useState("");
 
   // Modals
   const [detailTeam, setDetailTeam] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [disqualifyTeam, setDisqualifyTeam] = useState(null);
 
   // Action states
@@ -125,18 +132,29 @@ export function TeamsManagement() {
       setLoading(true);
       setApiError("");
       try {
-        const params = {
-          pageNumber: p,
-          pageSize,
+        if (!selectedEventId) {
+          setTeams([]);
+          setLoading(false);
+          return;
+        }
+        const res = await teamService.getGroupedTeams({
+          eventId: selectedEventId,
+          ...(selectedTrackId ? { trackId: selectedTrackId } : {}),
+        });
+        const data = res.data?.data || {};
+        const groups = {
+          Pending: data.pending || [],
+          Approved: data.approved || [],
+          Rejected: data.rejected || [],
+          Disqualified: data.disqualified || [],
         };
-        if (statusFilter !== "All") params.status = statusFilter;
-        // TODO: thêm trackId filter khi có track selector
-
-        const res = await teamService.getAdminTeams(params);
-        const data = res.data?.data;
-        setTeams(data?.items || []);
-        setTotalPages(data?.totalPages || 1);
-        setPage(data?.pageNumber || 1);
+        setTeams(
+          statusFilter === "All"
+            ? Object.values(groups).flat()
+            : groups[statusFilter] || [],
+        );
+        setTotalPages(1);
+        setPage(1);
       } catch (err) {
         setApiError(
           err?.response?.data?.message || "Không thể tải danh sách team.",
@@ -145,8 +163,24 @@ export function TeamsManagement() {
         setLoading(false);
       }
     },
-    [statusFilter, pageSize],
+    [statusFilter, selectedEventId, selectedTrackId],
   );
+
+  useEffect(() => {
+    eventService.getAll().then((response) => {
+      const list = response.data?.data || [];
+      setEvents(list);
+      setSelectedEventId(list[0]?.id ? String(list[0].id) : "");
+    }).catch(() => setEvents([]));
+  }, []);
+
+  useEffect(() => {
+    setSelectedTrackId("");
+    if (!selectedEventId) return setTracks([]);
+    trackService.getByEvent(selectedEventId)
+      .then((response) => setTracks(response.data?.data || []))
+      .catch(() => setTracks([]));
+  }, [selectedEventId]);
 
   useEffect(() => {
     fetchTeams(1);
@@ -159,15 +193,27 @@ export function TeamsManagement() {
     setPage(1);
   };
 
+  const openTeamDetail = async (team) => {
+    setDetailTeam(team);
+    setDetailLoading(true);
+    setActionError("");
+    try {
+      const response = await teamService.getById(team.id);
+      setDetailTeam(response.data?.data || team);
+    } catch (err) {
+      setActionError(err?.response?.data?.message || "Không thể tải chi tiết team.");
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
   // ---------------------------------------------------------------------------
   const handleApprove = async (team) => {
     setActionLoading(team.id);
     setActionError("");
     try {
       await teamService.approveTeam(team.id);
-      setTeams((prev) =>
-        prev.map((t) => (t.id === team.id ? { ...t, status: "Approved" } : t)),
-      );
+      await fetchTeams(1);
     } catch (err) {
       setActionError(err?.response?.data?.message || "Approve thất bại.");
     } finally {
@@ -183,11 +229,7 @@ export function TeamsManagement() {
         disqualifyTeam.id,
         disqualifyReason.trim() || undefined,
       );
-      setTeams((prev) =>
-        prev.map((t) =>
-          t.id === disqualifyTeam.id ? { ...t, status: "Disqualified" } : t,
-        ),
-      );
+      await fetchTeams(1);
       setDisqualifyTeam(null);
       setDisqualifyReason("");
     } catch (err) {
@@ -265,10 +307,7 @@ export function TeamsManagement() {
         <div className="flex gap-2 flex-wrap">
           <CoordinatorActionButton
             icon={icons.Eye}
-            onClick={() => {
-              setDetailTeam(row);
-              setActionError("");
-            }}
+            onClick={() => openTeamDetail(row)}
           >
             Details
           </CoordinatorActionButton>
@@ -322,6 +361,19 @@ export function TeamsManagement() {
         subtitle="Approve, inspect, or disqualify participating teams"
         icon={icons.UserRoundCog}
       >
+        <div className="mb-4 grid gap-3 md:grid-cols-2">
+          <label className="text-xs font-bold uppercase text-slate-600">Event
+            <select className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm" value={selectedEventId} onChange={(event) => setSelectedEventId(event.target.value)}>
+              {events.length === 0 ? <option value="">Chưa có Event</option> : events.map((event) => <option key={event.id} value={event.id}>{event.name}</option>)}
+            </select>
+          </label>
+          <label className="text-xs font-bold uppercase text-slate-600">Track
+            <select className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm" value={selectedTrackId} onChange={(event) => setSelectedTrackId(event.target.value)} disabled={!tracks.length}>
+              <option value="">Tất cả Track</option>
+              {tracks.map((track) => <option key={track.id} value={track.id}>{track.name}</option>)}
+            </select>
+          </label>
+        </div>
         <FilterBar
           status={statusFilter}
           onStatus={handleStatusFilter}
@@ -379,6 +431,7 @@ export function TeamsManagement() {
           }
         >
           <div className="space-y-2 text-sm">
+            {detailLoading && <div className="flex justify-center gap-2 py-4 text-slate-500"><Loader2 className="h-4 w-4 animate-spin" />Đang tải chi tiết...</div>}
             <InfoRow label="Tên team" value={detailTeam.teamName} />
             <InfoRow label="Trường" value={detailTeam.university} />
             <InfoRow
@@ -393,8 +446,15 @@ export function TeamsManagement() {
             />
             <InfoRow
               label="Thành viên"
-              value={`${detailTeam.memberCount ?? 0} người`}
+              value={`${detailTeam.members?.length ?? detailTeam.memberCount ?? 0} người`}
             />
+            {detailTeam.topic && <InfoRow label="Đề tài" value={detailTeam.topic.title} />}
+            {detailTeam.members?.length > 0 && (
+              <div className="rounded-xl border border-slate-200 p-3">
+                <p className="mb-2 text-xs font-bold uppercase text-slate-500">Danh sách thành viên</p>
+                <div className="space-y-2">{detailTeam.members.map((member) => <div key={member.id} className="flex justify-between gap-3 text-sm"><span className="font-semibold text-slate-800">{member.fullName}</span><span className="text-slate-500">{member.studentCode}</span></div>)}</div>
+              </div>
+            )}
             {detailTeam.disqualifyReason && (
               <InfoRow label="Lý do loại" value={detailTeam.disqualifyReason} />
             )}
