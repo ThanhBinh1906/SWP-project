@@ -11,6 +11,7 @@ import {
 import teamService from "../../services/teamService";
 import submissionService from "../../services/submissionService";
 import { getApiMessage } from "../Coordinator/coordinatorHelpers";
+import LoadingActionText from "../shared/LoadingActionText";
 
 const EMPTY_FORM = {
   presentationUrl: "",
@@ -504,7 +505,7 @@ function SubmissionForm({ eventId }) {
       >
         {saving ? (
           <span className="flex items-center justify-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin" /> Đang lưu...
+            <Loader2 className="h-4 w-4 animate-spin" /> <LoadingActionText>Đang lưu</LoadingActionText>
           </span>
         ) : existingSubmission ? (
           "Cập nhật bài nộp"

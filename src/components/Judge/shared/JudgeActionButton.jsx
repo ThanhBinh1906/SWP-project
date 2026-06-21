@@ -1,4 +1,8 @@
+import LoadingActionText from "../../shared/LoadingActionText";
+
 export function JudgeActionButton({ variant = "secondary", disabled = false, children, icon: Icon, className = "", ...props }) {
+  const isLoadingLabel = typeof children === "string" && /^Đang\s/i.test(children.trim());
+  const content = isLoadingLabel ? <LoadingActionText>{children.trim().replace(/\.{3}$/, "")}</LoadingActionText> : children;
   const variants = {
     primary: "border-orange-600 bg-gradient-to-r from-[#F26F21] to-[#c9520e] text-white hover:shadow-lg",
     secondary: "border-slate-300 bg-white text-slate-700 hover:border-orange-400 hover:bg-orange-50 hover:text-orange-700",
@@ -12,8 +16,8 @@ export function JudgeActionButton({ variant = "secondary", disabled = false, chi
       disabled={disabled}
       {...props}
     >
-      {Icon && <Icon className="h-4 w-4" />}
-      {children}
+      {Icon && <Icon className={`h-4 w-4 ${isLoadingLabel ? "animate-spin" : ""}`} />}
+      {content}
     </button>
   );
 }

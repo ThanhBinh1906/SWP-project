@@ -12,6 +12,7 @@ import staffService from "../../../services/staffService";
 import teamService from "../../../services/teamService";
 import trackService from "../../../services/trackService";
 import { useSelector } from "react-redux";
+import LoadingActionText from "../../shared/LoadingActionText";
 
 // ---------------------------------------------------------------------------
 const TABS = ["Participants", "Mentors & Judges"];
@@ -940,7 +941,7 @@ function StaffTab() {
                 }
                 onClick={handleAssignMentorTeams}
               >
-                {mentorAssignLoading ? "Đang gán..." : "Gán team"}
+                {mentorAssignLoading ? <LoadingActionText>Đang gán team</LoadingActionText> : "Gán team"}
               </CoordinatorActionButton>
             </>
           }
@@ -1003,7 +1004,7 @@ function StaffTab() {
                   icon={icons.GitBranch}
                   onClick={handleAssignMentorToTrack}
                 >
-                  Gán Mentor vào Track
+                  {mentorAssignLoading ? <LoadingActionText>Đang gán Mentor vào Track</LoadingActionText> : "Gán Mentor vào Track"}
                 </CoordinatorActionButton>
               </div>
             )}

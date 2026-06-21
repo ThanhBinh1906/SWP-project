@@ -32,6 +32,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import LoadingActionText from "../shared/LoadingActionText";
 
 export const icons = {
   Activity,
@@ -96,6 +97,13 @@ export function CoordinatorActionButton({
   className = "",
   disabled = false,
 }) {
+  const isLoadingLabel =
+    typeof children === "string" && /^Đang\s/i.test(children.trim());
+  const content = isLoadingLabel ? (
+    <LoadingActionText>{children.trim().replace(/\.{3}$/, "")}</LoadingActionText>
+  ) : (
+    children
+  );
   const variants = {
     primary:
       "text-white border-transparent shadow-sm shadow-orange-200 bg-gradient-to-r from-[#F26F21] to-[#c9520e] hover:shadow-orange-300",
@@ -118,7 +126,7 @@ export function CoordinatorActionButton({
       } ${variants[variant]} ${className}`}
     >
       {Icon && <Icon className="h-4 w-4" />}
-      {children}
+      {content}
     </button>
   );
 }

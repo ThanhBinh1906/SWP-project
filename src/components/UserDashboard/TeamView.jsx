@@ -23,6 +23,7 @@ import {
   X,
 } from "lucide-react";
 import teamService from "../../services/teamService";
+import LoadingActionText from "../shared/LoadingActionText";
 
 const MIN_MEMBERS = 2; // BE yêu cầu tối thiểu 3 người, gồm leader
 const MAX_TEAM_MEMBERS = 5; // tổng số thành viên gồm leader
@@ -735,9 +736,7 @@ function TeamCreateForm({
         }}
       >
         {loading ? (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin" /> Đang đăng ký...
-          </>
+          <LoadingActionText>Đang tạo team</LoadingActionText>
         ) : (
           <>
             <Plus className="w-4 h-4" /> Đăng ký Team
@@ -1114,7 +1113,7 @@ function MemberModal({ teamId, member, onClose, onSaved }) {
               cursor: saving ? "not-allowed" : "pointer",
             }}
           >
-            {saving ? "Đang lưu..." : isEdit ? "Lưu thay đổi" : "Thêm"}
+            {saving ? <LoadingActionText>Đang lưu</LoadingActionText> : isEdit ? "Lưu thay đổi" : "Thêm"}
           </button>
         </div>
       </div>
@@ -1271,7 +1270,7 @@ function EditTeamModal({ team, onClose, onSaved }) {
               cursor: saving ? "not-allowed" : "pointer",
             }}
           >
-            {saving ? "Đang lưu..." : "Lưu thay đổi"}
+            {saving ? <LoadingActionText>Đang lưu</LoadingActionText> : "Lưu thay đổi"}
           </button>
         </div>
       </div>
@@ -1674,7 +1673,7 @@ function TeamInfoView({ team: initialTeam, onRefresh }) {
                     cursor: deleting ? "not-allowed" : "pointer",
                   }}
                 >
-                  {deleting ? "Đang xóa..." : "Xác nhận xóa"}
+                  {deleting ? <LoadingActionText>Đang xóa</LoadingActionText> : "Xác nhận xóa"}
                 </button>
               </div>
             </div>

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import eventService from "../../services/eventService";
 import { CloneCompetitionModal } from "./competition/CloneCompetitionModal";
+import { CompetitionTemplateModal } from "./competition/CompetitionTemplateModal";
 
 // ---------------------------------------------------------------------------
 // Constants & helpers (preserved from originals)
@@ -130,6 +131,7 @@ function FormError({ msg }) {
 // ---------------------------------------------------------------------------
 export function CompetitionSetup() {
   const [cloneSourceEvent, setCloneSourceEvent] = useState(null);
+  const [structureModalOpen, setStructureModalOpen] = useState(false);
   // === EVENTS ===
   const [events, setEvents] = useState([]);
   const [eventsLoading, setEventsLoading] = useState(true);
@@ -284,11 +286,6 @@ export function CompetitionSetup() {
   // =========================================================================
   // EVENT HANDLERS (preserved from EventsManagement)
   // =========================================================================
-  const openCreateEvent = () => {
-    setEventForm(EVENT_EMPTY);
-    setEventFormError("");
-    setEventModal("create");
-  };
   const openEditEvent = (ev) => {
     setSelectedEvent(ev);
     setEventForm({
@@ -324,33 +321,6 @@ export function CompetitionSetup() {
     if (eventForm.endDate < eventForm.startDate)
       return "Ngày kết thúc phải sau ngày bắt đầu.";
     return "";
-  };
-
-  // CREATE event
-  const handleCreateEvent = async () => {
-    const err = validateEventForm();
-    if (err) {
-      setEventFormError(err);
-      return;
-    }
-    setEventSaving(true);
-    try {
-      await eventService.create({
-        name: eventForm.name.trim(),
-        description: eventForm.description.trim(),
-        startDate: eventForm.startDate,
-        endDate: eventForm.endDate,
-        status: eventForm.status,
-      });
-      await fetchEvents();
-      closeEventModal();
-    } catch (err) {
-      setEventFormError(
-        err?.response?.data?.message || "Tạo sự kiện thất bại.",
-      );
-    } finally {
-      setEventSaving(false);
-    }
   };
 
   // EDIT event
@@ -653,12 +623,8 @@ export function CompetitionSetup() {
         subtitle="Manage events, tracks, and rounds in a unified tree view"
         icon={icons.CalendarDays}
         actions={
-          <CoordinatorActionButton
-            variant="primary"
-            icon={icons.Plus}
-            onClick={openCreateEvent}
-          >
-            Create Event
+          <CoordinatorActionButton variant="primary" icon={icons.GitBranch} onClick={() => setStructureModalOpen(true)}>
+            Setup Event
           </CoordinatorActionButton>
         }
       />
@@ -681,7 +647,7 @@ export function CompetitionSetup() {
         </div>
       ) : events.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 py-14 text-center text-sm text-slate-400">
-          Chưa có sự kiện nào. Nhấn &quot;Create Event&quot; để bắt đầu.
+          Chưa có sự kiện nào. Nhấn &quot;Setup Event&quot; để bắt đầu.
         </div>
       ) : (
         <div className="space-y-3">
@@ -1040,16 +1006,22 @@ export function CompetitionSetup() {
         />
       )}
 
+      {structureModalOpen && (
+        <CompetitionTemplateModal
+          onClose={() => setStructureModalOpen(false)}
+          onCompleted={async () => {
+            setStructureModalOpen(false);
+            await fetchEvents();
+          }}
+        />
+      )}
+
       {/* =============================================================== */}
       {/* EVENT MODALS (preserved from EventsManagement)                  */}
       {/* =============================================================== */}
-      {(eventModal === "create" || eventModal === "edit") && (
+      {eventModal === "edit" && (
         <ModalShell
-          title={
-            eventModal === "create"
-              ? "Tạo sự kiện mới"
-              : `Chỉnh sửa: ${selectedEvent?.name}`
-          }
+          title={`Chỉnh sửa: ${selectedEvent?.name}`}
           onClose={closeEventModal}
           actions={
             <>
@@ -1062,15 +1034,9 @@ export function CompetitionSetup() {
               <CoordinatorActionButton
                 variant="primary"
                 disabled={eventSaving}
-                onClick={
-                  eventModal === "create" ? handleCreateEvent : handleEditEvent
-                }
+                onClick={handleEditEvent}
               >
-                {eventSaving
-                  ? "Đang lưu..."
-                  : eventModal === "create"
-                    ? "Tạo sự kiện"
-                    : "Lưu thay đổi"}
+                {eventSaving ? "Đang lưu..." : "Lưu thay đổi"}
               </CoordinatorActionButton>
             </>
           }
@@ -1130,35 +1096,11 @@ export function CompetitionSetup() {
               </div>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
-                Trạng thái
-              </label>
-              <select
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-                value={eventForm.status}
-                onChange={(e) =>
-                  handleEventFormChange("status", e.target.value)
-                }
-              >
-                {EVENT_STATUS_OPTIONS.map((s) => (
-                  <option
-                    key={s}
-                    value={s}
-                    disabled={
-                      eventModal === "edit" &&
-                      isEventStatusRollback(selectedEvent?.status, s)
-                    }
-                  >
-                    {s}
-                  </option>
-                ))}
+              <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">Trạng thái</label>
+              <select className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none" value={eventForm.status} onChange={(e) => handleEventFormChange("status", e.target.value)}>
+                {EVENT_STATUS_OPTIONS.map((status) => <option key={status} value={status} disabled={isEventStatusRollback(selectedEvent?.status, status)}>{status}</option>)}
               </select>
-              <p className="mt-1.5 text-xs leading-relaxed text-slate-500">
-                Event tạo mới mặc định ở <strong>Registration</strong>. Sau khi
-                chuyển lên <strong>Active</strong> hoặc{" "}
-                <strong>Completed</strong>, Coordinator không thể quay lại
-                trạng thái trước đó.
-              </p>
+              <p className="mt-1.5 text-xs leading-relaxed text-slate-500">Sau khi chuyển lên <strong>Active</strong> hoặc <strong>Completed</strong>, Coordinator không thể quay lại trạng thái trước đó.</p>
             </div>
           </div>
         </ModalShell>

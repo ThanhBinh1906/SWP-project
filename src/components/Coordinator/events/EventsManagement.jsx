@@ -12,7 +12,7 @@ import axiosInstance from "../../../services/axiosInstance";
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-const STATUS_OPTIONS = ["Draft", "Open", "Ongoing", "Closed"];
+const STATUS_OPTIONS = ["Registration", "Active", "Completed"];
 
 const statusTone = (s) =>
   s === "Ongoing"
@@ -28,7 +28,7 @@ const EMPTY_FORM = {
   description: "",
   startDate: "",
   endDate: "",
-  status: "Draft",
+  status: "Registration",
 };
 
 function formatDate(iso) {
@@ -146,7 +146,6 @@ export function EventsManagement() {
         description: form.description.trim(),
         startDate: form.startDate,
         endDate: form.endDate,
-        status: form.status,
       });
       await fetchEvents();
       closeModal();
@@ -402,20 +401,16 @@ export function EventsManagement() {
                 />
               </div>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
-                Trạng thái
-              </label>
-              <select
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-                value={form.status}
-                onChange={(e) => handleFormChange("status", e.target.value)}
-              >
-                {STATUS_OPTIONS.map((s) => (
-                  <option key={s}>{s}</option>
-                ))}
-              </select>
-            </div>
+            {modal === "edit" ? (
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">Trạng thái</label>
+                <select className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none" value={form.status} onChange={(e) => handleFormChange("status", e.target.value)}>
+                  {STATUS_OPTIONS.map((status) => <option key={status}>{status}</option>)}
+                </select>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">Event mới sẽ tự động ở trạng thái <strong>Registration</strong>.</div>
+            )}
           </div>
         </ModalShell>
       )}

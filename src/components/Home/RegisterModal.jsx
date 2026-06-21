@@ -2,6 +2,7 @@ import { useState } from "react";
 import Modal from "./Modal";
 import PasswordInput from "./PasswordInput";
 import authService from "../../services/authService";
+import LoadingActionText from "../shared/LoadingActionText";
 
 const inputClass =
   "w-full px-4 py-2 rounded-lg bg-[#0F121E] border border-white/[0.18] text-white text-sm placeholder:text-slate-400 focus:outline-none focus:border-[#F26F21] focus:ring-2 focus:ring-[#F26F21]/30 hover:border-white/[0.3] transition-all";
@@ -122,7 +123,7 @@ export default function RegisterModal({ open, onClose }) {
             disabled={loading}
             className="w-full px-5 py-3 bg-[#F26F21] text-white text-sm font-bold tracking-wider uppercase rounded-lg glow-orange hover:bg-[#e05a10] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? "Đang đăng ký..." : "Register"}
+            {loading ? <LoadingActionText>Đang đăng ký</LoadingActionText> : "Register"}
           </button>
         )}
       </form>

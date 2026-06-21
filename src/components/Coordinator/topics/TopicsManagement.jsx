@@ -25,6 +25,7 @@ import {
   FilterSelect,
   ModalHintBanner,
 } from "../coordinatorHelpers";
+import LoadingActionText from "../../shared/LoadingActionText";
 
 const EMPTY_FORM = {
   title: "",
@@ -366,7 +367,7 @@ export function TopicsManagement() {
                 disabled={saving}
                 onClick={handleCreate}
               >
-                {saving ? "Đang lưu..." : "Lưu đề tài"}
+                {saving ? <LoadingActionText>Đang lưu đề tài</LoadingActionText> : "Lưu đề tài"}
               </CoordinatorActionButton>
             </>
           }

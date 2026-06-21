@@ -6,6 +6,7 @@ import PasswordInput, { authLabelClass } from "./PasswordInput";
 import authService from "../../services/authService";
 import { loginSuccess } from "../../store/authSlice";
 import { getRedirectPathByUser } from "../../utils/roleHelpers";
+import LoadingActionText from "../shared/LoadingActionText";
 
 const inputClass =
   "w-full px-4 py-2 rounded-lg bg-[#0F121E] border border-white/[0.18] text-white text-sm placeholder:text-slate-400 focus:outline-none focus:border-[#F26F21] focus:ring-2 focus:ring-[#F26F21]/30 hover:border-white/[0.3] transition-all";
@@ -94,7 +95,7 @@ export default function LoginModal({ open, onClose }) {
           disabled={loading}
           className="w-full mt-2 px-5 py-2.5 bg-[#F26F21] text-white text-sm font-semibold tracking-wide rounded-lg hover:bg-[#e05811] shadow-[0_1px_2px_rgba(0,0,0,0.1)] transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? "Đang đăng nhập..." : "Login"}
+          {loading ? <LoadingActionText>Đang đăng nhập</LoadingActionText> : "Login"}
         </button>
       </form>
     </Modal>
