@@ -107,6 +107,7 @@ export function ResultsManagement() {
   const [leaderboardError, setLeaderboardError] = useState("");
   const [calculating, setCalculating] = useState(false);
   const [calculateMessage, setCalculateMessage] = useState("");
+  const [calculateConfirmOpen, setCalculateConfirmOpen] = useState(false);
 
   const [detailRanking, setDetailRanking] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -226,6 +227,7 @@ export function ResultsManagement() {
       setLeaderboardError(getApiMessage(err, "Tính ranking thất bại."));
     } finally {
       setCalculating(false);
+      setCalculateConfirmOpen(false);
     }
   };
 
@@ -277,7 +279,7 @@ export function ResultsManagement() {
               variant="primary"
               icon={icons.Trophy}
               disabled={!roundCheck.roundId || calculating}
-              onClick={handleCalculate}
+              onClick={() => setCalculateConfirmOpen(true)}
             >
               {calculating ? "Đang tính..." : "Tính ranking"}
             </CoordinatorActionButton>
@@ -516,6 +518,62 @@ export function ResultsManagement() {
       </CoordinatorPanel>
 
       <PrizeManagement trackId={selectedTrackId} roundId={selectedRoundId} />
+
+      {calculateConfirmOpen && (
+        <ModalShell
+          title="Xác nhận tính ranking"
+          onClose={() => {
+            if (!calculating) setCalculateConfirmOpen(false);
+          }}
+          maxWidthClass="max-w-xl"
+          actions={
+            <>
+              <CoordinatorActionButton
+                disabled={calculating}
+                onClick={() => setCalculateConfirmOpen(false)}
+              >
+                Hủy
+              </CoordinatorActionButton>
+              <CoordinatorActionButton
+                variant="danger"
+                disabled={calculating}
+                icon={icons.Lock}
+                onClick={handleCalculate}
+              >
+                {calculating ? "Đang tính ranking..." : "Xác nhận và khóa điểm"}
+              </CoordinatorActionButton>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <div className="flex gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
+                <icons.Lock className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="font-bold">Judge sẽ không thể sửa điểm sau thao tác này</p>
+                <p className="mt-1 text-sm leading-6 text-amber-800">
+                  Hệ thống sẽ chốt điểm hiện tại và dùng dữ liệu đó để tính thứ hạng của các team.
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Round được chốt</p>
+              <p className="mt-1 font-bold text-slate-950">
+                {selectedRound?.name || `Round #${roundCheck.roundId}`}
+              </p>
+              {selectedTrack?.name && (
+                <p className="mt-1 text-sm text-slate-600">Track: {selectedTrack.name}</p>
+              )}
+            </div>
+
+            <p className="text-sm leading-6 text-slate-700">
+              Chỉ xác nhận khi tất cả Judge đã hoàn thành việc chấm điểm và Coordinator đã kiểm tra kết quả.
+            </p>
+          </div>
+        </ModalShell>
+      )}
 
       {(detailLoading || detailRanking || detailError) && (
         <ModalShell
