@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { MentorOverview } from "../components/Mentor/dashboard/MentorOverview";
 import { MentorHeader } from "../components/Mentor/layout/MentorHeader";
 import { MentorPageTitle } from "../components/Mentor/layout/MentorPageTitle";
 import { MentorSidebar } from "../components/Mentor/layout/MentorSidebar";
 import { MentorTeams } from "../components/Mentor/teams/MentorTeams";
+import mentorService from "../services/mentorService";
+import submissionService from "../services/submissionService";
 
 const viewTitles = {
   dashboard: {
@@ -19,11 +21,63 @@ const viewTitles = {
 export default function MentorDashboard() {
   const [activeNav, setActiveNav] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [teams, setTeams] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const title = viewTitles[activeNav] || viewTitles.dashboard;
 
+  const loadMentorTeams = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const teamsResponse = await mentorService.getTeams();
+      const teamList = teamsResponse.data?.data || [];
+      const submissionResults = await Promise.allSettled(
+        teamList.map((team) => submissionService.getByTeam(team.id)),
+      );
+      setTeams(
+        teamList.map((team, index) => {
+          const result = submissionResults[index];
+          const submissions =
+            result?.status === "fulfilled" ? result.value.data?.data || [] : [];
+          const sortedSubmissions = [...submissions].sort(
+            (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0),
+          );
+          const readinessParts = [
+            Boolean(team.githubRepoLink),
+            Boolean(team.topic),
+            sortedSubmissions.length > 0,
+          ];
+          return {
+            ...team,
+            submissions: sortedSubmissions,
+            latestSubmission: sortedSubmissions[0] || null,
+            submissionStatus: sortedSubmissions.length ? "Submitted" : "Missing",
+            submissionLoadFailed: result?.status === "rejected",
+            readiness: Math.round(
+              (readinessParts.filter(Boolean).length / readinessParts.length) * 100,
+            ),
+          };
+        }),
+      );
+    } catch (requestError) {
+      setTeams([]);
+      setError(
+        requestError?.response?.data?.message ||
+          "Không thể tải danh sách team được phân công.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadMentorTeams();
+  }, [loadMentorTeams]);
+
   const views = {
-    dashboard: <MentorOverview onViewTeams={() => setActiveNav("teams")} />,
-    teams: <MentorTeams />,
+    dashboard: <MentorOverview teams={teams} loading={loading} error={error} onReload={loadMentorTeams} onViewTeams={() => setActiveNav("teams")} />,
+    teams: <MentorTeams teams={teams} loading={loading} error={error} onReload={loadMentorTeams} />,
   };
 
   return (
@@ -55,7 +109,7 @@ export default function MentorDashboard() {
           className="border-t bg-white px-4 py-4 text-center text-xs text-slate-500 sm:px-8"
           style={{ borderColor: "#E5E7EB" }}
         >
-          SEAL Hackathon Mentor Console • Read-only supervision workspace
+          SEAL Hackathon Mentor Console - Không gian theo dõi chỉ đọc
         </footer>
       </div>
     </div>

@@ -33,6 +33,12 @@ function getListFromApiData(data) {
   return [];
 }
 
+function getAssignedTeamsFromApiData(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.assignedTeams)) return data.assignedTeams;
+  return [];
+}
+
 function FormError({ msg }) {
   if (!msg) return null;
   return (
@@ -234,6 +240,7 @@ function StaffTab() {
   const [trackTeams, setTrackTeams] = useState([]);
   const [mentorTeams, setMentorTeams] = useState([]);
   const [selectedTeamIds, setSelectedTeamIds] = useState([]);
+  const [mentorTrackAssigned, setMentorTrackAssigned] = useState(false);
   const [mentorAssignLoading, setMentorAssignLoading] = useState(false);
   const [mentorAssignError, setMentorAssignError] = useState("");
 
@@ -332,16 +339,6 @@ function StaffTab() {
   };
 
   // ---------------------------------------------------------------------------
-  const ensureMentorAssignedToTrack = async (trackId, mentorId) => {
-    try {
-      await trackService.assignMentor(trackId, mentorId);
-    } catch (err) {
-      if (!isMentorAlreadyAssignedToTrack(err)) {
-        throw err;
-      }
-    }
-  };
-
   const loadRoundJudges = async () => {
     if (!judgeLookupRoundId.trim()) {
       setRoundJudgesError("Vui lòng nhập Round ID.");
@@ -395,6 +392,7 @@ function StaffTab() {
     setTrackTeams([]);
     setMentorTeams([]);
     setSelectedTeamIds([]);
+    setMentorTrackAssigned(false);
     setMentorAssignError("");
     setMentorAssignLoading(true);
     try {
@@ -414,44 +412,46 @@ function StaffTab() {
     setMentorAssignLoading(true);
     setMentorAssignError("");
     try {
-      const teams = await fetchApprovedTeamsByTrack(trackId);
-      const filteredTeams = teams.filter(
-        (team) => !team.trackId || String(team.trackId) === String(trackId),
-      );
-
-      let assignedTeams = [];
       try {
         const mentorTeamsRes = await trackService.getMentorTeams(trackId, mentorId);
-        assignedTeams = getListFromApiData(mentorTeamsRes.data?.data);
-      } catch (mentorTeamsErr) {
-        setMentorAssignError(
-          getApiMessage(
-            mentorTeamsErr,
-            "Đã tải danh sách team Approved, nhưng chưa tải được team mentor đang phụ trách.",
-          ),
+        const assignedTeams = getAssignedTeamsFromApiData(mentorTeamsRes.data?.data);
+        setMentorTrackAssigned(true);
+
+        // Chỉ tải danh sách team để chọn sau khi Mentor đã thuộc Track.
+        const teams = await fetchApprovedTeamsByTrack(trackId);
+        const filteredTeams = teams.filter(
+          (team) => !team.trackId || String(team.trackId) === String(trackId),
         );
+        const assignedIds = assignedTeams.map((team) =>
+          String(team.id ?? team.teamId),
+        );
+        const currentMentorTeamIds = filteredTeams
+          .filter((team) => String(team.mentorId || "") === String(mentorId))
+          .map((team) => String(team.id));
+
+        setTrackTeams(filteredTeams);
+        setMentorTeams(assignedTeams);
+        setSelectedTeamIds(
+          Array.from(new Set([...assignedIds, ...currentMentorTeamIds])),
+        );
+      } catch (mentorTeamsErr) {
+        if (isMentorMissingTrackAssignment(mentorTeamsErr)) {
+          setMentorTrackAssigned(false);
+          setTrackTeams([]);
+          setMentorTeams([]);
+          setSelectedTeamIds([]);
+          return;
+        }
+        throw mentorTeamsErr;
       }
-
-      const assignedIds = assignedTeams.map((team) =>
-        String(team.id ?? team.teamId),
-      );
-      const currentMentorTeamIds = filteredTeams
-        .filter((team) => String(team.mentorId || "") === String(mentorId))
-        .map((team) => String(team.id));
-      const nextSelectedIds = Array.from(
-        new Set([...assignedIds, ...currentMentorTeamIds]),
-      );
-
-      setTrackTeams(filteredTeams);
-      setMentorTeams(assignedTeams);
-      setSelectedTeamIds(nextSelectedIds);
     } catch (err) {
+      setMentorTrackAssigned(false);
       setTrackTeams([]);
       setMentorTeams([]);
       setSelectedTeamIds([]);
       setMentorAssignError(
         err?.response?.data?.message ||
-          "Không thể tải danh sách team của mentor trong track này.",
+          "Không thể tải danh sách team Approved trong track này.",
       );
     } finally {
       setMentorAssignLoading(false);
@@ -463,8 +463,38 @@ function StaffTab() {
     setTrackTeams([]);
     setMentorTeams([]);
     setSelectedTeamIds([]);
+    setMentorTrackAssigned(false);
     if (trackId && assignMentorModal?.accountId) {
       loadMentorTrackTeams(trackId, assignMentorModal.accountId);
+    }
+  };
+
+  const handleAssignMentorToTrack = async () => {
+    if (!selectedTrackId || !assignMentorModal?.accountId) return;
+    setMentorAssignLoading(true);
+    setMentorAssignError("");
+    try {
+      await trackService.assignMentor(
+        selectedTrackId,
+        assignMentorModal.accountId,
+      );
+      await loadMentorTrackTeams(
+        selectedTrackId,
+        assignMentorModal.accountId,
+      );
+    } catch (err) {
+      if (isMentorAlreadyAssignedToTrack(err)) {
+        await loadMentorTrackTeams(
+          selectedTrackId,
+          assignMentorModal.accountId,
+        );
+      } else {
+        setMentorAssignError(
+          err?.response?.data?.message || "Gán Mentor vào Track thất bại.",
+        );
+      }
+    } finally {
+      setMentorAssignLoading(false);
     }
   };
 
@@ -492,6 +522,10 @@ function StaffTab() {
       setMentorAssignError("Không tìm thấy mentor.");
       return;
     }
+    if (!mentorTrackAssigned) {
+      setMentorAssignError("Phải gán Mentor vào Track trước khi gán team.");
+      return;
+    }
     setMentorAssignLoading(true);
     setMentorAssignError("");
     try {
@@ -503,33 +537,18 @@ function StaffTab() {
         );
       });
 
-      try {
-        await trackService.assignMentorTeams(
-          selectedTrackId,
-          assignMentorModal.accountId,
-          { teamIds: assignableTeamIds },
-        );
-      } catch (assignTeamsErr) {
-        if (!isMentorMissingTrackAssignment(assignTeamsErr)) {
-          throw assignTeamsErr;
-        }
-
-        await ensureMentorAssignedToTrack(
-          selectedTrackId,
-          assignMentorModal.accountId,
-        );
-        await trackService.assignMentorTeams(
-          selectedTrackId,
-          assignMentorModal.accountId,
-          { teamIds: assignableTeamIds },
-        );
-      }
+      await trackService.assignMentorTeams(
+        selectedTrackId,
+        assignMentorModal.accountId,
+        { teamIds: assignableTeamIds },
+      );
       await fetchStaff();
       setAssignMentorModal(null);
       setSelectedTrackId("");
       setTrackTeams([]);
       setMentorTeams([]);
       setSelectedTeamIds([]);
+      setMentorTrackAssigned(false);
     } catch (err) {
       setMentorAssignError(
         err?.response?.data?.message || "Gán mentor cho team thất bại.",
@@ -901,6 +920,7 @@ function StaffTab() {
           onClose={() => {
             setAssignMentorModal(null);
             setMentorAssignError("");
+            setMentorTrackAssigned(false);
           }}
           actions={
             <>
@@ -915,6 +935,7 @@ function StaffTab() {
                 disabled={
                   mentorAssignLoading ||
                   !selectedTrackId ||
+                  !mentorTrackAssigned ||
                   selectedTeamIds.length === 0
                 }
                 onClick={handleAssignMentorTeams}
@@ -926,6 +947,15 @@ function StaffTab() {
         >
           <div className="space-y-4">
             <FormError msg={mentorAssignError} />
+
+            <div className="grid grid-cols-2 gap-2 text-xs font-bold">
+              <div className={`rounded-xl border px-3 py-2 ${mentorTrackAssigned ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-orange-200 bg-orange-50 text-orange-700"}`}>
+                1. Gán Mentor vào Track
+              </div>
+              <div className={`rounded-xl border px-3 py-2 ${mentorTrackAssigned ? "border-orange-200 bg-orange-50 text-orange-700" : "border-slate-200 bg-slate-50 text-slate-400"}`}>
+                2. Chọn team phụ trách
+              </div>
+            </div>
 
             <div>
               <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-600">
@@ -950,11 +980,35 @@ function StaffTab() {
                 ))}
               </select>
               <p className="mt-1 text-xs text-slate-400">
-                Mentor sẽ được assign vào track trước, sau đó mới gán team.
+                Chọn Track để kiểm tra trạng thái phân công của Mentor.
               </p>
             </div>
 
-            {selectedTrackId && (
+            {selectedTrackId && mentorAssignLoading && (
+              <div className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 py-8 text-sm text-slate-500">
+                <Loader2 className="h-4 w-4 animate-spin text-orange-500" />
+                Đang kiểm tra phân công Mentor trong Track...
+              </div>
+            )}
+
+            {selectedTrackId && !mentorAssignLoading && !mentorTrackAssigned && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <p className="font-bold text-amber-900">Mentor chưa thuộc Track này</p>
+                <p className="mt-1 text-sm text-amber-800">
+                  Hoàn tất bước 1 trước. Sau đó hệ thống mới tải danh sách team Approved để Coordinator lựa chọn.
+                </p>
+                <CoordinatorActionButton
+                  className="mt-3"
+                  variant="primary"
+                  icon={icons.GitBranch}
+                  onClick={handleAssignMentorToTrack}
+                >
+                  Gán Mentor vào Track
+                </CoordinatorActionButton>
+              </div>
+            )}
+
+            {selectedTrackId && mentorTrackAssigned && (
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>

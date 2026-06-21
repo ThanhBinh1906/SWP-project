@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import teamService from "../../services/teamService";
 
-const MIN_MEMBERS = 0; // members ngoài leader, có thể 0
+const MIN_MEMBERS = 2; // BE yêu cầu tối thiểu 3 người, gồm leader
 const MAX_TEAM_MEMBERS = 5; // tổng số thành viên gồm leader
 const MAX_MEMBERS = MAX_TEAM_MEMBERS - 1; // số member thêm vào ngoài leader
 
@@ -313,6 +313,10 @@ function TeamCreateForm({
       te.trackId = "Vui lòng chọn track";
       valid = false;
     }
+    if (members.length < MIN_MEMBERS) {
+      te.members = `Cần ít nhất ${MIN_MEMBERS} thành viên khác để team có tối thiểu ${MIN_MEMBERS + 1} người gồm Leader.`;
+      valid = false;
+    }
     setTeamErrors(te);
 
     const le = {};
@@ -362,7 +366,15 @@ function TeamCreateForm({
     setLoading(true);
     setApiError("");
     try {
-      // Bước 1: Tạo team + leader info
+      const memberPayload = members.map((member) => ({
+        fullName: member.fullName.trim(),
+        studentCode: member.studentCode.trim(),
+        email: member.email.trim(),
+        phone: member.phone.trim(),
+        university: member.university.trim(),
+        isFPTStudent: member.isFPTStudent,
+      }));
+
       const teamPayload = {
         teamName: teamForm.teamName.trim(),
         university: teamForm.university.trim(),
@@ -373,31 +385,20 @@ function TeamCreateForm({
         email: user?.email || "",
         phone: leaderExtra.phone.trim(),
         isFPTStudent: leaderExtra.isFPTStudent,
+        members: memberPayload,
       };
 
       const res = await teamService.createTeam(teamPayload);
-      const teamId = res.data?.data?.id;
-      if (!teamId) throw new Error("Không nhận được team ID từ server.");
-
-      if (members.length > 0) {
-        await Promise.all(
-          members.map((m) =>
-            teamService.addMember(teamId, {
-              fullName: m.fullName.trim(),
-              studentCode: m.studentCode.trim(),
-              email: m.email.trim(),
-              phone: m.phone.trim(),
-              university: m.university.trim(),
-              isFPTStudent: m.isFPTStudent,
-            }),
-          ),
-        );
-      }
-
-      onCreated({ ...res.data.data, members });
+      onCreated(res.data?.data || { ...teamPayload, members: memberPayload });
     } catch (err) {
+      const validationMessage = Object.values(err?.response?.data?.errors || {})
+        .flat()
+        .find(Boolean);
       setApiError(
-        err?.response?.data?.message || err?.message || "Đã có lỗi xảy ra.",
+        err?.response?.data?.message ||
+          validationMessage ||
+          err?.message ||
+          "Đã có lỗi xảy ra.",
       );
     } finally {
       setLoading(false);
@@ -686,6 +687,13 @@ function TeamCreateForm({
         {members.length >= MAX_MEMBERS && (
           <p className="text-xs text-center text-slate-400">
             Đã đạt tối đa {MAX_MEMBERS} thành viên khác (leader + {MAX_MEMBERS} = {MAX_TEAM_MEMBERS})
+          </p>
+        )}
+
+        {teamErrors.members && (
+          <p className="flex items-center justify-center gap-1 text-xs text-red-500">
+            <AlertCircle className="h-3 w-3" />
+            {teamErrors.members}
           </p>
         )}
       </div>

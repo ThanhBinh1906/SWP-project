@@ -27,12 +27,13 @@ export function TeamTable({ teams, onSelectTeam }) {
       rows={teams}
       renderCell={(team, key) => {
         if (key === "teamName") {
-          const leader = team.members.find((member) => member.isLeader);
-          return <div><p className="font-bold text-slate-900">{team.teamName}</p><p className="text-xs text-slate-500">Leader: {leader?.fullName}</p></div>;
+          const leader = team.members?.find((member) => member.isLeader);
+          return <div><p className="font-bold text-slate-900">{team.teamName}</p><p className="text-xs text-slate-500">Leader: {leader?.fullName || "N/A"}</p></div>;
         }
+        if (key === "track") return `Track #${team.trackId ?? "N/A"}`;
         if (key === "status") return <TeamStatusBadge status={team.status} />;
-        if (key === "submission") return <MentorBadge tone={submissionTone(team.submission.status)}>{team.submission.status}</MentorBadge>;
-        if (key === "progress") return <div className="w-40"><MentorProgressBar value={team.progress} /></div>;
+        if (key === "submission") return <MentorBadge tone={submissionTone(team.submissionStatus)}>{team.submissionStatus === "Submitted" ? "Đã nộp" : "Chưa nộp"}</MentorBadge>;
+        if (key === "progress") return <div className="w-40"><MentorProgressBar value={team.readiness || 0} /></div>;
         if (key === "details") {
           return (
             <button

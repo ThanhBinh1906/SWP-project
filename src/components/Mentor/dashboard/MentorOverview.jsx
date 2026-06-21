@@ -1,4 +1,3 @@
-import { activeEvent, currentRound, mentorTeams } from "../mentorMockData";
 import { MentorBadge } from "../shared/MentorBadge";
 import { MentorPanel } from "../shared/MentorPanel";
 import { MentorProgressBar } from "../shared/MentorProgressBar";
@@ -7,58 +6,22 @@ import { AssignedTracks } from "./AssignedTracks";
 import { MentorStatsCards } from "./MentorStatsCards";
 import { TeamActivity } from "./TeamActivity";
 
-export function MentorOverview({ onViewTeams }) {
-  const submitted = mentorTeams.filter((team) => team.submission.status === "Submitted").length;
-  const submissionProgress = Math.round((submitted / mentorTeams.length) * 100);
+export function MentorOverview({ teams = [], loading, error, onReload, onViewTeams }) {
+  const submitted = teams.filter((team) => team.submissionStatus === "Submitted").length;
+  const progress = teams.length ? Math.round((submitted / teams.length) * 100) : 0;
 
-  return (
-    <div className="space-y-6">
-      <MentorStatsCards />
+  if (loading) return <div className="rounded-xl border border-slate-200 bg-white p-10 text-center font-semibold text-slate-600">Đang tải dữ liệu Mentor...</div>;
+  if (error) return <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-red-800"><p className="font-bold">Không thể tải dữ liệu Mentor</p><p className="mt-1 text-sm">{error}</p><button onClick={onReload} className="mt-4 rounded-lg bg-red-700 px-4 py-2 text-sm font-bold text-white">Thử lại</button></div>;
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <MentorPanel title="Active Event" subtitle="Current event and round status" icon={mentorIcons.CalendarDays} className="xl:col-span-2">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-xl border border-slate-100 p-4">
-              <div className="mb-3 flex items-start justify-between gap-2">
-                <h4 className="font-bold text-slate-900">{activeEvent.name}</h4>
-                <MentorBadge tone="orange">{activeEvent.status}</MentorBadge>
-              </div>
-              <p className="text-sm text-slate-500">{activeEvent.location}</p>
-              <p className="mt-3 text-sm font-semibold text-slate-700">{activeEvent.timeline}</p>
-            </div>
-            <div className="rounded-xl border border-slate-100 p-4">
-              <div className="mb-3 flex items-start justify-between gap-2">
-                <h4 className="font-bold text-slate-900">{currentRound.name}</h4>
-                <MentorBadge tone="success">{currentRound.status}</MentorBadge>
-              </div>
-              <p className="text-sm text-slate-500">{currentRound.window}</p>
-              <p className="mt-3 text-sm font-semibold text-slate-700">Closes in {currentRound.closesIn}</p>
-            </div>
-          </div>
-        </MentorPanel>
-
-        <MentorPanel
-          title="Submission Progress"
-          subtitle="Assigned team submission summary"
-          icon={mentorIcons.FileText}
-          actions={<button className="rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-sm font-bold text-orange-700 transition hover:bg-orange-100" onClick={onViewTeams}>View teams</button>}
-        >
-          <MentorProgressBar value={submissionProgress} label="Submitted" />
-          <div className="mt-4 space-y-3">
-            {mentorTeams.map((team) => (
-              <div key={team.id} className="flex items-center justify-between gap-3 text-sm">
-                <span className="truncate font-semibold text-slate-700">{team.teamName}</span>
-                <MentorBadge tone={team.submission.status === "Submitted" ? "success" : team.submission.status === "Missing" ? "danger" : "warning"}>{team.submission.status}</MentorBadge>
-              </div>
-            ))}
-          </div>
-        </MentorPanel>
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <div className="xl:col-span-2"><AssignedTracks /></div>
-        <TeamActivity />
-      </div>
+  return <div className="space-y-6">
+    <MentorStatsCards teams={teams} />
+    <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+      <div className="xl:col-span-2"><AssignedTracks teams={teams} /></div>
+      <MentorPanel title="Tiến độ nộp bài" subtitle="Tổng hợp theo team được phân công" icon={mentorIcons.FileText} actions={<button onClick={onViewTeams} className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm font-bold text-orange-700">Xem team</button>}>
+        <MentorProgressBar value={progress} label={`${submitted}/${teams.length} team đã nộp`} />
+        <div className="mt-5 space-y-3">{teams.slice(0, 5).map((team) => <div key={team.id} className="flex items-center justify-between gap-3"><span className="truncate text-sm font-semibold text-slate-800">{team.teamName}</span><MentorBadge tone={team.submissionStatus === "Submitted" ? "success" : "danger"}>{team.submissionStatus === "Submitted" ? "Đã nộp" : "Chưa nộp"}</MentorBadge></div>)}</div>
+      </MentorPanel>
     </div>
-  );
+    <TeamActivity teams={teams} />
+  </div>;
 }
