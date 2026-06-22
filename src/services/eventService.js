@@ -9,6 +9,7 @@ const eventService = {
   update: (id, data) => api.put(`/api/events/${id}`, data),
   remove: (id) => api.delete(`/api/events/${id}`),
   getActiveEvent: () => api.get("/api/events/active"),
+  getRounds: (eventId) => api.get(`/api/events/${eventId}/rounds`),
 
   // Tracks
   getTracks: (eventId) => api.get(`/api/events/${eventId}/tracks`),

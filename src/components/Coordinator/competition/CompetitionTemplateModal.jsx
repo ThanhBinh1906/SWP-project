@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { AlertCircle, FileText, GitBranch, Plus, Trash2, Upload } from "lucide-react";
 import eventService from "../../../services/eventService";
 import { uploadTopicPdf, validateTopicPdf } from "../../../services/cloudinaryService";
@@ -12,7 +12,7 @@ const newTrack = () => ({ name: "", description: "", maxTeams: "", maxMembers: "
 const initialForm = () => ({ name: "", description: "", startDate: "", endDate: "", tracks: [newTrack()] });
 
 function Field({ label, required, children }) {
-  return <label className="block"><span className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-600">{label}{required && <span className="text-orange-600"> *</span>}</span>{children}</label>;
+  return <div className="min-w-0"><span className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-600">{label}{required && <span className="text-orange-600"> *</span>}</span>{children}</div>;
 }
 
 function validate(form) {
@@ -105,7 +105,7 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
     } finally { setSaving(false); setProgressLabel(""); }
   };
 
-  return <ModalShell title="Tạo cấu trúc cuộc thi" onClose={() => !saving && onClose?.()} maxWidthClass="max-w-7xl" maxHeightClass="max-h-[92vh]" actions={<><CoordinatorActionButton disabled={saving} onClick={onClose}>Hủy</CoordinatorActionButton><CoordinatorActionButton variant="primary" disabled={saving} onClick={submit}>{saving ? <LoadingActionText>{progressLabel || "Đang tạo cấu trúc"}</LoadingActionText> : "Tạo Event, Track, Round và Topic"}</CoordinatorActionButton></>}>
+  return <ModalShell title="Tạo cấu trúc cuộc thi" onClose={() => !saving && onClose?.()} maxWidthClass="max-w-7xl" maxHeightClass="h-[92vh] max-h-[92vh]" actions={<><CoordinatorActionButton disabled={saving} onClick={onClose}>Hủy</CoordinatorActionButton><CoordinatorActionButton variant="primary" disabled={saving} onClick={submit}>{saving ? <LoadingActionText>{progressLabel || "Đang tạo cấu trúc"}</LoadingActionText> : "Tạo Event, Track, Round và Topic"}</CoordinatorActionButton></>}>
     <div className="space-y-5">
       {error && <div className="flex gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-800"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />{error}</div>}
       <section className="rounded-xl border border-orange-200 bg-orange-50/50 p-4"><div className="mb-4"><p className="font-bold text-slate-950">Thông tin Event</p><p className="text-sm text-slate-600">Event được tạo tự động ở trạng thái Registration.</p></div><div className="grid gap-3 md:grid-cols-2"><Field label="Tên Event" required><input className={inputClass} value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} /></Field><Field label="Mô tả"><input className={inputClass} value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} /></Field><Field label="Bắt đầu" required><input type="datetime-local" className={inputClass} value={form.startDate} onChange={(event) => setForm((current) => ({ ...current, startDate: event.target.value }))} /></Field><Field label="Kết thúc" required><input type="datetime-local" className={inputClass} value={form.endDate} onChange={(event) => setForm((current) => ({ ...current, endDate: event.target.value }))} /></Field></div></section>
@@ -116,7 +116,7 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
         <div className="mt-4 space-y-3">{track.rounds.map((round, ri) => <div key={ri} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
           <div className="mb-3 flex items-center justify-between"><p className="font-bold text-slate-900">Round {ri + 1}</p>{track.rounds.length > 1 && <IconButton label={`Xóa Round ${ri + 1}`} onClick={() => removeRound(ti, ri)} />}</div>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4"><Field label="Tên Round" required><input className={inputClass} value={round.name} onChange={(event) => updateRound(ti, ri, "name", event.target.value)} /></Field><Field label="Bắt đầu" required><input type="datetime-local" className={inputClass} value={round.startTime} onChange={(event) => updateRound(ti, ri, "startTime", event.target.value)} /></Field><Field label="Kết thúc" required><input type="datetime-local" className={inputClass} value={round.endTime} onChange={(event) => updateRound(ti, ri, "endTime", event.target.value)} /></Field><Field label="Suất đi tiếp" required><input required type="number" min="1" step="1" className={inputClass} value={round.advancingSlots} onChange={(event) => updateRound(ti, ri, "advancingSlots", event.target.value)} /></Field></div>
-          <div className="mt-4 space-y-3">{round.topics.map((topic, pi) => <div key={pi} className="rounded-lg border border-orange-200 bg-white p-3"><div className="mb-3 flex items-center justify-between"><div className="flex items-center gap-2 text-sm font-bold text-orange-800"><FileText className="h-4 w-4" />Topic {pi + 1}</div><IconButton label={`Xóa Topic ${pi + 1}`} onClick={() => removeTopic(ti, ri, pi)} /></div><div className="grid gap-3 lg:grid-cols-2"><Field label="Tên Topic" required><input className={inputClass} value={topic.name} onChange={(event) => updateTopic(ti, ri, pi, "name", event.target.value)} /></Field><Field label="Mô tả"><input className={inputClass} value={topic.description} onChange={(event) => updateTopic(ti, ri, pi, "description", event.target.value)} /></Field><Field label="Yêu cầu"><textarea className={`${inputClass} min-h-20 resize-y`} value={topic.requirements} onChange={(event) => updateTopic(ti, ri, pi, "requirements", event.target.value)} /></Field><Field label="File đề PDF"><label className="flex min-h-20 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 text-sm font-semibold text-slate-700 hover:border-orange-400"><Upload className="h-4 w-4" />{topic.file?.name || "Chọn PDF"}<input type="file" accept="application/pdf,.pdf" className="sr-only" onChange={(event) => updateTopic(ti, ri, pi, "file", event.target.files?.[0] || null)} /></label></Field></div></div>)}<button type="button" onClick={() => addTopic(ti, ri)} className="inline-flex items-center gap-2 rounded-lg border border-dashed border-orange-300 px-3 py-2 text-sm font-bold text-orange-700 hover:bg-orange-50"><Plus className="h-4 w-4" />Thêm Topic</button></div>
+          <div className="mt-4 space-y-3">{round.topics.map((topic, pi) => <div key={pi} className="min-w-0 rounded-lg border border-orange-200 bg-white p-3"><div className="mb-3 flex items-center justify-between"><div className="flex items-center gap-2 text-sm font-bold text-orange-800"><FileText className="h-4 w-4" />Topic {pi + 1}</div><IconButton label={`Xóa Topic ${pi + 1}`} onClick={() => removeTopic(ti, ri, pi)} /></div><div className="grid min-w-0 gap-3 lg:grid-cols-2"><Field label="Tên Topic" required><input className={inputClass} value={topic.name} onChange={(event) => updateTopic(ti, ri, pi, "name", event.target.value)} /></Field><Field label="Mô tả"><input className={inputClass} value={topic.description} onChange={(event) => updateTopic(ti, ri, pi, "description", event.target.value)} /></Field><Field label="Yêu cầu"><textarea className={`${inputClass} min-h-20 resize-y`} value={topic.requirements} onChange={(event) => updateTopic(ti, ri, pi, "requirements", event.target.value)} /></Field><Field label="File đề PDF"><PdfFilePicker file={topic.file} onChange={(file) => updateTopic(ti, ri, pi, "file", file)} /></Field></div></div>)}<button type="button" onClick={() => addTopic(ti, ri)} className="inline-flex items-center gap-2 rounded-lg border border-dashed border-orange-300 px-3 py-2 text-sm font-bold text-orange-700 hover:bg-orange-50"><Plus className="h-4 w-4" />Thêm Topic</button></div>
         </div>)}<button type="button" onClick={() => addRound(ti)} className="inline-flex items-center gap-2 rounded-lg border border-dashed border-slate-300 px-3 py-2 text-sm font-bold text-slate-700 hover:bg-white"><Plus className="h-4 w-4" />Thêm Round</button></div>
       </section>)}</div>
       <button type="button" onClick={addTrack} className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-orange-300 py-3 text-sm font-bold text-orange-700 hover:bg-orange-50"><Plus className="h-4 w-4" />Thêm Track</button>
@@ -126,4 +126,31 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
 
 function IconButton({ label, onClick }) {
   return <button type="button" onClick={onClick} className="rounded-lg p-2 text-red-600 hover:bg-red-50" aria-label={label} title={label}><Trash2 className="h-4 w-4" /></button>;
+}
+
+function PdfFilePicker({ file, onChange }) {
+  const inputRef = useRef(null);
+
+  return (
+    <div className="min-w-0">
+      <input
+        ref={inputRef}
+        type="file"
+        accept="application/pdf,.pdf"
+        className="hidden"
+        onChange={(event) => {
+          onChange(event.target.files?.[0] || null);
+          event.target.value = "";
+        }}
+      />
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        className="flex min-h-20 w-full min-w-0 items-center justify-center gap-2 overflow-hidden rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 text-sm font-semibold text-slate-700 hover:border-orange-400"
+      >
+        <Upload className="h-4 w-4 shrink-0" />
+        <span className="min-w-0 truncate">{file?.name || "Chọn PDF"}</span>
+      </button>
+    </div>
+  );
 }

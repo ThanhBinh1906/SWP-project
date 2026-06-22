@@ -326,9 +326,9 @@ export function ModalShell({
   }, []);
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4 animate-fade-in">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/55 p-4 animate-fade-in">
       <div
-        className={`flex min-w-0 w-full ${maxWidthClass} ${maxHeightClass} flex-col overflow-hidden rounded-2xl bg-white shadow-2xl animate-modal-scale`}
+        className={`relative isolate flex min-w-0 w-full ${maxWidthClass} ${maxHeightClass} flex-col overflow-hidden rounded-2xl bg-white shadow-2xl`}
       >
         <div className="flex flex-shrink-0 items-start justify-between gap-4 px-6 pt-6 pb-5">
           <h3 className="text-lg font-bold text-slate-900">{title}</h3>
@@ -340,11 +340,11 @@ export function ModalShell({
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="modal-scrollbar min-w-0 overflow-x-hidden overflow-y-auto px-6 pb-2">
+        <div className="modal-scrollbar min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-6 pb-4">
           {children}
         </div>
         {actions && (
-          <div className="mt-6 flex flex-shrink-0 justify-end gap-2 border-t border-slate-100 bg-white px-6 py-4">
+          <div className="flex flex-shrink-0 justify-end gap-2 border-t border-slate-100 bg-white px-6 py-4">
             {actions}
           </div>
         )}

@@ -11,6 +11,7 @@ import { AlertCircle, Loader2 } from "lucide-react";
 import staffService from "../../../services/staffService";
 import teamService from "../../../services/teamService";
 import trackService from "../../../services/trackService";
+import eventService from "../../../services/eventService";
 import { useSelector } from "react-redux";
 import LoadingActionText from "../../shared/LoadingActionText";
 
@@ -228,6 +229,8 @@ function StaffTab() {
   const [assignRoundModal, setAssignRoundModal] = useState(null); // staff object
   const [roundId, setRoundId] = useState("");
   const [assignError, setAssignError] = useState("");
+  const [eventRounds, setEventRounds] = useState([]);
+  const [eventRoundsLoading, setEventRoundsLoading] = useState(false);
   const [roundJudgesModal, setRoundJudgesModal] = useState(false);
   const [judgeLookupRoundId, setJudgeLookupRoundId] = useState("");
   const [roundJudges, setRoundJudges] = useState([]);
@@ -321,8 +324,8 @@ function StaffTab() {
   };
 
   const handleAssignRound = async () => {
-    if (!roundId.trim()) {
-      setAssignError("Vui lòng nhập Round ID.");
+    if (!roundId) {
+      setAssignError("Vui lòng chọn Round.");
       return;
     }
     setAssignError("");
@@ -357,6 +360,31 @@ function StaffTab() {
       );
     } finally {
       setRoundJudgesLoading(false);
+    }
+  };
+
+  const openAssignRound = async (judge) => {
+    setAssignRoundModal(judge);
+    setRoundId("");
+    setAssignError("");
+    setEventRounds([]);
+
+    if (!eventId) {
+      setAssignError("Không xác định được Event hiện tại.");
+      return;
+    }
+
+    setEventRoundsLoading(true);
+    try {
+      const response = await eventService.getRounds(eventId);
+      setEventRounds(Array.isArray(response.data?.data) ? response.data.data : []);
+    } catch (error) {
+      setAssignError(
+        error?.response?.data?.message ||
+          "Không thể tải danh sách Round của Event này.",
+      );
+    } finally {
+      setEventRoundsLoading(false);
     }
   };
 
@@ -703,11 +731,7 @@ function StaffTab() {
                   {row.eventRole === "Judge" && (
                     <CoordinatorActionButton
                       icon={icons.Scale}
-                      onClick={() => {
-                        setAssignRoundModal(row);
-                        setRoundId("");
-                        setAssignError("");
-                      }}
+                      onClick={() => openAssignRound(row)}
                     >
                       Assign Round
                     </CoordinatorActionButton>
@@ -867,7 +891,9 @@ function StaffTab() {
       {assignRoundModal && (
         <ModalShell
           title={`Assign Round: ${assignRoundModal.username}`}
-          onClose={() => setAssignRoundModal(null)}
+          onClose={() => {
+            if (!saving) setAssignRoundModal(null);
+          }}
           actions={
             <>
               <CoordinatorActionButton
@@ -878,7 +904,7 @@ function StaffTab() {
               </CoordinatorActionButton>
               <CoordinatorActionButton
                 variant="primary"
-                disabled={saving || !roundId}
+                disabled={saving || eventRoundsLoading || !roundId}
                 onClick={handleAssignRound}
               >
                 {saving ? "Đang assign..." : "Assign"}
@@ -894,20 +920,37 @@ function StaffTab() {
               </strong>{" "}
               vào round:
             </p>
-            {/* TODO: thay input bằng dropdown khi có GET /api/tracks/rounds */}
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
-                Round ID <span className="text-orange-500">*</span>
+                Round <span className="text-orange-500">*</span>
               </label>
-              <input
+              <select
                 className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-                placeholder="Nhập Round ID"
                 value={roundId}
+                disabled={eventRoundsLoading || saving}
                 onChange={(e) => {
                   setRoundId(e.target.value);
                   setAssignError("");
                 }}
-              />
+              >
+                <option value="">
+                  {eventRoundsLoading
+                    ? "Đang tải danh sách Round..."
+                    : eventRounds.length
+                      ? "-- Chọn Track và Round --"
+                      : "Không có Round để gán"}
+                </option>
+                {eventRounds.map((round) => (
+                  <option key={round.id} value={round.id}>
+                    {round.trackName || `Track #${round.trackId}`} - {round.name}
+                  </option>
+                ))}
+              </select>
+              {!eventRoundsLoading && eventRounds.length === 0 && !assignError && (
+                <p className="mt-2 text-xs text-slate-500">
+                  Event hiện tại chưa có Round phù hợp để phân công Judge.
+                </p>
+              )}
             </div>
             <FormError msg={assignError} />
           </div>
