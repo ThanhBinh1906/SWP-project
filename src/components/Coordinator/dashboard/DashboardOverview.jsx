@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import dashboardService from "../../../services/dashboardService";
+import teamService from "../../../services/teamService";
 import {
   CoordinatorActionButton,
   CoordinatorBadge,
@@ -23,6 +24,11 @@ function normalizeDashboardData(data) {
       ? data.activeRoundStatuses
       : [],
   };
+}
+
+function getFilteredTeamCount(response, fallback) {
+  const totalRecords = Number(response?.data?.data?.totalRecords);
+  return Number.isFinite(totalRecords) ? totalRecords : fallback;
 }
 
 function getStatusTone(status) {
@@ -125,8 +131,36 @@ export function DashboardOverview() {
     setLoading(true);
     setError("");
     try {
-      const res = await dashboardService.getCoordinatorDashboard();
-      setDashboard(normalizeDashboardData(res.data?.data));
+      const [dashboardResult, approvedResult, pendingResult] =
+        await Promise.allSettled([
+          dashboardService.getCoordinatorDashboard(),
+          teamService.getAdminTeams({
+            pageNumber: 1,
+            pageSize: 1,
+            status: "Approved",
+          }),
+          teamService.getAdminTeams({
+            pageNumber: 1,
+            pageSize: 1,
+            status: "Pending",
+          }),
+        ]);
+      if (dashboardResult.status === "rejected") throw dashboardResult.reason;
+
+      const normalized = normalizeDashboardData(
+        dashboardResult.value.data?.data,
+      );
+      setDashboard({
+        ...normalized,
+        totalActiveTeams: getFilteredTeamCount(
+          approvedResult.status === "fulfilled" ? approvedResult.value : null,
+          normalized.totalActiveTeams,
+        ),
+        totalPendingTeams: getFilteredTeamCount(
+          pendingResult.status === "fulfilled" ? pendingResult.value : null,
+          normalized.totalPendingTeams,
+        ),
+      });
     } catch (err) {
       setError(
         err?.response?.data?.message ||
