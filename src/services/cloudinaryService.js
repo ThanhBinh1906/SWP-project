@@ -1,5 +1,7 @@
-const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+const CLOUDINARY_CLOUD_NAME =
+  import.meta.env.VITE_CLOUDINARY_CLOUD_NAME?.trim() || "dw79lzd2n";
+const CLOUDINARY_UPLOAD_PRESET =
+  import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET?.trim() || "ml_default";
 
 export const TOPIC_PDF_MAX_SIZE = 10 * 1024 * 1024;
 
