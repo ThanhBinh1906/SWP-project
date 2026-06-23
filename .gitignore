@@ -10,6 +10,7 @@
 *.userosscache
 *.sln.docstates
 *.env
+tools/cloudinary-poc/appsettings.Development.json
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
@@ -208,6 +209,7 @@ DocProject/Help/html
 
 # Click-Once directory
 publish/
+tools/
 
 # Publish Web Output
 *.[Pp]ublish.xml
