@@ -3,6 +3,7 @@ import eventService from "../../../services/eventService";
 import rankingService from "../../../services/rankingService";
 import roundService from "../../../services/roundService";
 import trackService from "../../../services/trackService";
+import dashboardService from "../../../services/dashboardService";
 import { PrizeManagement } from "./PrizeManagement";
 import { ChevronDown } from "lucide-react";
 import {
@@ -322,6 +323,25 @@ export function ResultsManagement() {
     }
   };
 
+  const exportRblCsv = async () => {
+    if (!selectedEventId) return;
+    setExporting("rbl");
+    setExportError("");
+    try {
+      const response = await dashboardService.downloadAnonymousRblCsv(selectedEventId);
+      downloadBlob(response, `rbl-anonymous-scores-event-${selectedEventId}.csv`);
+    } catch (error) {
+      setExportError(
+        await getExportErrorMessage(
+          error,
+          "Không thể xuất dữ liệu chấm điểm ẩn danh (RBL).",
+        ),
+      );
+    } finally {
+      setExporting("");
+    }
+  };
+
   const columns = [
     { key: "rank", label: "Hạng" },
     { key: "team", label: "Đội thi" },
@@ -393,6 +413,14 @@ export function ResultsManagement() {
                   className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300"
                 >
                   {exporting === "event" ? "Đang xuất Event..." : "Ranking toàn Event"}
+                </button>
+                <button
+                  type="button"
+                  disabled={!selectedEventId || !!exporting}
+                  onClick={exportRblCsv}
+                  className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300"
+                >
+                  {exporting === "rbl" ? "Đang xuất RBL..." : "Dữ liệu ẩn danh (RBL CSV)"}
                 </button>
                 {!roundCanExport && (
                   <p className="px-3 pb-1 pt-2 text-xs leading-5 text-slate-400">

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSelector } from "react-redux";
 import dashboardService from "../../../services/dashboardService";
 import teamService from "../../../services/teamService";
 import {
@@ -110,9 +111,34 @@ function EmptyRoundState() {
 }
 
 export function DashboardOverview() {
+  const { activeEventId } = useSelector((s) => s.event);
   const [dashboard, setDashboard] = useState(EMPTY_DASHBOARD);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const [variances, setVariances] = useState([]);
+  const [loadingVariance, setLoadingVariance] = useState(false);
+  const [varianceError, setVarianceError] = useState("");
+
+  const fetchVariance = async () => {
+    if (!activeEventId) return;
+    setLoadingVariance(true);
+    setVarianceError("");
+    try {
+      const res = await dashboardService.getRblCriteriaVariance(activeEventId);
+      setVariances(res.data?.data || []);
+    } catch (err) {
+      setVarianceError("Không thể tải dữ liệu phương sai tiêu chí.");
+    } finally {
+      setLoadingVariance(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeEventId) {
+      fetchVariance();
+    }
+  }, [activeEventId]);
 
   const rounds = dashboard.activeRoundStatuses;
   const groupedEvents = useMemo(() => groupRoundsByEvent(rounds), [rounds]);
@@ -403,6 +429,117 @@ export function DashboardOverview() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+      </CoordinatorPanel>
+
+      <CoordinatorPanel
+        title="Phân tích RBL: Phương sai điểm số giữa các giám khảo"
+        subtitle="Hiển thị độ lệch trung bình giữa các giám khảo khi chấm điểm cho cùng một bài nộp theo từng tiêu chí"
+        icon={icons.Scale}
+        actions={
+          <CoordinatorActionButton
+            variant="secondary"
+            icon={icons.Activity}
+            onClick={fetchVariance}
+            disabled={loadingVariance}
+          >
+            Làm mới phân tích
+          </CoordinatorActionButton>
+        }
+      >
+        {loadingVariance ? (
+          <div className="py-6 text-center text-sm text-slate-500 animate-pulse">
+            Đang tính toán phương sai...
+          </div>
+        ) : varianceError ? (
+          <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+            {varianceError}
+          </div>
+        ) : variances.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
+            <p className="font-bold text-slate-900">Chưa có dữ liệu phân tích</p>
+            <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
+              Cần ít nhất 2 giám khảo chấm cùng một bài nộp theo cùng một tiêu chí để tính toán phương sai điểm chấm chéo.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              {variances.map((v) => {
+                // Phương sai tối đa hiển thị tương đối là 2.0 (ở thang điểm 10)
+                const percent = Math.min((v.variance / 2) * 100, 100);
+                
+                // Quyết định mức độ đồng thuận & màu sắc biểu diễn
+                let barColor = "#10B981"; // Emerald/Green (<= 0.5)
+                let statusLabel = "Đồng thuận cao";
+                let badgeTone = "success";
+                
+                if (v.variance > 1.0) {
+                  barColor = "#EF4444"; // Red (> 1.0)
+                  statusLabel = "Bất đồng cao (Cần họp hiệu chuẩn)";
+                  badgeTone = "danger";
+                } else if (v.variance > 0.5) {
+                  barColor = "#F59E0B"; // Amber (0.5 - 1.0)
+                  statusLabel = "Đồng thuận trung bình";
+                  badgeTone = "warning";
+                } else if (v.submissionsCount === 0) {
+                  barColor = "#94A3B8"; // Slate
+                  statusLabel = "Chưa đủ dữ liệu chấm chéo";
+                  badgeTone = "neutral";
+                }
+
+                return (
+                  <div
+                    key={v.criterionId}
+                    className="rounded-xl border border-slate-100 bg-slate-50/50 p-4 transition hover:bg-slate-50"
+                  >
+                    <div className="mb-2 flex items-start justify-between gap-3">
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                          {v.trackName} / {v.roundName}
+                        </span>
+                        <h4 className="font-bold text-slate-800 line-clamp-1">{v.criterionName}</h4>
+                      </div>
+                      <CoordinatorBadge tone={badgeTone}>{statusLabel}</CoordinatorBadge>
+                    </div>
+
+                    <div className="mt-4">
+                      <div className="mb-1 flex items-center justify-between text-xs">
+                        <span className="text-slate-500">
+                          Phương sai: <strong className="text-slate-900">{v.variance.toFixed(3)}</strong>
+                        </span>
+                        <span className="text-slate-500">
+                          {v.submissionsCount} bài nộp được đối chiếu
+                        </span>
+                      </div>
+                      
+                      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${v.submissionsCount === 0 ? 0 : percent}%`,
+                            backgroundColor: barColor,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-4 text-xs text-blue-900">
+              <h5 className="font-bold mb-1 flex items-center gap-1.5">
+                <icons.ShieldCheck className="h-4.5 w-4.5 text-blue-600 shrink-0" />
+                Hướng dẫn phân tích độ tin cậy liên đánh giá viên (RBL)
+              </h5>
+              <ul className="list-disc pl-4 space-y-1 text-blue-800">
+                <li><strong>Phương sai điểm số (Variance)</strong> cho biết mức độ phân tán của điểm số giữa các giám khảo trên cùng 1 bài nộp.</li>
+                <li>Phương sai càng gần <strong>0</strong> chứng tỏ các giám khảo chấm rất đồng nhất (đồng thuận cao).</li>
+                <li>Nếu phương sai <strong>&gt; 1.0</strong>, ban tổ chức cần họp hiệu chuẩn các giám khảo để làm rõ các tiêu chí chấm điểm và đạt độ tin cậy đánh giá cao hơn.</li>
+              </ul>
+            </div>
           </div>
         )}
       </CoordinatorPanel>
