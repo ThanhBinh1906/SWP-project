@@ -48,8 +48,8 @@ const viewTitles = {
     sub: "Export official reports, spreadsheets, anonymous data, and history",
   },
   audit: {
-    title: "Audit Log",
-    sub: "Review administrative actions, entity changes, and detailed history",
+    title: "Lịch sử chấm điểm",
+    sub: "Theo dõi các lần Judge tạo và chỉnh sửa điểm",
   },
 };
 

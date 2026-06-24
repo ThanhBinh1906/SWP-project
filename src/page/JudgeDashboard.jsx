@@ -22,8 +22,8 @@ const viewTitles = {
     sub: "Chấm điểm bài nộp qua API, round status phải là Scoring",
   },
   history: {
-    title: "Scoring History",
-    sub: "Read-only record of submitted scores and comments",
+    title: "Lịch sử chấm điểm",
+    sub: "Xem lại các lần chấm mới và chỉnh sửa điểm của bạn",
   },
   ranking: {
     title: "Ranking",
@@ -52,7 +52,7 @@ export default function JudgeDashboard() {
     ),
     rounds: <JudgeRounds onOpenScoring={openScoring} />,
     scoring: <JudgeScoringWorkspace initialRoundId={scoringRoundId} />,
-    history: <ScoringHistory submissions={[]} />,
+    history: <ScoringHistory />,
     ranking: <JudgeRankingView />,
   };
 

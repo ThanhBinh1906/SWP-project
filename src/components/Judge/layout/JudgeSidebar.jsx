@@ -27,7 +27,7 @@ const navItems = [
   {
     id: "history",
     label: "History",
-    labelVi: "Lịch sử",
+    labelVi: "Lịch sử điểm",
     icon: judgeIcons.FileText,
   },
   {

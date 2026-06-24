@@ -1,6 +1,5 @@
-import { HistoryPanel } from "./HistoryTable";
+import ScoreAuditLog from "../../shared/ScoreAuditLog";
 
-export function ScoringHistory({ submissions }) {
-  const records = submissions.filter((item) => item.status === "Scored" || item.status === "Locked");
-  return <HistoryPanel records={records} />;
+export function ScoringHistory() {
+  return <ScoreAuditLog scope="judge" />;
 }
