@@ -17,7 +17,18 @@ function sortRankings(rows) {
 
 export function extractRankingRows(payload) {
   if (Array.isArray(payload)) return payload;
-  const candidates = [payload?.rankings, payload?.items, payload?.teams];
+  const nestedRanking =
+    payload?.finalRoundRanking ||
+    payload?.finalRanking ||
+    payload?.roundRanking;
+  const candidates = [
+    payload?.rankings,
+    payload?.items,
+    payload?.teams,
+    nestedRanking?.rankings,
+    nestedRanking?.items,
+    nestedRanking?.teams,
+  ];
   return candidates.find(Array.isArray) || [];
 }
 
@@ -34,12 +45,24 @@ export function extractEventRankingSections(payload) {
   ];
   const sections = sectionCandidates.find(Array.isArray);
   if (sections?.length) {
-    return sections.map((section, index) => ({
-      id: section.trackId ?? section.id ?? index,
-      name: section.trackName || section.name || `Track ${index + 1}`,
-      roundName: section.roundName || section.finalRoundName || "Final Round",
-      rows: extractRankingRows(section),
-    }));
+    return sections.map((section, index) => {
+      const finalRound =
+        section.finalRoundRanking ||
+        section.finalRanking ||
+        section.roundRanking;
+
+      return {
+        id: section.trackId ?? section.id ?? index,
+        name: section.trackName || section.name || `Track ${index + 1}`,
+        roundName:
+          finalRound?.roundName ||
+          section.roundName ||
+          section.finalRoundName ||
+          "Final Round",
+        calculatedAt: finalRound?.calculatedAt || section.calculatedAt || null,
+        rows: extractRankingRows(section),
+      };
+    });
   }
 
   const flatRows = extractRankingRows(payload);

@@ -68,6 +68,13 @@ export default function ResultPage() {
   );
   const allRows = sections.flatMap((section) => section.rows || []);
   const uniqueTeams = new Set(allRows.map((row) => String(row.teamId))).size;
+  const latestSnapshotAt = sections.reduce((latest, section) => {
+    if (!section.calculatedAt) return latest;
+    if (!latest) return section.calculatedAt;
+    return new Date(section.calculatedAt) > new Date(latest)
+      ? section.calculatedAt
+      : latest;
+  }, eventRanking?.calculatedAt || null);
 
   const discoverEvents = useCallback(async () => {
     setLoadingEvents(true);
@@ -178,7 +185,7 @@ export default function ResultPage() {
                 Bảng xếp hạng lấy từ snapshot Final Round của từng Track. Trang này không tự tính lại điểm.
               </p>
               <p className="mt-5 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Cập nhật: {formatSnapshotTime(eventRanking?.calculatedAt)}
+                Cập nhật: {formatSnapshotTime(latestSnapshotAt)}
               </p>
             </div>
             <div className="border-t border-orange-100 bg-orange-50 p-6 lg:border-l lg:border-t-0">
