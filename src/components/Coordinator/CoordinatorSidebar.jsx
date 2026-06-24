@@ -29,12 +29,6 @@ const navItems = [
   { id: "accounts", label: "Accounts", labelVi: "Tài khoản", icon: icons.Users },
   { id: "teams", label: "Teams", labelVi: "Đội thi", icon: icons.UserRoundCog },
   { id: "results", label: "Results", labelVi: "Kết quả", icon: icons.Trophy },
-  {
-    id: "export",
-    label: "Export",
-    labelVi: "Xuất dữ liệu",
-    icon: icons.Download,
-  },
   { id: "audit", label: "Audit", labelVi: "Nhật ký", icon: icons.ShieldCheck },
 ];
 

@@ -16,7 +16,6 @@ import { useSelector } from "react-redux";
 import LoadingActionText from "../../shared/LoadingActionText";
 
 // ---------------------------------------------------------------------------
-const TABS = ["Participants", "Mentors & Judges"];
 const EVENT_ROLE_OPTIONS = ["Mentor", "Judge"];
 const MAX_ADMIN_TEAM_PAGE_SIZE = 50;
 // TODO: confirm judgeType options với BE
@@ -58,159 +57,6 @@ function FormError({ msg }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// TAB 1: Participants — mock data tạm, update sau khi có API
-// ---------------------------------------------------------------------------
-const MOCK_PARTICIPANTS = [
-  {
-    id: "u1",
-    name: "Nguyen Van A",
-    email: "a@fpt.edu.vn",
-    team: "Team Nova",
-    status: "Pending",
-    submittedAt: "Jun 1, 09:00",
-  },
-  {
-    id: "u2",
-    name: "Tran Thi B",
-    email: "b@fpt.edu.vn",
-    team: "Byte Builders",
-    status: "Approved",
-    submittedAt: "Jun 1, 10:00",
-  },
-];
-
-function ParticipantsTab() {
-  const [rejecting, setRejecting] = useState(null);
-  const [rejectReason, setRejectReason] = useState("");
-
-  const columns = [
-    { key: "name", label: "Leader" },
-    { key: "team", label: "Team" },
-    { key: "status", label: "Status" },
-    { key: "submittedAt", label: "Submitted" },
-    { key: "actions", label: "Actions" },
-  ];
-
-  return (
-    <div className="space-y-4">
-      {/* TODO: thay MOCK_PARTICIPANTS bằng GET /api/Auth/pending khi có endpoint */}
-      <div
-        className="flex items-center gap-2 p-3 rounded-xl text-xs"
-        style={{
-          background: "rgba(234,179,8,0.06)",
-          border: "1px solid rgba(234,179,8,0.2)",
-          color: "#92400e",
-        }}
-      >
-        <icons.Clock
-          className="w-3.5 h-3.5 flex-shrink-0"
-          style={{ color: "#F26F21" }}
-        />
-        Đang dùng mock data. Sẽ kết nối API sau khi BE cung cấp endpoint lấy
-        danh sách participants.
-      </div>
-
-      <div className="mb-4 grid gap-3 md:grid-cols-3">
-        <div className="relative md:col-span-2">
-          <icons.Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-          <input
-            className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-3 text-sm outline-none"
-            placeholder="Search leaders"
-          />
-        </div>
-        <select className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none">
-          <option>All statuses</option>
-          <option>Pending</option>
-          <option>Approved</option>
-          <option>Rejected</option>
-        </select>
-      </div>
-
-      <CoordinatorTable
-        columns={columns}
-        rows={MOCK_PARTICIPANTS}
-        renderCell={(row, key) => {
-          if (key === "name")
-            return (
-              <div>
-                <p className="font-bold text-slate-900">{row.name}</p>
-                <p className="text-xs text-slate-500">{row.email}</p>
-              </div>
-            );
-          if (key === "status")
-            return (
-              <CoordinatorBadge
-                tone={
-                  row.status === "Approved"
-                    ? "success"
-                    : row.status === "Rejected"
-                      ? "danger"
-                      : "warning"
-                }
-              >
-                {row.status}
-              </CoordinatorBadge>
-            );
-          if (key === "actions")
-            return (
-              <div className="flex gap-2">
-                {row.status === "Pending" && (
-                  <>
-                    <CoordinatorActionButton
-                      variant="primary"
-                      icon={icons.CheckCircle2}
-                    >
-                      Approve
-                    </CoordinatorActionButton>
-                    <CoordinatorActionButton
-                      variant="danger"
-                      icon={icons.X}
-                      onClick={() => setRejecting(row)}
-                    >
-                      Reject
-                    </CoordinatorActionButton>
-                  </>
-                )}
-              </div>
-            );
-          return row[key] ?? "—";
-        }}
-      />
-
-      {rejecting && (
-        <ModalShell
-          title={`Reject: ${rejecting.name}?`}
-          onClose={() => setRejecting(null)}
-          actions={
-            <>
-              <CoordinatorActionButton onClick={() => setRejecting(null)}>
-                Huỷ
-              </CoordinatorActionButton>
-              <CoordinatorActionButton
-                variant="danger"
-                onClick={() => setRejecting(null)}
-              >
-                Xác nhận Reject
-              </CoordinatorActionButton>
-            </>
-          }
-        >
-          <textarea
-            className="min-h-24 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-            placeholder="Lý do reject"
-            value={rejectReason}
-            onChange={(e) => setRejectReason(e.target.value)}
-          />
-        </ModalShell>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// TAB 2: Mentors & Judges
-// ---------------------------------------------------------------------------
 function StaffTab() {
   const eventId = useSelector((s) => s.event.activeEventId);
 
@@ -1208,42 +1054,13 @@ function isMentorMissingTrackAssignment(err) {
 // Main: AccountsManagement
 // ---------------------------------------------------------------------------
 export function AccountsManagement() {
-  const [activeTab, setActiveTab] = useState("Mentors & Judges");
-
   return (
-    <div className="space-y-6">
-      {/* Tab bar */}
-      <div className="flex gap-2 border-b" style={{ borderColor: "#E5E7EB" }}>
-        {TABS.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className="px-4 py-2.5 text-sm font-semibold transition-all duration-150 border-b-2 -mb-px"
-            style={{
-              borderColor: activeTab === tab ? "#F26F21" : "transparent",
-              color: activeTab === tab ? "#F26F21" : "#64748B",
-            }}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
-
-      <CoordinatorPanel
-        title={
-          activeTab === "Participants"
-            ? "Participant Approvals"
-            : "Staff Management"
-        }
-        subtitle={
-          activeTab === "Participants"
-            ? "Review and approve leader registrations"
-            : "Manage Mentors and Judges for this event"
-        }
-        icon={activeTab === "Participants" ? icons.UserCheck : icons.Handshake}
-      >
-        {activeTab === "Participants" ? <ParticipantsTab /> : <StaffTab />}
-      </CoordinatorPanel>
-    </div>
+    <CoordinatorPanel
+      title="Staff Management"
+      subtitle="Manage Mentors and Judges for this event"
+      icon={icons.Handshake}
+    >
+      <StaffTab />
+    </CoordinatorPanel>
   );
 }

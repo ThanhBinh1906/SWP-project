@@ -11,7 +11,6 @@ import { TopicsManagement } from "./topics/TopicsManagement";
 import { TeamsManagement } from "./teams/TeamsManagement";
 import { AccountsManagement } from "./account/AccountManagement";
 import { ResultsManagement } from "./results/ResultsManagement";
-import { ExportManagement } from "./export/ExportManagement";
 import { AuditLog } from "./audit/AuditLog";
 
 const viewTitles = {
@@ -43,10 +42,6 @@ const viewTitles = {
     title: "Result Finalization",
     sub: "Review rankings, advancing teams, and final score locks",
   },
-  export: {
-    title: "Export Management",
-    sub: "Export official reports, spreadsheets, anonymous data, and history",
-  },
   audit: {
     title: "Lịch sử chấm điểm",
     sub: "Theo dõi các lần Judge tạo và chỉnh sửa điểm",
@@ -61,7 +56,6 @@ const views = {
   accounts: AccountsManagement,
   teams: TeamsManagement,
   results: ResultsManagement,
-  export: ExportManagement,
   audit: AuditLog,
 };
 

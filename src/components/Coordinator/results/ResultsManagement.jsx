@@ -4,10 +4,10 @@ import rankingService from "../../../services/rankingService";
 import roundService from "../../../services/roundService";
 import trackService from "../../../services/trackService";
 import { PrizeManagement } from "./PrizeManagement";
+import { ChevronDown } from "lucide-react";
 import {
   CoordinatorActionButton,
   CoordinatorBadge,
-  CoordinatorPanel,
   CoordinatorTable,
   ModalShell,
   icons,
@@ -16,7 +16,6 @@ import {
   ApiErrorState,
   FilterSelect,
   LoadingState,
-  SetupRequiredBanner,
   formatDateTime,
   getApiMessage,
   validateRoundSelection,
@@ -216,7 +215,6 @@ export function ResultsManagement() {
     [leaderboard.rankings],
   );
   const advancingCount = sortedRankings.filter((ranking) => ranking.isAdvancing).length;
-  const topRankings = sortedRankings.slice(0, 3);
 
   const fetchLeaderboard = useCallback(async () => {
     if (!roundCheck.roundId) {
@@ -325,29 +323,85 @@ export function ResultsManagement() {
   };
 
   const columns = [
-    { key: "rank", label: "Rank" },
-    { key: "team", label: "Team" },
-    { key: "score", label: "Total score" },
-    { key: "status", label: "Status" },
-    { key: "calculatedAt", label: "Calculated at" },
-    { key: "actions", label: "Actions" },
+    { key: "rank", label: "Hạng" },
+    { key: "team", label: "Đội thi" },
+    { key: "score", label: "Tổng điểm" },
+    { key: "status", label: "Kết quả" },
+    { key: "calculatedAt", label: "Cập nhật" },
   ];
 
   return (
-    <div className="space-y-6">
-      <CoordinatorPanel
-        title="Bộ lọc ranking"
-        subtitle="Chọn đúng round trước khi tính hoặc xem bảng xếp hạng"
-        icon={icons.Filter}
-        actions={
-          <>
-            <CoordinatorActionButton
-              icon={icons.Activity}
+    <div className="space-y-4">
+      <section className="overflow-visible rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <header className="flex flex-col gap-4 px-4 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg font-black text-slate-950">Kết quả vòng thi</h2>
+              {selectedRound?.status && (
+                <CoordinatorBadge
+                  tone={
+                    selectedRound.status === "Closed" ||
+                    selectedRound.status === "Completed"
+                      ? "success"
+                      : selectedRound.status === "Scoring"
+                        ? "warning"
+                        : "neutral"
+                  }
+                >
+                  {selectedRound.status}
+                </CoordinatorBadge>
+              )}
+            </div>
+            <p className="mt-1 text-sm text-slate-500">
+              Chọn vòng thi, kiểm tra điểm và chốt bảng xếp hạng.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              title="Làm mới leaderboard"
+              aria-label="Làm mới leaderboard"
               disabled={!roundCheck.roundId || loadingLeaderboard}
               onClick={fetchLeaderboard}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Tải leaderboard
-            </CoordinatorActionButton>
+              <icons.Activity
+                className={`h-4 w-4 ${loadingLeaderboard ? "animate-pulse" : ""}`}
+              />
+            </button>
+
+            <details className="group relative">
+              <summary className="inline-flex h-10 cursor-pointer list-none items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+                <icons.Download className="h-4 w-4" />
+                Tải xuống
+                <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
+                <button
+                  type="button"
+                  disabled={!roundCheck.roundId || !roundCanExport || !!exporting}
+                  onClick={exportRoundRanking}
+                  className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300"
+                >
+                  {exporting === "round" ? "Đang xuất Round..." : "Ranking của Round"}
+                </button>
+                <button
+                  type="button"
+                  disabled={!selectedEventId || !!exporting}
+                  onClick={exportEventRanking}
+                  className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300"
+                >
+                  {exporting === "event" ? "Đang xuất Event..." : "Ranking toàn Event"}
+                </button>
+                {!roundCanExport && (
+                  <p className="px-3 pb-1 pt-2 text-xs leading-5 text-slate-400">
+                    Ranking Round chỉ tải được sau khi vòng thi đã đóng.
+                  </p>
+                )}
+              </div>
+            </details>
+
             <CoordinatorActionButton
               variant="primary"
               icon={icons.Trophy}
@@ -356,12 +410,12 @@ export function ResultsManagement() {
             >
               {calculating ? "Đang tính..." : "Tính ranking"}
             </CoordinatorActionButton>
-          </>
-        }
-      >
-        <div className="grid gap-3 md:grid-cols-3">
+          </div>
+        </header>
+
+        <div className="grid gap-3 border-y border-slate-100 bg-slate-50/70 px-4 py-4 sm:px-6 md:grid-cols-3">
           <FilterSelect
-            label="Sự kiện (Event)"
+            label="Sự kiện"
             icon={icons.CalendarDays}
             value={selectedEventId}
             onChange={(event) => setSelectedEventId(event.target.value)}
@@ -377,7 +431,7 @@ export function ResultsManagement() {
             )}
           </FilterSelect>
           <FilterSelect
-            label="Bảng thi (Track)"
+            label="Track"
             icon={icons.GitBranch}
             value={selectedTrackId}
             onChange={(event) => setSelectedTrackId(event.target.value)}
@@ -394,7 +448,7 @@ export function ResultsManagement() {
             )}
           </FilterSelect>
           <FilterSelect
-            label="Vòng thi (Round)"
+            label="Round"
             icon={icons.Timer}
             value={selectedRoundId}
             onChange={(event) => setSelectedRoundId(event.target.value)}
@@ -412,140 +466,58 @@ export function ResultsManagement() {
           </FilterSelect>
         </div>
 
-        <div className="mt-4 flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-bold text-slate-900">Xuất bảng xếp hạng XLSX</p>
-            <p className="mt-1 text-xs text-slate-500">
-              Round chỉ được xuất sau khi Closed. File Event được sắp theo Track và thứ hạng.
-            </p>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <CoordinatorActionButton
-              icon={icons.Download}
-              disabled={!roundCheck.roundId || !roundCanExport || !!exporting}
-              onClick={exportRoundRanking}
-            >
-              {exporting === "round" ? "Đang xuất Round..." : "Xuất Round"}
-            </CoordinatorActionButton>
-            <CoordinatorActionButton
-              variant="primary"
-              icon={icons.Download}
-              disabled={!selectedEventId || !!exporting}
-              onClick={exportEventRanking}
-            >
-              {exporting === "event" ? "Đang xuất Event..." : "Xuất Event"}
-            </CoordinatorActionButton>
-          </div>
-        </div>
-
-        {exportError && (
-          <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-            {exportError}
+        {(roundCheck.error || calculateMessage || exportError) && (
+          <div className="space-y-2 px-4 pt-4 sm:px-6">
+            {roundCheck.error && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm font-semibold text-amber-800">
+                {roundCheck.error}
+              </div>
+            )}
+            {calculateMessage && (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm font-semibold text-emerald-700">
+                {calculateMessage}
+              </div>
+            )}
+            {exportError && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-700">
+                {exportError}
+              </div>
+            )}
           </div>
         )}
-      </CoordinatorPanel>
 
-      {roundCheck.error && (
-        <SetupRequiredBanner
-          title={roundCheck.error}
-          hint="Thứ tự: Event → Track → Round → Ranking"
-        />
-      )}
-
-      {calculateMessage && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
-          {calculateMessage}
-        </div>
-      )}
-
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-        <div className="grid gap-0 xl:grid-cols-[1.05fr_0.95fr]">
-          <div className="border-b border-slate-100 p-5 sm:p-6 xl:border-b-0 xl:border-r">
-            <div className="flex flex-wrap items-center gap-2">
-              <CoordinatorBadge tone={roundCheck.roundId ? "orange" : "neutral"}>
-                {selectedRound?.name || "Chưa chọn round"}
-              </CoordinatorBadge>
-              {selectedTrack?.name && (
-                <CoordinatorBadge tone="info">{selectedTrack.name}</CoordinatorBadge>
-              )}
-            </div>
-            <h2 className="mt-4 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
-              Bảng xếp hạng theo round
-            </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              Ranking được tính từ điểm chấm của round. Coordinator có thể tải
-              leaderboard hiện tại hoặc tính lại khi điểm thay đổi.
+        <div className="flex flex-col gap-4 px-4 py-5 sm:px-6 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-orange-600">
+              {selectedTrack?.name || "Chưa chọn Track"}
             </p>
-            <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-slate-400">
-              Cập nhật lần cuối: {formatDateTime(leaderboard.calculatedAt)}
+            <h3 className="mt-1 text-xl font-black text-slate-950">
+              {selectedRound?.name || "Chưa chọn Round"}
+            </h3>
+            <p className="mt-1 text-xs text-slate-500">
+              Cập nhật: {formatDateTime(leaderboard.calculatedAt)}
             </p>
           </div>
-
-          <div className="grid grid-cols-3 gap-3 bg-orange-50 p-5 sm:p-6">
-            <div className="rounded-xl border border-orange-100 bg-white p-4">
-              <p className="text-2xl font-black text-slate-950">
-                {leaderboard.totalTeams || sortedRankings.length}
-              </p>
-              <p className="mt-1 text-xs font-bold uppercase tracking-wider text-slate-500">
-                Teams
-              </p>
-            </div>
-            <div className="rounded-xl border border-orange-100 bg-white p-4">
-              <p className="text-2xl font-black text-slate-950">
-                {leaderboard.advancingSlots || 0}
-              </p>
-              <p className="mt-1 text-xs font-bold uppercase tracking-wider text-slate-500">
-                Slots
-              </p>
-            </div>
-            <div className="rounded-xl border border-orange-100 bg-white p-4">
-              <p className="text-2xl font-black text-slate-950">{advancingCount}</p>
-              <p className="mt-1 text-xs font-bold uppercase tracking-wider text-slate-500">
-                Advancing
-              </p>
-            </div>
+          <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+            <p className="text-slate-500">
+              Đội: <strong className="text-slate-950">{leaderboard.totalTeams || sortedRankings.length}</strong>
+            </p>
+            <p className="text-slate-500">
+              Suất đi tiếp: <strong className="text-slate-950">{leaderboard.advancingSlots || 0}</strong>
+            </p>
+            <p className="text-slate-500">
+              Đã xác định: <strong className="text-emerald-700">{advancingCount}</strong>
+            </p>
           </div>
         </div>
-      </section>
 
-      {topRankings.length > 0 && (
-        <div className="grid gap-4 md:grid-cols-3">
-          {topRankings.map((ranking, index) => (
-            <div
-              key={ranking.id || ranking.teamId}
-              className="rounded-2xl border bg-white p-5 shadow-sm"
-              style={{ borderColor: index === 0 ? "#FFD0B5" : "#E5E7EB" }}
-            >
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div
-                  className="flex h-11 w-11 items-center justify-center rounded-xl text-lg font-black text-white"
-                  style={{ background: index === 0 ? "#F26F21" : "#64748B" }}
-                >
-                  #{ranking.rankPosition || index + 1}
-                </div>
-                <CoordinatorBadge tone={ranking.isAdvancing ? "success" : "neutral"}>
-                  {ranking.isAdvancing ? "Advancing" : "Not advancing"}
-                </CoordinatorBadge>
-              </div>
-              <h3 className="truncate font-bold text-slate-900">
-                {ranking.teamName || ranking.teamId}
-              </h3>
-              <p className="mt-4 text-3xl font-black text-slate-950">
-                {formatScore(ranking.totalScore)}
-              </p>
-              <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Total score
-              </p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <CoordinatorPanel
-        title="Leaderboard"
-        subtitle="Danh sách team theo thứ hạng trong round đã chọn"
-        icon={icons.Trophy}
-      >
+        <div className="border-t border-slate-100 px-4 py-5 sm:px-6">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h3 className="font-bold text-slate-950">Bảng xếp hạng</h3>
+            <span className="text-xs font-semibold text-slate-400">
+              {sortedRankings.length} đội
+            </span>
+          </div>
         {loadingLeaderboard ? (
           <LoadingState label="Đang tải leaderboard..." />
         ) : leaderboardError ? (
@@ -576,9 +548,13 @@ export function ResultsManagement() {
               if (key === "team") {
                 return (
                   <div>
-                    <p className="font-bold text-slate-900">
+                    <button
+                      type="button"
+                      onClick={() => openTeamRanking(row)}
+                      className="text-left font-bold text-slate-900 hover:text-orange-700 hover:underline"
+                    >
                       {row.teamName || row.teamId}
-                    </p>
+                    </button>
                     <p className="max-w-56 truncate font-mono text-xs text-slate-400">
                       {row.teamId}
                     </p>
@@ -606,23 +582,30 @@ export function ResultsManagement() {
                   </span>
                 );
               }
-              if (key === "actions") {
-                return (
-                  <CoordinatorActionButton
-                    icon={icons.Eye}
-                    onClick={() => openTeamRanking(row)}
-                  >
-                    Detail
-                  </CoordinatorActionButton>
-                );
-              }
               return row[key] ?? "—";
             }}
           />
         )}
-      </CoordinatorPanel>
+        </div>
+      </section>
 
-      <PrizeManagement trackId={selectedTrackId} roundId={selectedRoundId} />
+      <details className="group">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-4 py-4 hover:border-orange-200 [&::-webkit-details-marker]:hidden sm:px-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-orange-50 text-orange-600">
+              <icons.Trophy className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="font-bold text-slate-900">Giải thưởng</p>
+              <p className="text-sm text-slate-500">Cấu hình giải và xem đội chiến thắng</p>
+            </div>
+          </div>
+          <ChevronDown className="h-5 w-5 text-slate-400 transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="mt-4">
+          <PrizeManagement trackId={selectedTrackId} roundId={selectedRoundId} />
+        </div>
+      </details>
 
       {calculateConfirmOpen && (
         <ModalShell
