@@ -6,6 +6,7 @@ import { JudgePageTitle } from "../components/Judge/layout/JudgePageTitle";
 import { JudgeSidebar } from "../components/Judge/layout/JudgeSidebar";
 import { JudgeRounds } from "../components/Judge/rounds/JudgeRounds";
 import { JudgeScoringWorkspace } from "../components/Judge/scoring/JudgeScoringWorkspace";
+import { JudgeRankingView } from "../components/Judge/ranking/JudgeRankingView";
 
 const viewTitles = {
   dashboard: {
@@ -23,6 +24,10 @@ const viewTitles = {
   history: {
     title: "Scoring History",
     sub: "Read-only record of submitted scores and comments",
+  },
+  ranking: {
+    title: "Ranking",
+    sub: "Xem snapshot bảng xếp hạng của các Round được phân công",
   },
 };
 
@@ -48,6 +53,7 @@ export default function JudgeDashboard() {
     rounds: <JudgeRounds onOpenScoring={openScoring} />,
     scoring: <JudgeScoringWorkspace initialRoundId={scoringRoundId} />,
     history: <ScoringHistory submissions={[]} />,
+    ranking: <JudgeRankingView />,
   };
 
   return (

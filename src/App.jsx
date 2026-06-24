@@ -110,7 +110,14 @@ const router = createBrowserRouter([
       </ProtectedRoute>
     ),
   },
-  { path: "/results", element: <ResultPage /> },
+  {
+    path: "/results",
+    element: (
+      <ProtectedRoute allowedRoles={["Leader", "Coordinator", "Judge"]}>
+        <ResultPage />
+      </ProtectedRoute>
+    ),
+  },
 ]);
 
 export default function App() {

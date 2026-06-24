@@ -23,6 +23,12 @@ const navItems = [
     labelVi: "Thông tin nhóm",
     icon: Users,
   },
+  {
+    id: "ranking",
+    label: "Ranking",
+    labelVi: "Bảng xếp hạng",
+    icon: Trophy,
+  },
 ];
 
 export function Sidebar({ active, onNav, isOpen, onClose }) {

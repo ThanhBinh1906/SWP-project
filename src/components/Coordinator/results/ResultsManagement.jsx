@@ -54,6 +54,38 @@ function formatScore(value) {
   return Number.isInteger(score) ? String(score) : score.toFixed(2);
 }
 
+function parseDownloadName(headers, fallbackName) {
+  const disposition = headers?.["content-disposition"] || "";
+  const match = disposition.match(/filename\*?=(?:UTF-8''|\")?([^";]+)/i);
+  return match?.[1]
+    ? decodeURIComponent(match[1].replace(/\"/g, ""))
+    : fallbackName;
+}
+
+function downloadBlob(response, fallbackName) {
+  const url = URL.createObjectURL(response.data);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = parseDownloadName(response.headers, fallbackName);
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function getExportErrorMessage(error, fallbackMessage) {
+  const responseData = error?.response?.data;
+  if (responseData instanceof Blob) {
+    try {
+      const payload = JSON.parse(await responseData.text());
+      return payload?.message || fallbackMessage;
+    } catch {
+      return fallbackMessage;
+    }
+  }
+  return getApiMessage(error, fallbackMessage);
+}
+
 function TeamRankingDetails({ ranking }) {
   if (!ranking) return null;
 
@@ -112,6 +144,8 @@ export function ResultsManagement() {
   const [detailRanking, setDetailRanking] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState("");
+  const [exporting, setExporting] = useState("");
+  const [exportError, setExportError] = useState("");
 
   useEffect(() => {
     eventService
@@ -175,6 +209,7 @@ export function ResultsManagement() {
 
   const selectedTrack = tracks.find((track) => String(track.id) === selectedTrackId);
   const selectedRound = rounds.find((round) => String(round.id) === selectedRoundId);
+  const roundCanExport = ["Closed", "Completed"].includes(selectedRound?.status);
 
   const sortedRankings = useMemo(
     () => sortRankings(leaderboard.rankings),
@@ -248,6 +283,44 @@ export function ResultsManagement() {
       setDetailRanking(ranking);
     } finally {
       setDetailLoading(false);
+    }
+  };
+
+  const exportRoundRanking = async () => {
+    if (!roundCheck.roundId || !roundCanExport) return;
+    setExporting("round");
+    setExportError("");
+    try {
+      const response = await rankingService.exportRound(roundCheck.roundId);
+      downloadBlob(response, `ranking-round-${roundCheck.roundId}.xlsx`);
+    } catch (error) {
+      setExportError(
+        await getExportErrorMessage(
+          error,
+          "Không thể xuất ranking của Round đã chọn.",
+        ),
+      );
+    } finally {
+      setExporting("");
+    }
+  };
+
+  const exportEventRanking = async () => {
+    if (!selectedEventId) return;
+    setExporting("event");
+    setExportError("");
+    try {
+      const response = await rankingService.exportEvent(selectedEventId);
+      downloadBlob(response, `ranking-event-${selectedEventId}.xlsx`);
+    } catch (error) {
+      setExportError(
+        await getExportErrorMessage(
+          error,
+          "Không thể xuất ranking của Event đã chọn.",
+        ),
+      );
+    } finally {
+      setExporting("");
     }
   };
 
@@ -338,6 +411,38 @@ export function ResultsManagement() {
             )}
           </FilterSelect>
         </div>
+
+        <div className="mt-4 flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-bold text-slate-900">Xuất bảng xếp hạng XLSX</p>
+            <p className="mt-1 text-xs text-slate-500">
+              Round chỉ được xuất sau khi Closed. File Event được sắp theo Track và thứ hạng.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <CoordinatorActionButton
+              icon={icons.Download}
+              disabled={!roundCheck.roundId || !roundCanExport || !!exporting}
+              onClick={exportRoundRanking}
+            >
+              {exporting === "round" ? "Đang xuất Round..." : "Xuất Round"}
+            </CoordinatorActionButton>
+            <CoordinatorActionButton
+              variant="primary"
+              icon={icons.Download}
+              disabled={!selectedEventId || !!exporting}
+              onClick={exportEventRanking}
+            >
+              {exporting === "event" ? "Đang xuất Event..." : "Xuất Event"}
+            </CoordinatorActionButton>
+          </div>
+        </div>
+
+        {exportError && (
+          <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+            {exportError}
+          </div>
+        )}
       </CoordinatorPanel>
 
       {roundCheck.error && (

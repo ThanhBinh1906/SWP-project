@@ -30,6 +30,12 @@ const navItems = [
     labelVi: "Lịch sử",
     icon: judgeIcons.FileText,
   },
+  {
+    id: "ranking",
+    label: "Ranking",
+    labelVi: "Bảng xếp hạng",
+    icon: judgeIcons.Trophy,
+  },
 ];
 
 export function JudgeSidebar({ active, onNav, isOpen, onClose }) {

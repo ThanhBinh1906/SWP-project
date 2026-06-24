@@ -8,6 +8,7 @@ import { Header } from "../components/UserDashboard/Header";
 import { ChallengesView } from "../components/UserDashboard/ChallengesView";
 import { SubmitView } from "../components/UserDashboard/SubmitView";
 import { TeamView } from "../components/UserDashboard/TeamView";
+import { RankingView } from "../components/UserDashboard/RankingView";
 
 const viewTitles = {
   challenges: {
@@ -21,6 +22,10 @@ const viewTitles = {
   team: {
     title: "Team Information",
     sub: "Manage your team and track progress",
+  },
+  ranking: {
+    title: "Bảng xếp hạng",
+    sub: "Xem kết quả Final Round của Track và toàn Event",
   },
 };
 
@@ -130,6 +135,7 @@ export default function UserDashboard() {
             {activeNav === "challenges" && <ChallengesView />}
             {activeNav === "submit" && <SubmitView eventId={activeEventId} />}
             {activeNav === "team" && <TeamView />}
+            {activeNav === "ranking" && <RankingView />}
           </div>
         </main>
 
