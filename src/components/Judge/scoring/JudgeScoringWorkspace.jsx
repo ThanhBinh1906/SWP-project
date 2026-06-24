@@ -287,12 +287,11 @@ function SubmissionScoringCard({
                       Điểm
                     </label>
                     <input
-                      type="number"
-                      min="0"
-                      max={criterion.maxScore}
-                      step="0.1"
+                      type="text"
+                      inputMode="decimal"
                       value={scoreValue}
                       disabled={disabled}
+                      placeholder={`0 - ${criterion.maxScore}`}
                       onChange={(event) =>
                         onScoreChange(submission.id, criterion.id, event.target.value)
                       }
@@ -468,11 +467,16 @@ export function JudgeScoringWorkspace({ initialRoundId = "" }) {
   }, [loadRoundData]);
 
   const handleScoreChange = (submissionId, criterionId, value) => {
+    const normalizedValue = value.replace(",", ".");
+    if (normalizedValue !== "" && !/^\d*(\.\d*)?$/.test(normalizedValue)) {
+      return;
+    }
+
     setScores((prev) => ({
       ...prev,
       [submissionId]: {
         ...(prev[submissionId] || {}),
-        [criterionId]: value,
+        [criterionId]: normalizedValue,
       },
     }));
     setFieldErrors((prev) => ({
