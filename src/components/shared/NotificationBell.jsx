@@ -32,6 +32,14 @@ function formatNotificationTime(value) {
 
 function getNotificationTone(type) {
   const normalizedType = String(type || "").toLowerCase();
+  if (normalizedType === "round_eliminated") {
+    return {
+      label: "Dừng tại vòng này",
+      bg: "#FEF2F2",
+      color: "#B91C1C",
+      border: "#FECACA",
+    };
+  }
   if (normalizedType === "team_approved") {
     return {
       label: "Đội đã duyệt",
@@ -88,7 +96,10 @@ function getNotificationTone(type) {
   };
 }
 
-export default function NotificationBell({ ariaLabel = "Thông báo" }) {
+export default function NotificationBell({
+  ariaLabel = "Thông báo",
+  onNotificationsLoaded,
+}) {
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState("all");
   const [notifications, setNotifications] = useState([]);
@@ -113,7 +124,9 @@ export default function NotificationBell({ ariaLabel = "Thông báo" }) {
         pageNumber: 1,
         pageSize: PAGE_SIZE,
       });
-      setNotifications(getNotificationItems(res.data?.data));
+      const items = getNotificationItems(res.data?.data);
+      setNotifications(items);
+      onNotificationsLoaded?.(items);
     } catch (err) {
       setError(
         err?.response?.data?.message || "Không thể tải danh sách thông báo.",

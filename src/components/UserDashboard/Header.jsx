@@ -30,7 +30,7 @@ function useCountdown(target) {
   return { hours, minutes, seconds };
 }
 
-export function Header({ onMenuClick }) {
+export function Header({ onMenuClick, onNotificationsLoaded }) {
   const { hours, minutes, seconds } = useCountdown(DEADLINE);
   const { user } = useSelector((s) => s.auth); // lấy user thật từ Redux
   return (
@@ -94,7 +94,10 @@ export function Header({ onMenuClick }) {
           </span>
         </div>
 
-        <NotificationBell ariaLabel="Leader notifications" />
+        <NotificationBell
+          ariaLabel="Leader notifications"
+          onNotificationsLoaded={onNotificationsLoaded}
+        />
       </div>
     </header>
   );

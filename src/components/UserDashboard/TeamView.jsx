@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import teamService from "../../services/teamService";
 import LoadingActionText from "../shared/LoadingActionText";
+import TeamEliminationOverlay from "./TeamEliminationOverlay";
 
 const MIN_MEMBERS = 2; // BE yêu cầu tối thiểu 3 người, gồm leader
 const MAX_TEAM_MEMBERS = 5; // tổng số thành viên gồm leader
@@ -1282,7 +1283,12 @@ function EditTeamModal({ team, onClose, onSaved }) {
 // ---------------------------------------------------------------------------
 // TeamInfoView — hiển thị khi đã có team (fetch từ API)
 // ---------------------------------------------------------------------------
-function TeamInfoView({ team: initialTeam, onRefresh }) {
+function TeamInfoView({
+  team: initialTeam,
+  onRefresh,
+  readOnly = false,
+  lockMessage = "",
+}) {
   const [team, setTeam] = useState(initialTeam);
   const [memberModal, setMemberModal] = useState(null); // null | "add" | member object (edit)
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -1314,7 +1320,7 @@ function TeamInfoView({ team: initialTeam, onRefresh }) {
   };
 
   const handleDelete = async () => {
-    if (!deleteTarget) return;
+    if (!deleteTarget || readOnly) return;
     setDeleting(true);
     setActionError("");
     try {
@@ -1351,10 +1357,30 @@ function TeamInfoView({ team: initialTeam, onRefresh }) {
   };
 
   const nonLeaderCount = team.members?.filter((m) => !m.isLeader).length || 0;
-  const canAddMember = nonLeaderCount < MAX_MEMBERS;
+  const canAddMember = !readOnly && nonLeaderCount < MAX_MEMBERS;
+
+  useEffect(() => {
+    if (readOnly) {
+      setMemberModal(null);
+      setDeleteTarget(null);
+      setEditTeamModal(false);
+    }
+  }, [readOnly]);
 
   return (
     <div className="max-w-2xl mx-auto mt-6 space-y-4">
+      {readOnly && (
+        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-900">
+          <Lock className="mt-0.5 h-5 w-5 shrink-0" />
+          <div>
+            <p className="font-bold">Thông tin đội đang ở chế độ chỉ xem</p>
+            <p className="mt-1 text-sm leading-6 text-red-800">
+              {lockMessage ||
+                "Team đã dừng tại vòng trước nên không thể chỉnh sửa đội hoặc thành viên."}
+            </p>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div
         className="rounded-2xl p-6 text-center"
@@ -1390,23 +1416,25 @@ function TeamInfoView({ team: initialTeam, onRefresh }) {
           <h4 className="text-xs font-bold text-[#374151] uppercase tracking-widest">
             Thông tin Team
           </h4>
-          <button
-            onClick={() => setEditTeamModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150"
-            style={{
-              background: "rgba(242,111,33,0.08)",
-              border: "1px solid rgba(242,111,33,0.2)",
-              color: "#F26F21",
-            }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.background = "rgba(242,111,33,0.15)")
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.background = "rgba(242,111,33,0.08)")
-            }
-          >
-            <Edit2 className="w-3.5 h-3.5" /> Sửa thông tin
-          </button>
+          {!readOnly && (
+            <button
+              onClick={() => setEditTeamModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150"
+              style={{
+                background: "rgba(242,111,33,0.08)",
+                border: "1px solid rgba(242,111,33,0.2)",
+                color: "#F26F21",
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.background = "rgba(242,111,33,0.15)")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.background = "rgba(242,111,33,0.08)")
+              }
+            >
+              <Edit2 className="w-3.5 h-3.5" /> Sửa thông tin
+            </button>
+          )}
         </div>
         <div className="space-y-2">
           <InfoRow label="Tên team" value={team.teamName} />
@@ -1565,7 +1593,7 @@ function TeamInfoView({ team: initialTeam, onRefresh }) {
                     )}
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap">
-                    {!m.isLeader && (
+                    {!m.isLeader && !readOnly && (
                       <div className="flex gap-1.5">
                         <button
                           onClick={() => setMemberModal(m)}
@@ -1617,7 +1645,7 @@ function TeamInfoView({ team: initialTeam, onRefresh }) {
       </div>
 
       {/* Member Modal (Add/Edit) */}
-      {memberModal && (
+      {memberModal && !readOnly && (
         <MemberModal
           teamId={team.id}
           member={memberModal === "add" ? null : memberModal}
@@ -1630,7 +1658,7 @@ function TeamInfoView({ team: initialTeam, onRefresh }) {
       )}
 
       {/* Edit Team Modal */}
-      {editTeamModal && (
+      {editTeamModal && !readOnly && (
         <EditTeamModal
           team={team}
           onClose={() => setEditTeamModal(false)}
@@ -1642,7 +1670,7 @@ function TeamInfoView({ team: initialTeam, onRefresh }) {
       )}
 
       {/* Delete confirm */}
-      {deleteTarget &&
+      {deleteTarget && !readOnly &&
         createPortal(
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4 animate-fade-in">
             <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl space-y-4 animate-modal-scale">
@@ -1685,7 +1713,7 @@ function TeamInfoView({ team: initialTeam, onRefresh }) {
 }
 
 // ---------------------------------------------------------------------------
-export function TeamView() {
+export function TeamView({ readOnly = false, lockMessage = "" }) {
   const dispatch = useDispatch();
   const eventId = useSelector((s) => s.event.activeEventId);
   const { myTeam, loading: teamLoading, fetched } = useSelector((s) => s.team);
@@ -1731,6 +1759,12 @@ export function TeamView() {
       </div>
     );
 
+  if (!myTeam && readOnly) {
+    return (
+      <TeamEliminationOverlay embedded message={lockMessage || undefined} />
+    );
+  }
+
   if (!myTeam)
     return (
       <TeamCreateForm
@@ -1742,5 +1776,12 @@ export function TeamView() {
       />
     );
 
-  return <TeamInfoView team={myTeam} onRefresh={handleRefresh} />;
+  return (
+    <TeamInfoView
+      team={myTeam}
+      onRefresh={handleRefresh}
+      readOnly={readOnly}
+      lockMessage={lockMessage}
+    />
+  );
 }

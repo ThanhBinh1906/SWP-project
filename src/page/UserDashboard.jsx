@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchActiveEvent } from "../store/eventSlice";
 import { fetchMyTeam } from "../store/teamSlice";
@@ -9,6 +9,16 @@ import { ChallengesView } from "../components/UserDashboard/ChallengesView";
 import { SubmitView } from "../components/UserDashboard/SubmitView";
 import { TeamView } from "../components/UserDashboard/TeamView";
 import { RankingView } from "../components/UserDashboard/RankingView";
+import TeamEliminationOverlay from "../components/UserDashboard/TeamEliminationOverlay";
+import notificationService from "../services/notificationService";
+
+const NOTIFICATION_PAGE_SIZE = 10;
+
+function getNotificationItems(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  return [];
+}
 
 const viewTitles = {
   challenges: {
@@ -32,12 +42,43 @@ const viewTitles = {
 export default function UserDashboard() {
   const [activeNav, setActiveNav] = useState("challenges");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notificationsLoading, setNotificationsLoading] = useState(true);
+  const [eliminationNotice, setEliminationNotice] = useState(null);
   const dispatch = useDispatch();
 
   const { activeEventId, loading: eventLoading } = useSelector((s) => s.event);
-  const { fetched: teamFetched, loading: teamLoading } = useSelector(
+  const { myTeam, fetched: teamFetched, loading: teamLoading } = useSelector(
     (s) => s.team,
   );
+
+  const applyNotifications = useCallback((notifications) => {
+    const eliminated = notifications.find(
+      (item) => String(item?.type || "").toUpperCase() === "ROUND_ELIMINATED",
+    );
+    setEliminationNotice(eliminated || null);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    notificationService
+      .getAll({ pageNumber: 1, pageSize: NOTIFICATION_PAGE_SIZE })
+      .then((response) => {
+        if (active) {
+          applyNotifications(getNotificationItems(response.data?.data));
+        }
+      })
+      .catch(() => {
+        if (active) applyNotifications([]);
+      })
+      .finally(() => {
+        if (active) setNotificationsLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [applyNotifications]);
 
   // Step 1: fetch active event
   useEffect(() => {
@@ -54,7 +95,18 @@ export default function UserDashboard() {
   }, [dispatch, activeEventId, teamFetched]);
 
   const loading =
-    eventLoading || (activeEventId && teamLoading && !teamFetched);
+    notificationsLoading ||
+    eventLoading ||
+    (activeEventId && teamLoading && !teamFetched);
+
+  const isEliminated = Boolean(eliminationNotice);
+  const eliminationState = (
+    <TeamEliminationOverlay
+      embedded
+      teamName={myTeam?.teamName}
+      message={eliminationNotice?.message}
+    />
+  );
 
   if (loading) {
     return (
@@ -105,7 +157,10 @@ export default function UserDashboard() {
       />
 
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
-        <Header onMenuClick={() => setSidebarOpen(true)} />
+        <Header
+          onMenuClick={() => setSidebarOpen(true)}
+          onNotificationsLoaded={applyNotifications}
+        />
 
         <div className="px-8 py-5 border-b" style={{ borderColor: "#E5E7EB" }}>
           <div className="flex items-end gap-3">
@@ -132,9 +187,20 @@ export default function UserDashboard() {
 
         <main className="flex-1 px-8 py-7">
           <div key={activeNav} className="animate-fade-in">
-            {activeNav === "challenges" && <ChallengesView />}
-            {activeNav === "submit" && <SubmitView eventId={activeEventId} />}
-            {activeNav === "team" && <TeamView />}
+            {activeNav === "challenges" &&
+              (isEliminated ? eliminationState : <ChallengesView />)}
+            {activeNav === "submit" &&
+              (isEliminated ? (
+                eliminationState
+              ) : (
+                <SubmitView eventId={activeEventId} />
+              ))}
+            {activeNav === "team" && (
+              <TeamView
+                readOnly={isEliminated}
+                lockMessage={eliminationNotice?.message}
+              />
+            )}
             {activeNav === "ranking" && <RankingView />}
           </div>
         </main>
