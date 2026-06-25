@@ -99,7 +99,7 @@ export default function MentorDashboard() {
         onClose={() => setSidebarOpen(false)}
       />
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col md:pl-64">
         <MentorHeader onMenuClick={() => setSidebarOpen(true)} />
         <MentorPageTitle title={title.title} sub={title.sub} />
         <main className="flex-1 px-4 py-6 sm:px-8">
