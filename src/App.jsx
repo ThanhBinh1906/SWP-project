@@ -113,9 +113,9 @@ const router = createBrowserRouter([
   {
     path: "/results",
     element: (
-      <ProtectedRoute allowedRoles={["Leader", "Coordinator", "Judge"]}>
+      <PublicRoute>
         <ResultPage />
-      </ProtectedRoute>
+      </PublicRoute>
     ),
   },
 ]);
