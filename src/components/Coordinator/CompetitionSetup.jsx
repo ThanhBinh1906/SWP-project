@@ -170,6 +170,7 @@ export function CompetitionSetup() {
   const [roundFormError, setRoundFormError] = useState("");
   const [roundSaving, setRoundSaving] = useState(false);
   const [roundStatusValue, setRoundStatusValue] = useState("");
+  const [roundStatusNotice, setRoundStatusNotice] = useState("");
 
   // =========================================================================
   // FETCH — same API endpoints as originals
@@ -590,8 +591,14 @@ export function CompetitionSetup() {
     }
     setRoundSaving(true);
     try {
-      await eventService.updateRoundStatus(selectedRound.roundId, roundStatusValue);
+      const response = await eventService.updateRoundStatus(selectedRound.roundId, roundStatusValue);
       await fetchRoundsForTrack(selectedRound.trackId);
+      setRoundStatusNotice(
+        response.data?.message ||
+          (roundStatusValue === "Active"
+            ? "Đã mở vòng thi thành công."
+            : "Cập nhật trạng thái round thành công."),
+      );
       closeRoundModal();
     } catch (err) {
       setRoundFormError(
@@ -628,6 +635,21 @@ export function CompetitionSetup() {
           </CoordinatorActionButton>
         }
       />
+
+      {roundStatusNotice && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+          <div className="flex items-start justify-between gap-3">
+            <span>{roundStatusNotice}</span>
+            <button
+              type="button"
+              onClick={() => setRoundStatusNotice("")}
+              className="text-emerald-700/70 hover:text-emerald-900"
+            >
+              Đóng
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ─── Event list ─── */}
       {eventsLoading ? (

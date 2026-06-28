@@ -5,7 +5,7 @@ import { RoundStatusBadge } from "../rounds/RoundStatusBadge";
 
 export function AssignedRounds({ rounds, loading, onReload, onOpenScoring }) {
   return (
-    <JudgePanel title="Assigned Rounds" subtitle="Round access follows scoring window and ranking lock rules" icon={judgeIcons.CalendarDays}>
+    <JudgePanel title="Vòng được phân công" subtitle="Chỉ có thể chấm trong thời gian và trạng thái cho phép" icon={judgeIcons.CalendarDays}>
       {loading ? <p className="py-10 text-center text-sm text-slate-500">Đang tải Round...</p> : rounds.length === 0 ? <div className="py-10 text-center"><p className="text-sm text-slate-500">Chưa được phân công Round.</p><JudgeActionButton className="mt-3" onClick={onReload}>Tải lại</JudgeActionButton></div> :
       <div className="grid gap-4 lg:grid-cols-3">
         {rounds.map((round) => {
@@ -20,8 +20,8 @@ export function AssignedRounds({ rounds, loading, onReload, onOpenScoring }) {
                 <RoundStatusBadge status={round.status} />
               </div>
               <div className="space-y-2 text-sm text-slate-600">
-                <p><span className="font-semibold text-slate-700">EndTime:</span> {new Date(round.endTime).toLocaleString()}</p>
-                <p><span className="font-semibold text-slate-700">Submissions:</span> {round.submissionCount || 0}</p>
+                <p><span className="font-semibold text-slate-700">Hạn chấm:</span> {new Date(round.endTime).toLocaleString()}</p>
+                <p><span className="font-semibold text-slate-700">Bài nộp:</span> {round.submissionCount || 0}</p>
               </div>
               <div className="mt-4 space-y-3">
                 {!canScore && <p className="text-xs text-slate-500">Chỉ mở chấm điểm khi Round ở trạng thái Scoring.</p>}

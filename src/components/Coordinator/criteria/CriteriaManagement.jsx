@@ -725,7 +725,7 @@ export function CriteriaManagement() {
 
       <CoordinatorPanel
         title="Criteria table"
-        subtitle="Add and review scoring rubrics (no edit/delete on BE)"
+        subtitle="Quản lý bộ tiêu chí chấm điểm cho từng vòng thi"
         icon={icons.Scale}
       >
         {loading ? (
@@ -861,7 +861,7 @@ export function CriteriaManagement() {
               <FormField
                 label="Trọng số (Weight)"
                 icon={icons.SlidersHorizontal}
-                hint="Nhập 20 hoặc 20%. FE gửi BE là 20, BE tự lưu decimal 0.2."
+                hint="Có thể nhập 20 hoặc 20%. Hệ thống sẽ tự chuẩn hóa thành trọng số 20%."
               >
                 <input
                   type="text"

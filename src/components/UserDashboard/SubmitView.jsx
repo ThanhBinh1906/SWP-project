@@ -202,11 +202,35 @@ function SubmissionForm({ eventId }) {
 
       const currentRound = activeRoundRes.data?.data || null;
       const submissionList = subsRes.data?.data || [];
+      const editableSubmission = submissionList.find(
+        (submission) => submission?.canEdit === true,
+      );
 
-      setActiveRound(currentRound);
+      setActiveRound(
+        currentRound ||
+          (editableSubmission
+            ? {
+                roundId: editableSubmission.roundId,
+                roundName:
+                  editableSubmission.roundName ||
+                  editableSubmission.round?.name ||
+                  `Round #${editableSubmission.roundId}`,
+                status: editableSubmission.roundStatus || "Closed",
+                canSubmit: false,
+                topic: true,
+              }
+            : null),
+      );
       setSubmissions(submissionList);
       const currentRoundId = getActiveRoundId(currentRound);
-      setSelectedRoundId(currentRoundId ? String(currentRoundId) : "");
+      const editableRoundId = editableSubmission?.roundId;
+      setSelectedRoundId(
+        currentRoundId
+          ? String(currentRoundId)
+          : editableRoundId
+            ? String(editableRoundId)
+            : "",
+      );
     } catch (err) {
       if (err?.response?.status === 404) {
         setTeam(null);
@@ -234,6 +258,7 @@ function SubmissionForm({ eventId }) {
         : null,
     [activeRound, selectedRoundId],
   );
+  const canEditSubmission = existingSubmission?.canEdit === true;
 
   useEffect(() => {
     setForm({
@@ -285,11 +310,11 @@ function SubmissionForm({ eventId }) {
       setError("Team chưa được Coordinator duyệt. Không thể nộp bài.");
       return;
     }
-    if (!activeRound) {
+    if (!activeRound && !canEditSubmission) {
       setError("Chưa có vòng thi đang diễn ra.");
       return;
     }
-    if (!activeRound.topic) {
+    if (!activeRound?.topic && !canEditSubmission) {
       setError("Đề chưa được phát nên chưa thể nộp bài.");
       return;
     }
@@ -297,7 +322,7 @@ function SubmissionForm({ eventId }) {
       setError("Không có vòng thi Active trong thời gian cho phép để nộp bài.");
       return;
     }
-    if (!selectedRound || !isRoundOpen(selectedRound)) {
+    if (!canEditSubmission && (!selectedRound || !isRoundOpen(selectedRound))) {
       setError("Round hiện tại không ở trạng thái Active hoặc đã ngoài khung thời gian nộp bài.");
       return;
     }
@@ -352,7 +377,7 @@ function SubmissionForm({ eventId }) {
     );
   }
 
-  if (!activeRound) {
+  if (!activeRound && !canEditSubmission) {
     return (
       <AlertBox title="Chưa có vòng thi đang mở">
         <p>Cần có Round trạng thái Active và thời gian hiện tại nằm trong khoảng startTime - endTime.</p>
@@ -360,7 +385,7 @@ function SubmissionForm({ eventId }) {
     );
   }
 
-  if (!activeRound.topic) {
+  if (!activeRound?.topic && !canEditSubmission) {
     return (
       <AlertBox title="Đề chưa được phát">
         <p>Round đang diễn ra nhưng team chưa được phát đề nên chưa thể nộp bài.</p>

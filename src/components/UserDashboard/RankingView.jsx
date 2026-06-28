@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import rankingService from "../../services/rankingService";
 import {
+  EventTop3Podium,
   RankingBoard,
   extractEventRankingSections,
   extractRankingRows,
@@ -11,20 +12,52 @@ function getApiMessage(error, fallback) {
   return error?.response?.data?.message || error?.message || fallback;
 }
 
+function getEventRankingMessage(error) {
+  const message = getApiMessage(
+    error,
+    "Không thể tải bảng xếp hạng. Kết quả có thể chưa được công bố.",
+  );
+  const normalized = message.toLowerCase();
+
+  if (normalized.includes("completed") || normalized.includes("hoàn tất")) {
+    return "Kết quả chung cuộc chưa được công bố. Event cần hoàn tất trước khi xem bảng xếp hạng.";
+  }
+
+  if (
+    normalized.includes("track final") ||
+    normalized.includes("final track") ||
+    normalized.includes("chung kết") ||
+    normalized.includes("chung ket")
+  ) {
+    return "Cấu hình Track Final chưa hợp lệ. Coordinator cần kiểm tra lại Track Final và Final Round.";
+  }
+
+  if (normalized.includes("closed") || normalized.includes("ranking")) {
+    return "Final Round chưa có bảng xếp hạng đã chốt.";
+  }
+
+  return message;
+}
+
 export function RankingView() {
   const myTeam = useSelector((state) => state.team.myTeam);
   const activeEvent = useSelector((state) => state.event.activeEvent);
   const activeEventId = useSelector((state) => state.event.activeEventId);
   const [scope, setScope] = useState("track");
   const [trackRanking, setTrackRanking] = useState(null);
+  const [eventRanking, setEventRanking] = useState(null);
   const [eventSections, setEventSections] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const eventTop3 = Array.isArray(eventRanking?.eventTop3)
+    ? eventRanking.eventTop3
+    : [];
 
   const loadRanking = useCallback(async () => {
     const targetId = scope === "track" ? myTeam?.trackId : activeEventId;
     if (!targetId) {
       setTrackRanking(null);
+      setEventRanking(null);
       setEventSections([]);
       setError("");
       return;
@@ -36,20 +69,26 @@ export function RankingView() {
       if (scope === "track") {
         const response = await rankingService.getTrackLeaderboard(targetId);
         setTrackRanking(response.data?.data || null);
+        setEventRanking(null);
         setEventSections([]);
       } else {
         const response = await rankingService.getEventLeaderboard(targetId);
-        setEventSections(extractEventRankingSections(response.data?.data));
+        const payload = response.data?.data || null;
+        setEventRanking(payload);
+        setEventSections(extractEventRankingSections(payload));
         setTrackRanking(null);
       }
     } catch (requestError) {
       setTrackRanking(null);
+      setEventRanking(null);
       setEventSections([]);
       setError(
-        getApiMessage(
-          requestError,
-          "Không thể tải bảng xếp hạng. Ranking có thể chưa được công bố.",
-        ),
+        scope === "event"
+          ? getEventRankingMessage(requestError)
+          : getApiMessage(
+              requestError,
+              "Không thể tải bảng xếp hạng. Kết quả có thể chưa được công bố.",
+            ),
       );
     } finally {
       setLoading(false);
@@ -65,7 +104,7 @@ export function RankingView() {
       <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
         <p className="font-bold text-slate-900">Bạn chưa có đội thi</p>
         <p className="mt-1 text-sm text-slate-500">
-          Ranking theo Track sẽ xuất hiện sau khi tài khoản tham gia một team.
+          Bảng xếp hạng theo track sẽ xuất hiện sau khi tài khoản tham gia một team.
         </p>
       </div>
     );
@@ -88,7 +127,7 @@ export function RankingView() {
         <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
           {[
             ["track", "Track của đội"],
-            ["event", "Toàn Event"],
+            ["event", "Chung cuộc Event"],
           ].map(([value, label]) => (
             <button
               key={value}
@@ -108,11 +147,11 @@ export function RankingView() {
 
       {scope === "track" ? (
         <RankingBoard
-          title={trackRanking?.trackName || "Final Ranking của Track"}
+          title={trackRanking?.trackName || "Bảng xếp hạng chung cuộc của track"}
           subtitle={
             trackRanking?.roundName ||
             trackRanking?.finalRoundName ||
-            "Backend tự xác định Final Round của Track"
+            "Hệ thống tự chọn vòng chung kết của track"
           }
           rows={extractRankingRows(trackRanking)}
           loading={loading}
@@ -120,10 +159,10 @@ export function RankingView() {
           onReload={loadRanking}
           highlightTeamId={myTeam.id}
         />
-      ) : loading || error || eventSections.length === 0 ? (
+      ) : loading || error ? (
         <RankingBoard
-          title={activeEvent?.name || "Ranking toàn Event"}
-          subtitle="Final Ranking của tất cả Track"
+          title={activeEvent?.name || "Bảng xếp hạng toàn sự kiện"}
+          subtitle="Top 3 và bảng đầy đủ của Final Round"
           rows={[]}
           loading={loading}
           error={error}
@@ -132,16 +171,27 @@ export function RankingView() {
         />
       ) : (
         <div className="space-y-6">
-          {eventSections.map((section) => (
+          <EventTop3Podium rows={eventTop3} />
+          {eventSections.length === 0 ? (
             <RankingBoard
-              key={section.id}
-              title={section.name}
-              subtitle={section.roundName}
-              rows={section.rows}
+              title={activeEvent?.name || "Bảng xếp hạng toàn sự kiện"}
+              subtitle="Bảng đầy đủ của Final Round"
+              rows={[]}
               onReload={loadRanking}
               highlightTeamId={myTeam.id}
             />
-          ))}
+          ) : (
+            eventSections.map((section) => (
+              <RankingBoard
+                key={section.id}
+                title={section.name}
+                subtitle={`Bảng đầy đủ - ${section.roundName}`}
+                rows={section.rows}
+                onReload={loadRanking}
+                highlightTeamId={myTeam.id}
+              />
+            ))
+          )}
         </div>
       )}
     </div>

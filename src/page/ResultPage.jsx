@@ -10,6 +10,7 @@ import {
 import { useSelector } from "react-redux";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
+  EventTop3Podium,
   RankingBoard,
   extractEventRankingSections,
 } from "../components/shared/RankingBoard";
@@ -20,6 +21,33 @@ import { getRedirectPathByUser, hasRole } from "../utils/roleHelpers";
 
 function getApiMessage(error, fallback) {
   return error?.response?.data?.message || error?.message || fallback;
+}
+
+function getEventRankingMessage(error) {
+  const message = getApiMessage(
+    error,
+    "Sự kiện này chưa có bảng xếp hạng chung cuộc hoặc kết quả chưa được công bố.",
+  );
+  const normalized = message.toLowerCase();
+
+  if (normalized.includes("completed") || normalized.includes("hoàn tất")) {
+    return "Kết quả chung cuộc chưa được công bố. Event cần hoàn tất trước khi xem bảng xếp hạng.";
+  }
+
+  if (
+    normalized.includes("track final") ||
+    normalized.includes("final track") ||
+    normalized.includes("chung kết") ||
+    normalized.includes("chung ket")
+  ) {
+    return "Cấu hình Track Final chưa hợp lệ. Coordinator cần kiểm tra lại Track Final và Final Round.";
+  }
+
+  if (normalized.includes("closed") || normalized.includes("ranking")) {
+    return "Final Round chưa có bảng xếp hạng đã chốt. Hãy kiểm tra trạng thái vòng chung kết.";
+  }
+
+  return message;
 }
 
 function normalizeEvents(...sources) {
@@ -63,10 +91,15 @@ export default function ResultPage() {
     () => extractEventRankingSections(eventRanking),
     [eventRanking],
   );
+  const eventTop3 = Array.isArray(eventRanking?.eventTop3)
+    ? eventRanking.eventTop3
+    : [];
   const selectedEvent = events.find(
     (event) => String(event.id) === selectedEventId,
   );
-  const allRows = sections.flatMap((section) => section.rows || []);
+  const allRows = sections.length
+    ? sections.flatMap((section) => section.rows || [])
+    : eventTop3;
   const uniqueTeams = new Set(allRows.map((row) => String(row.teamId))).size;
   const latestSnapshotAt = sections.reduce((latest, section) => {
     if (!section.calculatedAt) return latest;
@@ -122,12 +155,7 @@ export default function ResultPage() {
       setEventRanking(response.data?.data || null);
     } catch (requestError) {
       setEventRanking(null);
-      setError(
-        getApiMessage(
-          requestError,
-          "Event này chưa có Final Ranking hoặc kết quả chưa được công bố.",
-        ),
-      );
+      setError(getEventRankingMessage(requestError));
     } finally {
       setLoadingRanking(false);
     }
@@ -179,10 +207,10 @@ export default function ResultPage() {
                 Kết quả chính thức
               </p>
               <h1 className="mt-3 max-w-3xl text-3xl font-black text-slate-950 sm:text-4xl">
-                {eventRanking?.eventName || selectedEvent?.name || "Event Ranking"}
+                {eventRanking?.eventName || selectedEvent?.name || "Bảng xếp hạng sự kiện"}
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-                Bảng xếp hạng lấy từ snapshot Final Round của từng Track. Trang này không tự tính lại điểm.
+                Top 3 chung cuộc và bảng đầy đủ được lấy từ Final Round của Track Final.
               </p>
               <p className="mt-5 text-xs font-semibold uppercase tracking-wider text-slate-400">
                 Cập nhật: {formatSnapshotTime(latestSnapshotAt)}
@@ -225,9 +253,9 @@ export default function ResultPage() {
 
         <div className="grid gap-3 sm:grid-cols-3">
           {[
-            ["Track", sections.length, Trophy],
-            ["Team có ranking", uniqueTeams, Users],
-            ["Snapshot", eventRanking ? "Đã có" : "Chưa có", CalendarDays],
+            ["Bảng chung kết", sections.length || (eventRanking ? 1 : 0), Trophy],
+            ["Team có thứ hạng", uniqueTeams, Users],
+            ["Kết quả", eventRanking ? "Đã công bố" : "Chưa công bố", CalendarDays],
           ].map(([label, value, Icon]) => (
             <div key={label} className="rounded-xl border border-slate-200 bg-white p-5">
               <div className="flex items-center justify-between gap-3">
@@ -252,10 +280,33 @@ export default function ResultPage() {
           <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm font-semibold text-red-700">
             {error}
           </div>
+        ) : eventTop3.length > 0 ? (
+          <div className="space-y-7">
+            <EventTop3Podium rows={eventTop3} />
+            {sections.length === 0 ? (
+              <RankingBoard
+                title={selectedEvent?.name || "Bảng xếp hạng sự kiện"}
+                subtitle="Bảng đầy đủ của Final Round"
+                rows={[]}
+                onReload={loadRanking}
+                highlightTeamId={teamId || reduxTeam?.id}
+              />
+            ) : (
+              sections.map((section) => (
+                <RankingBoard
+                  key={section.id}
+                  title={section.name}
+                  subtitle={`Bảng đầy đủ - ${section.roundName}`}
+                  rows={section.rows}
+                  highlightTeamId={teamId || reduxTeam?.id}
+                />
+              ))
+            )}
+          </div>
         ) : sections.length === 0 ? (
           <RankingBoard
-            title={selectedEvent?.name || "Event Ranking"}
-            subtitle="Final Ranking của các Track"
+            title={selectedEvent?.name || "Bảng xếp hạng sự kiện"}
+            subtitle="Bảng đầy đủ của Final Round"
             rows={[]}
             onReload={loadRanking}
             highlightTeamId={teamId || reduxTeam?.id}
@@ -263,13 +314,13 @@ export default function ResultPage() {
         ) : (
           <div className="space-y-7">
             {sections.map((section) => (
-              <RankingBoard
-                key={section.id}
-                title={section.name}
-                subtitle={section.roundName}
-                rows={section.rows}
-                highlightTeamId={teamId || reduxTeam?.id}
-              />
+            <RankingBoard
+              key={section.id}
+              title={section.name}
+              subtitle={`Bảng đầy đủ - ${section.roundName}`}
+              rows={section.rows}
+              highlightTeamId={teamId || reduxTeam?.id}
+            />
             ))}
           </div>
         )}

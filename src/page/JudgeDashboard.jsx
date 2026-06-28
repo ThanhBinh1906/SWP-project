@@ -4,30 +4,35 @@ import { ScoringHistory } from "../components/Judge/history/ScoringHistory";
 import { JudgeHeader } from "../components/Judge/layout/JudgeHeader";
 import { JudgePageTitle } from "../components/Judge/layout/JudgePageTitle";
 import { JudgeSidebar } from "../components/Judge/layout/JudgeSidebar";
+import { JudgeRankingView } from "../components/Judge/ranking/JudgeRankingView";
 import { JudgeRounds } from "../components/Judge/rounds/JudgeRounds";
 import { JudgeScoringWorkspace } from "../components/Judge/scoring/JudgeScoringWorkspace";
-import { JudgeRankingView } from "../components/Judge/ranking/JudgeRankingView";
+import { JudgeTieBreakView } from "../components/Judge/tiebreak/JudgeTieBreakView";
 
 const viewTitles = {
   dashboard: {
     title: "Judge Dashboard",
-    sub: "Assigned rounds, scoring progress, countdowns, and lock status",
+    sub: "Theo dõi vòng được phân công, tiến độ chấm và trạng thái khóa điểm",
   },
   rounds: {
-    title: "Assigned Rounds",
-    sub: "Review scoring windows and ranking lock state",
+    title: "Vòng được phân công",
+    sub: "Xem thời gian chấm và các vòng đã chốt kết quả",
   },
   scoring: {
-    title: "Submission Scoring",
-    sub: "Chấm điểm bài nộp qua API, round status phải là Scoring",
+    title: "Chấm điểm bài nộp",
+    sub: "Chấm điểm các bài nộp trong vòng đang mở chấm",
+  },
+  "tie-break": {
+    title: "Tie-break Scoring",
+    sub: "Chấm lại các đội đồng hạng ở vị trí quan trọng",
   },
   history: {
     title: "Lịch sử chấm điểm",
     sub: "Xem lại các lần chấm mới và chỉnh sửa điểm của bạn",
   },
   ranking: {
-    title: "Ranking",
-    sub: "Xem snapshot bảng xếp hạng của các Round được phân công",
+    title: "Bảng xếp hạng",
+    sub: "Xem bảng xếp hạng đã được công bố của các vòng được phân công",
   },
 };
 
@@ -45,13 +50,10 @@ export default function JudgeDashboard() {
   };
 
   const views = {
-    dashboard: (
-      <JudgeOverview
-        onOpenScoring={openScoring}
-      />
-    ),
+    dashboard: <JudgeOverview onOpenScoring={openScoring} />,
     rounds: <JudgeRounds onOpenScoring={openScoring} />,
     scoring: <JudgeScoringWorkspace initialRoundId={scoringRoundId} />,
+    "tie-break": <JudgeTieBreakView />,
     history: <ScoringHistory />,
     ranking: <JudgeRankingView />,
   };
@@ -85,7 +87,7 @@ export default function JudgeDashboard() {
           className="border-t bg-white px-4 py-4 text-center text-xs text-slate-500 sm:px-8"
           style={{ borderColor: "#E5E7EB" }}
         >
-          SEAL Hackathon Judge Console • API scoring workspace
+          SEAL Hackathon Judge Console • Không gian chấm điểm
         </footer>
       </div>
     </div>

@@ -79,7 +79,7 @@ export function JudgeRankingView() {
       setError(
         getApiMessage(
           requestError,
-          "Round này chưa có snapshot ranking hoặc chưa được phép công bố.",
+          "Round này chưa có bảng xếp hạng đã chốt hoặc chưa được phép công bố.",
         ),
       );
     } finally {
@@ -101,13 +101,13 @@ export function JudgeRankingView() {
         <div className="grid gap-4 lg:grid-cols-[1fr_360px] lg:items-end">
           <div>
             <p className="text-xs font-bold uppercase tracking-wider text-orange-700">
-              Ranking snapshot
+              Bảng xếp hạng đã chốt
             </p>
             <h3 className="mt-1 text-xl font-black text-slate-950">
               Bảng xếp hạng Round được phân công
             </h3>
             <p className="mt-1 text-sm text-slate-500">
-              Đây là dữ liệu đã được Coordinator tính và lưu, không tự tính lại điểm.
+              Đây là kết quả đã được Coordinator tính và lưu, hệ thống không tự thay đổi điểm tại màn hình này.
             </p>
           </div>
           <label className="block">
@@ -135,7 +135,7 @@ export function JudgeRankingView() {
       </section>
 
       <RankingBoard
-        title={leaderboard?.roundName || selectedRound?.name || "Ranking theo Round"}
+        title={leaderboard?.roundName || selectedRound?.name || "Bảng xếp hạng theo Round"}
         subtitle={
           selectedRound
             ? `${selectedRound.trackName} · ${selectedRound.eventName} · ${selectedRound.status}`

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import eventService from "../../../services/eventService";
 import rankingService from "../../../services/rankingService";
 import roundService from "../../../services/roundService";
+import tieBreakService from "../../../services/tieBreakService";
 import trackService from "../../../services/trackService";
 import dashboardService from "../../../services/dashboardService";
 import { PrizeManagement } from "./PrizeManagement";
@@ -73,6 +74,34 @@ function downloadBlob(response, fallbackName) {
   URL.revokeObjectURL(url);
 }
 
+function collectTieBreakSessions(data) {
+  const candidates = [
+    data?.tieBreakSession,
+    data?.tieBreak,
+    data?.session,
+    ...(Array.isArray(data?.tieBreakSessions) ? data.tieBreakSessions : []),
+    ...(Array.isArray(data?.sessions) ? data.sessions : []),
+  ].filter(Boolean);
+
+  return candidates
+    .map((session) => ({
+      ...session,
+      id: session.id || session.sessionId || session.tieBreakSessionId,
+    }))
+    .filter((session) => session.id);
+}
+
+function hasTieBreakSignal(message, data) {
+  const text = String(message || "").toLowerCase();
+  return (
+    collectTieBreakSessions(data).length > 0 ||
+    text.includes("tie") ||
+    text.includes("đồng") ||
+    text.includes("dong") ||
+    text.includes("tie-break")
+  );
+}
+
 async function getExportErrorMessage(error, fallbackMessage) {
   const responseData = error?.response?.data;
   if (responseData instanceof Blob) {
@@ -91,20 +120,20 @@ function TeamRankingDetails({ ranking }) {
 
   return (
     <div className="space-y-3 text-sm">
-      <DetailRow label="Team" value={ranking.teamName || ranking.teamId} />
-      <DetailRow label="Team ID" value={ranking.teamId} mono />
+      <DetailRow label="Đội thi" value={ranking.teamName || ranking.teamId} />
+      <DetailRow label="Mã đội" value={ranking.teamId} mono />
       <DetailRow label="Round" value={ranking.roundName || `Round #${ranking.roundId}`} />
-      <DetailRow label="Rank" value={`#${ranking.rankPosition || "—"}`} />
-      <DetailRow label="Total score" value={formatScore(ranking.totalScore)} />
+      <DetailRow label="Thứ hạng" value={`#${ranking.rankPosition || "—"}`} />
+      <DetailRow label="Tổng điểm" value={formatScore(ranking.totalScore)} />
       <DetailRow
-        label="Status"
+        label="Kết quả"
         value={
           <CoordinatorBadge tone={ranking.isAdvancing ? "success" : "neutral"}>
             {ranking.isAdvancing ? "Vào vòng trong" : "Không vào vòng trong"}
           </CoordinatorBadge>
         }
       />
-      <DetailRow label="Calculated at" value={formatDateTime(ranking.calculatedAt)} />
+      <DetailRow label="Thời gian cập nhật" value={formatDateTime(ranking.calculatedAt)} />
     </div>
   );
 }
@@ -140,6 +169,8 @@ export function ResultsManagement() {
   const [calculating, setCalculating] = useState(false);
   const [calculateMessage, setCalculateMessage] = useState("");
   const [calculateConfirmOpen, setCalculateConfirmOpen] = useState(false);
+  const [tieBreakNotice, setTieBreakNotice] = useState(null);
+  const [calculatingTieBreakId, setCalculatingTieBreakId] = useState("");
 
   const [detailRanking, setDetailRanking] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -227,6 +258,7 @@ export function ResultsManagement() {
     setLoadingLeaderboard(true);
     setLeaderboardError("");
     setCalculateMessage("");
+    setTieBreakNotice(null);
     try {
       const res = await rankingService.getRoundLeaderboard(roundCheck.roundId);
       setLeaderboard(normalizeLeaderboard(res.data?.data));
@@ -235,7 +267,7 @@ export function ResultsManagement() {
       setLeaderboardError(
         getApiMessage(
           err,
-          "Chưa tải được bảng xếp hạng. Hãy thử tính ranking cho round này.",
+          "Chưa tải được bảng xếp hạng. Hãy thử tính bảng xếp hạng cho round này.",
         ),
       );
     } finally {
@@ -253,15 +285,57 @@ export function ResultsManagement() {
     setCalculating(true);
     setLeaderboardError("");
     setCalculateMessage("");
+    setTieBreakNotice(null);
     try {
       const res = await rankingService.calculateRound(roundCheck.roundId);
-      setLeaderboard(normalizeLeaderboard(res.data?.data));
-      setCalculateMessage(res.data?.message || "Tính ranking thành công.");
+      const responseData = res.data?.data;
+      const responseMessage = res.data?.message || "Tính bảng xếp hạng thành công.";
+      setLeaderboard(normalizeLeaderboard(responseData));
+      setCalculateMessage(responseMessage);
+      if (hasTieBreakSignal(responseMessage, responseData)) {
+        setTieBreakNotice({
+          message:
+            responseMessage ||
+            "Đã mở phiên xử lý đồng hạng. Judge cần chấm bổ sung trước khi chốt kết quả.",
+          sessions: collectTieBreakSessions(responseData),
+        });
+      }
     } catch (err) {
-      setLeaderboardError(getApiMessage(err, "Tính ranking thất bại."));
+      const message = getApiMessage(err, "Tính bảng xếp hạng thất bại.");
+      setLeaderboardError(message);
+      if (hasTieBreakSignal(message, err?.response?.data?.data)) {
+        setTieBreakNotice({
+          message,
+          sessions: collectTieBreakSessions(err?.response?.data?.data),
+        });
+      }
     } finally {
       setCalculating(false);
       setCalculateConfirmOpen(false);
+    }
+  };
+
+  const handleCalculateTieBreakResult = async (sessionId) => {
+    if (!sessionId) return;
+    setCalculatingTieBreakId(String(sessionId));
+    setLeaderboardError("");
+    setCalculateMessage("");
+    try {
+      const response = await tieBreakService.calculateResult(sessionId);
+      setCalculateMessage(
+        response.data?.message || "Tính kết quả tie-break thành công.",
+      );
+      setTieBreakNotice(null);
+      await fetchLeaderboard();
+    } catch (error) {
+      setLeaderboardError(
+        getApiMessage(
+          error,
+          "Không thể tính kết quả tie-break. Hãy kiểm tra Judge đã chấm đủ chưa.",
+        ),
+      );
+    } finally {
+      setCalculatingTieBreakId("");
     }
   };
 
@@ -278,7 +352,7 @@ export function ResultsManagement() {
       );
       setDetailRanking(res.data?.data || ranking);
     } catch (err) {
-      setDetailError(getApiMessage(err, "Không thể tải ranking của team."));
+      setDetailError(getApiMessage(err, "Không thể tải thứ hạng của team."));
       setDetailRanking(ranking);
     } finally {
       setDetailLoading(false);
@@ -296,7 +370,7 @@ export function ResultsManagement() {
       setExportError(
         await getExportErrorMessage(
           error,
-          "Không thể xuất ranking của Round đã chọn.",
+          "Không thể xuất bảng xếp hạng của Round đã chọn.",
         ),
       );
     } finally {
@@ -315,7 +389,7 @@ export function ResultsManagement() {
       setExportError(
         await getExportErrorMessage(
           error,
-          "Không thể xuất ranking của Event đã chọn.",
+          "Không thể xuất bảng xếp hạng của Event đã chọn.",
         ),
       );
     } finally {
@@ -380,8 +454,8 @@ export function ResultsManagement() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              title="Làm mới leaderboard"
-              aria-label="Làm mới leaderboard"
+              title="Làm mới bảng xếp hạng"
+              aria-label="Làm mới bảng xếp hạng"
               disabled={!roundCheck.roundId || loadingLeaderboard}
               onClick={fetchLeaderboard}
               className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
@@ -404,7 +478,7 @@ export function ResultsManagement() {
                   onClick={exportRoundRanking}
                   className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300"
                 >
-                  {exporting === "round" ? "Đang xuất Round..." : "Ranking của Round"}
+                  {exporting === "round" ? "Đang xuất Round..." : "Bảng xếp hạng của Round"}
                 </button>
                 <button
                   type="button"
@@ -412,7 +486,7 @@ export function ResultsManagement() {
                   onClick={exportEventRanking}
                   className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300"
                 >
-                  {exporting === "event" ? "Đang xuất Event..." : "Ranking toàn Event"}
+                  {exporting === "event" ? "Đang xuất Event..." : "Bảng xếp hạng chung cuộc Event"}
                 </button>
                 <button
                   type="button"
@@ -424,7 +498,7 @@ export function ResultsManagement() {
                 </button>
                 {!roundCanExport && (
                   <p className="px-3 pb-1 pt-2 text-xs leading-5 text-slate-400">
-                    Ranking Round chỉ tải được sau khi vòng thi đã đóng.
+                    Bảng xếp hạng Round chỉ tải được sau khi vòng thi đã đóng.
                   </p>
                 )}
               </div>
@@ -436,7 +510,7 @@ export function ResultsManagement() {
               disabled={!roundCheck.roundId || calculating}
               onClick={() => setCalculateConfirmOpen(true)}
             >
-              {calculating ? "Đang tính..." : "Tính ranking"}
+              {calculating ? "Đang tính..." : "Tính bảng xếp hạng"}
             </CoordinatorActionButton>
           </div>
         </header>
@@ -494,7 +568,7 @@ export function ResultsManagement() {
           </FilterSelect>
         </div>
 
-        {(roundCheck.error || calculateMessage || exportError) && (
+        {(roundCheck.error || calculateMessage || exportError || tieBreakNotice) && (
           <div className="space-y-2 px-4 pt-4 sm:px-6">
             {roundCheck.error && (
               <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm font-semibold text-amber-800">
@@ -509,6 +583,44 @@ export function ResultsManagement() {
             {exportError && (
               <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-700">
                 {exportError}
+              </div>
+            )}
+            {tieBreakNotice && (
+              <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  <div>
+                    <p className="font-bold">Cần xử lý tie-break</p>
+                    <p className="mt-1 leading-6">
+                      {tieBreakNotice.message ||
+                        "Đã mở phiên xử lý đồng hạng. Judge cần chấm đủ trước khi Coordinator chốt kết quả."}
+                    </p>
+                    <p className="mt-1 text-xs text-amber-800">
+                      Judge sẽ thấy phiên này trong tab Tie-break của Judge Dashboard.
+                    </p>
+                  </div>
+                  {tieBreakNotice.sessions?.length > 0 && (
+                    <div className="flex flex-wrap gap-2 lg:justify-end">
+                      {tieBreakNotice.sessions.map((session) => (
+                        <CoordinatorActionButton
+                          key={session.id}
+                          variant="primary"
+                          disabled={calculatingTieBreakId === String(session.id)}
+                          onClick={() => handleCalculateTieBreakResult(session.id)}
+                        >
+                          {calculatingTieBreakId === String(session.id)
+                            ? "Đang tính..."
+                            : `Tính kết quả #${session.rankPosition || session.rank || ""}`}
+                        </CoordinatorActionButton>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {!tieBreakNotice.sessions?.length && (
+                  <p className="mt-3 rounded-lg bg-white/70 px-3 py-2 text-xs text-amber-800">
+                    Phiên xử lý đồng hạng đã được ghi nhận. Nếu chưa thấy nút chốt kết quả,
+                    hãy làm mới sau khi Judge hoàn tất phần chấm bổ sung.
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -547,18 +659,18 @@ export function ResultsManagement() {
             </span>
           </div>
         {loadingLeaderboard ? (
-          <LoadingState label="Đang tải leaderboard..." />
+          <LoadingState label="Đang tải bảng xếp hạng..." />
         ) : leaderboardError ? (
           <ApiErrorState message={leaderboardError} onRetry={fetchLeaderboard} />
         ) : !roundCheck.roundId ? (
           <p className="py-12 text-center text-sm text-slate-400">
-            Hãy chọn Event, Track và Round để xem ranking.
+            Hãy chọn Event, Track và Round để xem bảng xếp hạng.
           </p>
         ) : sortedRankings.length === 0 ? (
           <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
-            <p className="font-bold text-slate-900">Chưa có ranking</p>
+            <p className="font-bold text-slate-900">Chưa có bảng xếp hạng</p>
             <p className="mt-1 text-sm text-slate-500">
-              Bấm “Tính ranking” để backend tính bảng xếp hạng cho round này.
+              Bấm “Tính bảng xếp hạng” để hệ thống lập kết quả cho round này.
             </p>
           </div>
         ) : (
@@ -637,7 +749,7 @@ export function ResultsManagement() {
 
       {calculateConfirmOpen && (
         <ModalShell
-          title="Xác nhận tính ranking"
+          title="Xác nhận tính bảng xếp hạng"
           onClose={() => {
             if (!calculating) setCalculateConfirmOpen(false);
           }}
@@ -656,7 +768,7 @@ export function ResultsManagement() {
                 icon={icons.Lock}
                 onClick={handleCalculate}
               >
-                {calculating ? "Đang tính ranking..." : "Xác nhận và khóa điểm"}
+                {calculating ? "Đang tính bảng xếp hạng..." : "Xác nhận và khóa điểm"}
               </CoordinatorActionButton>
             </>
           }
@@ -693,7 +805,7 @@ export function ResultsManagement() {
 
       {(detailLoading || detailRanking || detailError) && (
         <ModalShell
-          title="Chi tiết ranking của team"
+          title="Chi tiết thứ hạng của team"
           onClose={() => {
             setDetailRanking(null);
             setDetailError("");
@@ -712,7 +824,7 @@ export function ResultsManagement() {
           }
         >
           {detailLoading ? (
-            <LoadingState label="Đang tải ranking của team..." />
+            <LoadingState label="Đang tải thứ hạng của team..." />
           ) : (
             <div className="space-y-4">
               {detailError && (

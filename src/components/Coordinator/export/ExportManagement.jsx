@@ -70,7 +70,7 @@ export function ExportManagement() {
       }
     } catch (err) {
       console.error(err);
-      setError("Không thể tải xuống dữ liệu. Vui lòng kiểm tra kết nối API.");
+      setError("Không thể tải xuống dữ liệu. Vui lòng kiểm tra kết nối hệ thống.");
     } finally {
       setLoadingType(null);
     }

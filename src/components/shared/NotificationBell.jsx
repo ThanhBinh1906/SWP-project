@@ -64,6 +64,14 @@ function getNotificationTone(type) {
       border: "#FED7AA",
     };
   }
+  if (normalizedType === "tie_break_required") {
+    return {
+      label: "Xử lý đồng hạng",
+      bg: "#FEFCE8",
+      color: "#A16207",
+      border: "#FEF08A",
+    };
+  }
   if (normalizedType.includes("team")) {
     return {
       label: "Đội thi",

@@ -25,6 +25,12 @@ const navItems = [
     icon: judgeIcons.Gavel,
   },
   {
+    id: "tie-break",
+    label: "Tie-break",
+    labelVi: "Chấm đồng hạng",
+    icon: judgeIcons.Scale,
+  },
+  {
     id: "history",
     label: "History",
     labelVi: "Lịch sử điểm",

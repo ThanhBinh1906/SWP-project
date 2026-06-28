@@ -414,7 +414,7 @@ export function TopicsManagement() {
             >
               <textarea
                 className="min-h-20 min-w-0 max-h-40 max-w-full w-full resize-y rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-                placeholder="React FE, .NET BE, có demo live..."
+                placeholder="Công nghệ sử dụng, yêu cầu demo, tiêu chí kỹ thuật cần đạt..."
                 value={form.requirements}
                 onChange={(e) =>
                   setForm((p) => ({ ...p, requirements: e.target.value }))
@@ -424,7 +424,7 @@ export function TopicsManagement() {
             <FormField
               label="File tài liệu đính kèm"
               icon={icons.Upload}
-              hint="Chỉ hỗ trợ PDF, tối đa 10MB. FE sẽ upload lên Cloudinary rồi gửi link cho backend."
+              hint="Chỉ hỗ trợ PDF, tối đa 10MB. Sau khi chọn file, hệ thống sẽ tự lưu và gắn vào đề tài."
             >
               <TopicPdfUpload
                 file={attachmentFile}

@@ -33,7 +33,7 @@ export default function VerifyEmail() {
       })
       .catch(() => {
         setStatus("error");
-        setMessage("Không kết nối được server. Kiểm tra BE đang chạy.");
+        setMessage("Không kết nối được hệ thống. Vui lòng thử lại sau.");
       });
   }, [navigate, searchParams]);
 

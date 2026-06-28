@@ -40,6 +40,37 @@ function getAssignedTeamsFromApiData(data) {
   return [];
 }
 
+function renderCompactAssignmentList(items, getPrimary, getSecondary, emptyText) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return <span className="text-sm text-slate-400">{emptyText}</span>;
+  }
+
+  return (
+    <div className="max-w-xs space-y-1">
+      {items.slice(0, 3).map((item) => (
+        <div
+          key={item.id || item.teamId || item.roundId || getPrimary(item)}
+          className="rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-1.5"
+        >
+          <p className="truncate text-xs font-bold text-slate-800">
+            {getPrimary(item)}
+          </p>
+          {getSecondary?.(item) && (
+            <p className="truncate text-[11px] text-slate-500">
+              {getSecondary(item)}
+            </p>
+          )}
+        </div>
+      ))}
+      {items.length > 3 && (
+        <p className="text-[11px] font-semibold text-slate-400">
+          +{items.length - 3} mục khác
+        </p>
+      )}
+    </div>
+  );
+}
+
 function FormError({ msg }) {
   if (!msg) return null;
   return (
@@ -555,6 +586,22 @@ function StaffTab() {
                   {row.judgeType || "—"}
                 </span>
               );
+            if (key === "team") {
+              return renderCompactAssignmentList(
+                row.assignedTeams,
+                (team) => team.teamName || team.name || team.id || team.teamId,
+                null,
+                "Chưa gán team",
+              );
+            }
+            if (key === "round") {
+              return renderCompactAssignmentList(
+                row.assignedRounds,
+                (round) => round.name || round.roundName || `Round #${round.id}`,
+                (round) => round.trackName || round.eventName || "",
+                "Chưa gán round",
+              );
+            }
             if (key === "status")
               return (
                 <CoordinatorBadge

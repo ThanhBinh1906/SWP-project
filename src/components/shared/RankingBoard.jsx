@@ -53,7 +53,7 @@ export function extractEventRankingSections(payload) {
 
       return {
         id: section.trackId ?? section.id ?? index,
-        name: section.trackName || section.name || `Track ${index + 1}`,
+        name: section.trackName || section.name || "Track Final",
         roundName:
           finalRound?.roundName ||
           section.roundName ||
@@ -71,7 +71,7 @@ export function extractEventRankingSections(payload) {
     const key = row.trackId ?? row.trackName ?? "event";
     const section = grouped.get(key) || {
       id: key,
-      name: row.trackName || "Event ranking",
+      name: row.trackName || "Bảng xếp hạng chung cuộc",
       roundName: row.roundName || "Final Round",
       rows: [],
     };
@@ -140,6 +140,79 @@ function Podium({ rows }) {
   );
 }
 
+export function EventTop3Podium({
+  rows = [],
+  emptyMessage = "Chung kết đang diễn ra hoặc chưa có bảng xếp hạng chung cuộc.",
+}) {
+  const sortedRows = sortRankings(rows).slice(0, 3);
+
+  return (
+    <section className="rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-50 via-white to-amber-50 p-5 shadow-sm">
+      <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-orange-700">
+            Event Top 3
+          </p>
+          <h2 className="mt-1 text-2xl font-black text-slate-950">
+            Bục vinh danh chung cuộc
+          </h2>
+        </div>
+        <p className="text-sm text-slate-500">
+          Danh sách đội đạt thứ hạng cao nhất của sự kiện.
+        </p>
+      </div>
+
+      {sortedRows.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-orange-200 bg-white/70 px-6 py-8 text-center">
+          <Trophy className="mx-auto h-8 w-8 text-orange-300" />
+          <p className="mt-3 font-bold text-slate-900">Chưa có Top 3 chung cuộc</p>
+          <p className="mt-1 text-sm text-slate-500">{emptyMessage}</p>
+        </div>
+      ) : (
+        <div className="grid gap-3 md:grid-cols-3">
+          {sortedRows.map((row, index) => {
+            const rank = row.rankPosition || index + 1;
+            const cardTone =
+              rank === 1
+                ? "border-amber-300 bg-amber-50"
+                : rank === 2
+                  ? "border-slate-300 bg-slate-50"
+                  : "border-orange-300 bg-orange-50";
+            return (
+              <article
+                key={row.id || row.teamId || index}
+                className={`relative overflow-hidden rounded-xl border p-5 ${cardTone}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                      Hạng {rank}
+                    </p>
+                    <h3 className="mt-2 truncate text-lg font-black text-slate-950">
+                      {row.teamName || row.teamId || "Team"}
+                    </h3>
+                  </div>
+                  <Medal
+                    className={`h-7 w-7 shrink-0 ${
+                      rank === 1 ? "text-amber-600" : "text-slate-500"
+                    }`}
+                  />
+                </div>
+                <p className="mt-6 text-4xl font-black text-slate-950">
+                  {formatScore(row.totalScore)}
+                </p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Tổng điểm
+                </p>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function RankingBoard({
   title,
   subtitle,
@@ -148,7 +221,7 @@ export function RankingBoard({
   error = "",
   onReload,
   highlightTeamId,
-  emptyMessage = "Chưa có snapshot ranking cho lựa chọn này.",
+  emptyMessage = "Chưa có bảng xếp hạng cho lựa chọn này.",
 }) {
   const sortedRows = sortRankings(rows);
 

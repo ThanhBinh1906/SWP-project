@@ -22,7 +22,7 @@ export default function RankingTable({ teams, currentUserTeamId }) {
           className="text-3xl md:text-4xl font-extrabold text-white tracking-tight"
           style={{ fontFamily: 'Montserrat, sans-serif' }}
         >
-          Official <span className="text-[#F26F21]">Leaderboard</span>
+          Bảng xếp hạng <span className="text-[#F26F21]">chính thức</span>
         </h2>
         <p className="text-slate-400 text-sm md:text-base max-w-xl mx-auto leading-relaxed">
           Complete ranking of all participating teams sorted by final score.

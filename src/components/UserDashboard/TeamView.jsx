@@ -688,7 +688,7 @@ function TeamCreateForm({
 
         {members.length >= MAX_MEMBERS && (
           <p className="text-xs text-center text-slate-400">
-            Đã đạt tối đa {MAX_MEMBERS} thành viên khác (leader + {MAX_MEMBERS} = {MAX_TEAM_MEMBERS})
+            Đã đạt tối đa {MAX_TEAM_MEMBERS} thành viên trong đội, bao gồm Leader.
           </p>
         )}
 

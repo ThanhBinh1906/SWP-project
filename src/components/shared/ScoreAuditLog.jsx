@@ -23,7 +23,6 @@ function getApiMessage(error, fallback) {
 
 function formatDateTime(value) {
   if (!value) return "Không xác định";
-
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
 
@@ -39,7 +38,10 @@ function formatScore(value) {
 }
 
 function AuditEntry({ entry, showJudge }) {
-  const isUpdate = entry.action === "Score.Update";
+  const isTieBreak =
+    Boolean(entry.isTieBreak) || String(entry.action || "").startsWith("TieBreak");
+  const isUpdate =
+    entry.action === "Score.Update" || entry.action === "TieBreakScore.Update";
   const commentChanged =
     entry.oldComment !== entry.newComment &&
     (entry.oldComment || entry.newComment);
@@ -58,6 +60,11 @@ function AuditEntry({ entry, showJudge }) {
             >
               {isUpdate ? "Sửa điểm" : "Chấm mới"}
             </span>
+            {isTieBreak && (
+              <span className="rounded-full border border-purple-200 bg-purple-50 px-2.5 py-1 text-xs font-bold text-purple-800">
+                Tie-break
+              </span>
+            )}
             <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500">
               <Clock3 className="h-3.5 w-3.5" />
               {formatDateTime(entry.createdAt)}
@@ -79,6 +86,12 @@ function AuditEntry({ entry, showJudge }) {
           {showJudge && (
             <p className="mt-2 text-sm text-slate-700">
               Judge: <span className="font-semibold">{entry.judgeName || "N/A"}</span>
+            </p>
+          )}
+          {isTieBreak && (
+            <p className="mt-2 font-mono text-xs text-purple-700">
+              Session: {entry.tieBreakSessionId || "N/A"} · Submission:{" "}
+              {entry.tieBreakSubmissionId || "N/A"}
             </p>
           )}
         </div>
@@ -146,9 +159,7 @@ export default function ScoreAuditLog({ scope = "judge" }) {
         hasNextPage: Boolean(data.hasNextPage),
       });
     } catch (requestError) {
-      setError(
-        getApiMessage(requestError, "Không thể tải lịch sử chấm điểm."),
-      );
+      setError(getApiMessage(requestError, "Không thể tải lịch sử chấm điểm."));
     } finally {
       setLoading(false);
     }
@@ -169,8 +180,8 @@ export default function ScoreAuditLog({ scope = "judge" }) {
             <h2 className="font-bold text-slate-950">Lịch sử chấm điểm</h2>
             <p className="mt-1 text-sm text-slate-500">
               {isCoordinator
-                ? "Theo dõi các lần Judge chấm mới hoặc sửa điểm."
-                : "Các lần chấm mới và sửa điểm của bạn."}
+                ? "Theo dõi các lần Judge chấm mới hoặc sửa điểm, gồm cả tie-break."
+                : "Các lần chấm mới và sửa điểm của bạn, gồm cả tie-break."}
             </p>
           </div>
         </div>
@@ -205,7 +216,9 @@ export default function ScoreAuditLog({ scope = "judge" }) {
       ) : pageData.items.length === 0 ? (
         <div className="px-6 py-16 text-center">
           <History className="mx-auto h-9 w-9 text-slate-300" />
-          <p className="mt-3 font-bold text-slate-800">Chưa có lịch sử chấm điểm</p>
+          <p className="mt-3 font-bold text-slate-800">
+            Chưa có lịch sử chấm điểm
+          </p>
           <p className="mt-1 text-sm text-slate-500">
             Lịch sử sẽ xuất hiện sau khi điểm được tạo hoặc chỉnh sửa.
           </p>

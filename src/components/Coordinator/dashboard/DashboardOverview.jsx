@@ -103,8 +103,8 @@ function EmptyRoundState() {
       </div>
       <p className="font-bold text-slate-900">Chưa có vòng thi đang hiển thị</p>
       <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
-        Khi backend trả về round theo event và track, bảng điều phối sẽ tự nhóm
-        dữ liệu tại đây.
+        Khi có vòng thi được thiết lập, bảng điều phối sẽ tự nhóm theo sự kiện
+        và track tại đây.
       </p>
     </div>
   );
@@ -290,7 +290,7 @@ export function DashboardOverview() {
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
               Theo dõi team, bài nộp và trạng thái round theo từng event/track
-              bằng dữ liệu thật từ backend.
+              bằng dữ liệu vận hành hiện tại của hệ thống.
             </p>
           </div>
 
@@ -349,7 +349,7 @@ export function DashboardOverview() {
 
       <CoordinatorPanel
         title="Round theo event và track"
-        subtitle="Dữ liệu lấy từ GET /api/dashboard/coordinator"
+        subtitle="Theo dõi các vòng thi đang diễn ra trong từng sự kiện và track"
         icon={icons.GitBranch}
         actions={
           <CoordinatorActionButton
