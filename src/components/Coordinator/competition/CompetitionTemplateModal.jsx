@@ -41,6 +41,7 @@ const newTrack = (overrides = {}) => ({
   maxTeams: "",
   maxMembers: "",
   rounds: [newRound()],
+  isFinal: false,
   isFinalTrack: false,
   ...overrides,
 });
@@ -49,6 +50,7 @@ const newFinalTrack = () =>
   newTrack({
     name: "Final Track",
     description: "Track chung kết nhận các đội đi tiếp từ các track vòng loại.",
+    isFinal: true,
     isFinalTrack: true,
     rounds: [
       newRound({
@@ -82,7 +84,7 @@ function Field({ label, required, children, hint }) {
 }
 
 function isFinalTrack(track) {
-  return Boolean(track?.isFinalTrack);
+  return Boolean(track?.isFinal || track?.isFinalTrack);
 }
 
 function isFinalRound(track, round) {
@@ -130,6 +132,9 @@ function validate(form) {
     if (isFinalTrack(track) && track.rounds.length !== 1) {
       return "Final Track chỉ được có một Final Round.";
     }
+    if (!isFinalTrack(track) && track.rounds.length !== 1) {
+      return `${trackLabel} chỉ được có một Round.`;
+    }
 
     for (let ri = 0; ri < track.rounds.length; ri += 1) {
       const round = track.rounds[ri];
@@ -138,7 +143,11 @@ function validate(form) {
         : `Round ${ri + 1} của ${trackLabel}`;
 
       if (!round.name.trim()) return `${roundLabel} chưa có tên.`;
-      if (!round.startTime || !round.endTime || round.endTime <= round.startTime) {
+      if (
+        !round.startTime ||
+        !round.endTime ||
+        round.endTime <= round.startTime
+      ) {
         return `Thời gian ${roundLabel} chưa hợp lệ.`;
       }
       if (round.startTime < form.startDate || round.endTime > form.endDate) {
@@ -226,7 +235,9 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
   const addTrack = () => {
     setForm((current) => {
       const finalTrack = current.tracks.find(isFinalTrack) || newFinalTrack();
-      const normalTracks = current.tracks.filter((track) => !isFinalTrack(track));
+      const normalTracks = current.tracks.filter(
+        (track) => !isFinalTrack(track),
+      );
       return { ...current, tracks: [...normalTracks, newTrack(), finalTrack] };
     });
   };
@@ -242,35 +253,6 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
       const finalTrack = current.tracks.find(isFinalTrack) || newFinalTrack();
       return { ...current, tracks: [...normalTracks, finalTrack] };
     });
-  };
-
-  const addRound = (ti) => {
-    setForm((current) => ({
-      ...current,
-      tracks: normalizeTracks(
-        current.tracks.map((track, index) => {
-          if (index !== ti || isFinalTrack(track)) return track;
-          return { ...track, rounds: [...track.rounds, newRound()] };
-        }),
-      ),
-    }));
-  };
-
-  const removeRound = (ti, ri) => {
-    setForm((current) => ({
-      ...current,
-      tracks: normalizeTracks(
-        current.tracks.map((track, index) => {
-          if (index !== ti || isFinalTrack(track) || track.rounds.length <= 1) {
-            return track;
-          }
-          return {
-            ...track,
-            rounds: track.rounds.filter((_, position) => position !== ri),
-          };
-        }),
-      ),
-    }));
   };
 
   const buildPayload = async () => {
@@ -293,11 +275,13 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
       description: track.description.trim() || null,
       maxTeams: Number(track.maxTeams),
       maxMembers: Number(track.maxMembers),
-      rounds: track.rounds.map((round) => ({
+      isFinal: isFinalTrack(track),
+      rounds: track.rounds.slice(0, 1).map((round) => ({
         name: round.name.trim(),
         startTime: new Date(round.startTime).toISOString(),
         endTime: new Date(round.endTime).toISOString(),
-        advancingSlots: round.advancingSlots === "" ? null : Number(round.advancingSlots),
+        advancingSlots:
+          round.advancingSlots === "" ? null : Number(round.advancingSlots),
       })),
     }));
 
@@ -350,7 +334,11 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
           <CoordinatorActionButton disabled={saving} onClick={onClose}>
             Hủy
           </CoordinatorActionButton>
-          <CoordinatorActionButton variant="primary" disabled={saving} onClick={submit}>
+          <CoordinatorActionButton
+            variant="primary"
+            disabled={saving}
+            onClick={submit}
+          >
             {saving ? (
               <LoadingActionText>
                 {progressLabel || "Đang tạo cấu trúc"}
@@ -383,7 +371,10 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
                 className={inputClass}
                 value={form.name}
                 onChange={(event) =>
-                  setForm((current) => ({ ...current, name: event.target.value }))
+                  setForm((current) => ({
+                    ...current,
+                    name: event.target.value,
+                  }))
                 }
               />
             </Field>
@@ -418,7 +409,10 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
                 className={inputClass}
                 value={form.endDate}
                 onChange={(event) =>
-                  setForm((current) => ({ ...current, endDate: event.target.value }))
+                  setForm((current) => ({
+                    ...current,
+                    endDate: event.target.value,
+                  }))
                 }
               />
             </Field>
@@ -449,14 +443,18 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
               <input
                 className={inputClass}
                 value={form.topic.description}
-                onChange={(event) => updateTopic("description", event.target.value)}
+                onChange={(event) =>
+                  updateTopic("description", event.target.value)
+                }
               />
             </Field>
             <Field label="Yêu cầu">
               <textarea
                 className={`${inputClass} min-h-24 resize-y`}
                 value={form.topic.requirements}
-                onChange={(event) => updateTopic("requirements", event.target.value)}
+                onChange={(event) =>
+                  updateTopic("requirements", event.target.value)
+                }
               />
             </Field>
             <Field label="File đề PDF">
@@ -474,14 +472,28 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
             const normalTrackCount = getNormalTrackCount(form.tracks);
 
             return (
-              <section
-                key={finalTrack ? "final-track" : `track-${ti}`}
-                className={`rounded-xl border p-4 ${
-                  finalTrack
-                    ? "border-orange-200 bg-orange-50/40"
-                    : "border-slate-200 bg-white"
-                }`}
+              <div
+                key={finalTrack ? "final-track-group" : `track-group-${ti}`}
+                className="space-y-4"
               >
+                {finalTrack && (
+                  <button
+                    type="button"
+                    onClick={addTrack}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-orange-300 py-3 text-sm font-bold text-orange-700 hover:bg-orange-50"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Thêm Track
+                  </button>
+                )}
+
+                <section
+                  className={`rounded-xl border p-4 ${
+                    finalTrack
+                      ? "border-orange-200 bg-orange-50/40"
+                      : "border-slate-200 bg-white"
+                  }`}
+                >
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     {finalTrack ? (
@@ -514,7 +526,9 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
                     <input
                       className={inputClass}
                       value={track.name}
-                      onChange={(event) => updateTrack(ti, "name", event.target.value)}
+                      onChange={(event) =>
+                        updateTrack(ti, "name", event.target.value)
+                      }
                     />
                   </Field>
                   <Field label="Mô tả">
@@ -574,12 +588,6 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
                               </p>
                             )}
                           </div>
-                          {!finalTrack && track.rounds.length > 1 && (
-                            <IconButton
-                              label={`Xóa Round ${ri + 1}`}
-                              onClick={() => removeRound(ti, ri)}
-                            />
-                          )}
                         </div>
 
                         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -598,7 +606,12 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
                               className={inputClass}
                               value={round.startTime}
                               onChange={(event) =>
-                                updateRound(ti, ri, "startTime", event.target.value)
+                                updateRound(
+                                  ti,
+                                  ri,
+                                  "startTime",
+                                  event.target.value,
+                                )
                               }
                             />
                           </Field>
@@ -608,14 +621,23 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
                               className={inputClass}
                               value={round.endTime}
                               onChange={(event) =>
-                                updateRound(ti, ri, "endTime", event.target.value)
+                                updateRound(
+                                  ti,
+                                  ri,
+                                  "endTime",
+                                  event.target.value,
+                                )
                               }
                             />
                           </Field>
                           <Field
                             label="Suất đi tiếp"
                             required={!finalRound}
-                            hint={finalRound ? "Vòng chung kết không cần suất đi tiếp." : ""}
+                            hint={
+                              finalRound
+                                ? "Vòng chung kết không cần suất đi tiếp."
+                                : ""
+                            }
                           >
                             <input
                               type="number"
@@ -626,7 +648,12 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
                               className={`${inputClass} disabled:bg-slate-100 disabled:text-slate-500`}
                               value={round.advancingSlots}
                               onChange={(event) =>
-                                updateRound(ti, ri, "advancingSlots", event.target.value)
+                                updateRound(
+                                  ti,
+                                  ri,
+                                  "advancingSlots",
+                                  event.target.value,
+                                )
                               }
                             />
                           </Field>
@@ -634,31 +661,12 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
                       </div>
                     );
                   })}
-
-                  {!finalTrack && (
-                    <button
-                      type="button"
-                      onClick={() => addRound(ti)}
-                      className="inline-flex items-center gap-2 rounded-lg border border-dashed border-slate-300 px-3 py-2 text-sm font-bold text-slate-700 hover:bg-white"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Thêm Round
-                    </button>
-                  )}
                 </div>
-              </section>
+                </section>
+              </div>
             );
           })}
         </div>
-
-        <button
-          type="button"
-          onClick={addTrack}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-orange-300 py-3 text-sm font-bold text-orange-700 hover:bg-orange-50"
-        >
-          <Plus className="h-4 w-4" />
-          Thêm Track vòng loại
-        </button>
       </div>
     </ModalShell>
   );

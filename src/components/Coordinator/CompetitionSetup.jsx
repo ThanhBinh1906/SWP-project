@@ -12,6 +12,7 @@ import {
   ChevronDown,
   ChevronRight,
   Copy,
+  Crown,
   Loader2,
 } from "lucide-react";
 import eventService from "../../services/eventService";
@@ -83,6 +84,30 @@ function getEffectiveRoundStatus(rounds, round) {
   return round?.status;
 }
 
+function isFinalTrack(track) {
+  const name = String(track?.name || "").toLowerCase();
+  return (
+    Boolean(track?.isFinal) ||
+    Boolean(track?.isFinalTrack) ||
+    name.includes("final") ||
+    name.includes("chung ket") ||
+    name.includes("chung kết")
+  );
+}
+
+function sortTracksWithFinalLast(tracks = []) {
+  return [...tracks].sort((a, b) => {
+    const aFinal = isFinalTrack(a);
+    const bFinal = isFinalTrack(b);
+    if (aFinal === bFinal) return 0;
+    return aFinal ? 1 : -1;
+  });
+}
+
+function isTrackCreateLocked(event) {
+  return ["Active", "Scoring", "Completed", "Closed"].includes(event?.status);
+}
+
 const EVENT_EMPTY = {
   name: "",
   description: "",
@@ -124,6 +149,11 @@ function FormError({ msg }) {
       {msg}
     </div>
   );
+}
+
+function getCreatedEntityId(response) {
+  const data = response?.data?.data;
+  return data?.id ?? data?.trackId ?? response?.data?.id ?? null;
 }
 
 // ---------------------------------------------------------------------------
@@ -208,7 +238,11 @@ export function CompetitionSetup() {
       const res = await eventService.getTracks(eventId);
       setTracksByEvent((prev) => ({
         ...prev,
-        [eventId]: { data: res.data?.data || [], loading: false, error: "" },
+        [eventId]: {
+          data: sortTracksWithFinalLast(res.data?.data || []),
+          loading: false,
+          error: "",
+        },
       }));
     } catch (err) {
       setTracksByEvent((prev) => ({
@@ -372,9 +406,12 @@ export function CompetitionSetup() {
   // =========================================================================
   // TRACK HANDLERS (preserved from TracksManagement)
   // =========================================================================
-  const openCreateTrack = (eventId) => {
-    setTrackForm({ ...TRACK_EMPTY, eventId: String(eventId) });
+  const openCreateTrack = (event) => {
+    if (isTrackCreateLocked(event)) return;
+    setTrackForm({ ...TRACK_EMPTY, eventId: String(event.id) });
+    setRoundForm({ ...ROUND_EMPTY });
     setTrackFormError("");
+    setRoundFormError("");
     setTrackModal("create");
   };
   const openEditTrack = (track) => {
@@ -411,6 +448,17 @@ export function CompetitionSetup() {
     return "";
   };
 
+  const validateTrackRoundForm = () => {
+    if (!roundForm.name.trim()) return "Tên vòng không được để trống.";
+    if (!roundForm.startTime) return "Vui lòng chọn thời gian bắt đầu.";
+    if (!roundForm.endTime) return "Vui lòng chọn thời gian kết thúc.";
+    if (roundForm.endTime <= roundForm.startTime)
+      return "Thời gian kết thúc phải sau bắt đầu.";
+    if (!roundForm.advancingSlots || Number(roundForm.advancingSlots) < 1)
+      return "Số suất đi tiếp phải lớn hơn 0.";
+    return "";
+  };
+
   // CREATE track
   const handleCreateTrack = async () => {
     const err = validateTrackForm();
@@ -418,18 +466,41 @@ export function CompetitionSetup() {
       setTrackFormError(err);
       return;
     }
+    const roundErr = validateTrackRoundForm();
+    if (roundErr) {
+      setRoundFormError(roundErr);
+      return;
+    }
     setTrackSaving(true);
     try {
-      await eventService.createTrack({
+      const trackResponse = await eventService.createTrack({
         name: trackForm.name.trim(),
         description: trackForm.description.trim(),
         maxTeams: Number(trackForm.maxTeams),
         eventId: Number(trackForm.eventId),
+        isFinal: false,
+      });
+      const createdTrackId = getCreatedEntityId(trackResponse);
+      if (!createdTrackId) {
+        throw new Error("Không lấy được Track ID sau khi tạo track.");
+      }
+      await eventService.createRound({
+        trackId: Number(createdTrackId),
+        orderIndex: 1,
+        name: roundForm.name.trim(),
+        startTime: new Date(roundForm.startTime).toISOString(),
+        endTime: new Date(roundForm.endTime).toISOString(),
+        advancingSlots: Number(roundForm.advancingSlots),
       });
       await fetchTracksForEvent(trackForm.eventId);
+      await fetchRoundsForTrack(createdTrackId);
       closeTrackModal();
     } catch (err) {
-      setTrackFormError(err?.response?.data?.message || "Tạo track thất bại.");
+      setTrackFormError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Tạo track và round thất bại.",
+      );
     } finally {
       setTrackSaving(false);
     }
@@ -449,6 +520,7 @@ export function CompetitionSetup() {
         description: trackForm.description.trim(),
         maxTeams: Number(trackForm.maxTeams),
         eventId: Number(trackForm.eventId),
+        isFinal: isFinalTrack(selectedTrack),
       });
       await fetchTracksForEvent(trackForm.eventId);
       closeTrackModal();
@@ -528,6 +600,7 @@ export function CompetitionSetup() {
     try {
       await eventService.createRound({
         trackId: Number(roundForm.trackId),
+        orderIndex: 1,
         name: roundForm.name.trim(),
         startTime: new Date(roundForm.startTime).toISOString(),
         endTime: new Date(roundForm.endTime).toISOString(),
@@ -756,7 +829,13 @@ export function CompetitionSetup() {
                     </CoordinatorActionButton>
                     <CoordinatorActionButton
                       icon={icons.Plus}
-                      onClick={() => openCreateTrack(event.id)}
+                      disabled={isTrackCreateLocked(event)}
+                      onClick={() => openCreateTrack(event)}
+                      className={
+                        isTrackCreateLocked(event)
+                          ? "pointer-events-auto"
+                          : ""
+                      }
                     >
                       Add Track
                     </CoordinatorActionButton>
@@ -797,26 +876,34 @@ export function CompetitionSetup() {
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        {tracksState.data.map((track) => {
+                        {sortTracksWithFinalLast(tracksState.data).map((track) => {
                           const isTrackExpanded = expandedTracks.has(track.id);
                           const roundsState = roundsByTrack[track.id];
-                          const teamPercent = track.maxTeams
-                            ? Math.round(
-                                ((track.currentTeams ?? 0) / track.maxTeams) *
-                                  100,
-                              )
-                            : 0;
+                          const finalTrack = isFinalTrack(track);
 
                           return (
-                            <div
-                              key={track.id}
-                              className="rounded-xl border bg-white transition-all duration-200"
-                              style={{
-                                borderColor: isTrackExpanded
-                                  ? "rgba(242,111,33,0.2)"
-                                  : "#E5E7EB",
-                              }}
-                            >
+                            <div key={track.id} className={finalTrack ? "pt-2" : ""}>
+                              {finalTrack && (
+                                <div className="mb-3 mt-1 flex items-center gap-3">
+                                  <div className="h-px flex-1 bg-slate-200" />
+                                  <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-orange-700">
+                                    <Crown className="h-3.5 w-3.5" />
+                                    Final Track
+                                  </div>
+                                  <div className="h-px flex-1 bg-slate-200" />
+                                </div>
+                              )}
+                              <div
+                                className="rounded-xl border transition-all duration-200"
+                                style={{
+                                  background: finalTrack ? "#f0f0f0f0" : "#FFFFFF",
+                                  borderColor: finalTrack
+                                    ? "rgba(242,111,33,0.28)"
+                                    : isTrackExpanded
+                                      ? "rgba(242,111,33,0.2)"
+                                      : "#E5E7EB",
+                                }}
+                              >
                               {/* ── Track header row ── */}
                               <div
                                 className="flex items-center gap-3 p-3 cursor-pointer select-none"
@@ -833,10 +920,17 @@ export function CompetitionSetup() {
                                   )}
                                 </button>
 
-                                <icons.GitBranch
-                                  className="w-4 h-4 flex-shrink-0"
-                                  style={{ color: "#F26F21" }}
-                                />
+                                {finalTrack ? (
+                                  <Crown
+                                    className="w-4 h-4 flex-shrink-0"
+                                    style={{ color: "#F26F21" }}
+                                  />
+                                ) : (
+                                  <icons.GitBranch
+                                    className="w-4 h-4 flex-shrink-0"
+                                    style={{ color: "#F26F21" }}
+                                  />
+                                )}
 
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2 flex-wrap">
@@ -853,11 +947,8 @@ export function CompetitionSetup() {
                                   </p>
                                 </div>
 
-                                <div className="w-32 flex-shrink-0 hidden sm:block">
-                                  <CoordinatorProgressBar
-                                    label={`${track.currentTeams ?? 0}/${track.maxTeams}`}
-                                    value={teamPercent}
-                                  />
+                                <div className="hidden flex-shrink-0 text-right text-sm font-semibold text-slate-700 sm:block">
+                                  {track.currentTeams ?? 0}/{track.maxTeams}
                                 </div>
 
                                 <div
@@ -869,12 +960,6 @@ export function CompetitionSetup() {
                                     onClick={() => openEditTrack(track)}
                                   >
                                     Edit
-                                  </CoordinatorActionButton>
-                                  <CoordinatorActionButton
-                                    icon={icons.Plus}
-                                    onClick={() => openCreateRound(track.id)}
-                                  >
-                                    Add Round
                                   </CoordinatorActionButton>
                                 </div>
                               </div>
@@ -1007,6 +1092,7 @@ export function CompetitionSetup() {
                                   )}
                                 </div>
                               )}
+                              </div>
                             </div>
                           );
                         })}
@@ -1165,6 +1251,7 @@ export function CompetitionSetup() {
       {/* =============================================================== */}
       {(trackModal === "create" || trackModal === "edit") && (
         <ModalShell
+          maxWidthClass={trackModal === "create" ? "max-w-4xl" : "max-w-xl"}
           title={
             trackModal === "create"
               ? "Tạo Track mới"
@@ -1189,7 +1276,7 @@ export function CompetitionSetup() {
                 {trackSaving
                   ? "Đang lưu..."
                   : trackModal === "create"
-                    ? "Tạo Track"
+                    ? "Tạo Track và Round"
                     : "Lưu thay đổi"}
               </CoordinatorActionButton>
             </>
@@ -1197,64 +1284,144 @@ export function CompetitionSetup() {
         >
           <div className="space-y-3">
             <FormError msg={trackFormError} />
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
-                Sự kiện <span className="text-orange-500">*</span>
-              </label>
-              <select
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-                value={trackForm.eventId}
-                onChange={(e) =>
-                  handleTrackFormChange("eventId", e.target.value)
-                }
-              >
-                <option value="">-- Chọn sự kiện --</option>
-                {events.map((ev) => (
-                  <option key={ev.id} value={ev.id}>
-                    {ev.name}
-                  </option>
-                ))}
-              </select>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <h4 className="mb-3 text-sm font-bold text-slate-900">
+                Thông tin Track
+              </h4>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
+                    Sự kiện <span className="text-orange-500">*</span>
+                  </label>
+                  <select
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+                    value={trackForm.eventId}
+                    onChange={(e) =>
+                      handleTrackFormChange("eventId", e.target.value)
+                    }
+                  >
+                    <option value="">-- Chọn sự kiện --</option>
+                    {events.map((ev) => (
+                      <option key={ev.id} value={ev.id}>
+                        {ev.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
+                    Tên Track <span className="text-orange-500">*</span>
+                  </label>
+                  <input
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+                    placeholder="VD: AI & Data Science"
+                    value={trackForm.name}
+                    onChange={(e) =>
+                      handleTrackFormChange("name", e.target.value)
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
+                    Số đội tối đa <span className="text-orange-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+                    placeholder="VD: 20"
+                    value={trackForm.maxTeams}
+                    onChange={(e) =>
+                      handleTrackFormChange("maxTeams", e.target.value)
+                    }
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
+                    Mô tả
+                  </label>
+                  <textarea
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none min-h-16"
+                    placeholder="Mô tả track"
+                    value={trackForm.description}
+                    onChange={(e) =>
+                      handleTrackFormChange("description", e.target.value)
+                    }
+                  />
+                </div>
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
-                Tên Track <span className="text-orange-500">*</span>
-              </label>
-              <input
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-                placeholder="VD: AI & Data Science"
-                value={trackForm.name}
-                onChange={(e) => handleTrackFormChange("name", e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
-                Mô tả
-              </label>
-              <textarea
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none min-h-16"
-                placeholder="Mô tả track"
-                value={trackForm.description}
-                onChange={(e) =>
-                  handleTrackFormChange("description", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
-                Số đội tối đa <span className="text-orange-500">*</span>
-              </label>
-              <input
-                type="number"
-                min="1"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-                placeholder="VD: 20"
-                value={trackForm.maxTeams}
-                onChange={(e) =>
-                  handleTrackFormChange("maxTeams", e.target.value)
-                }
-              />
-            </div>
+
+            {trackModal === "create" && (
+              <div className="rounded-2xl border border-orange-100 bg-orange-50/40 p-4">
+                <div className="mb-3">
+                  <h4 className="text-sm font-bold text-slate-900">
+                    Round của Track
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    Mỗi track chỉ có một round, vì vậy cần tạo round cùng lúc
+                    với track.
+                  </p>
+                </div>
+                <FormError msg={roundFormError} />
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
+                      Tên Round <span className="text-orange-500">*</span>
+                    </label>
+                    <input
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+                      placeholder="VD: Vòng sản phẩm"
+                      value={roundForm.name}
+                      onChange={(e) =>
+                        handleRoundFormChange("name", e.target.value)
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
+                      Suất đi tiếp <span className="text-orange-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+                      placeholder="VD: 5"
+                      value={roundForm.advancingSlots}
+                      onChange={(e) =>
+                        handleRoundFormChange("advancingSlots", e.target.value)
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
+                      Bắt đầu <span className="text-orange-500">*</span>
+                    </label>
+                    <input
+                      type="datetime-local"
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+                      value={roundForm.startTime}
+                      onChange={(e) =>
+                        handleRoundFormChange("startTime", e.target.value)
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
+                      Kết thúc <span className="text-orange-500">*</span>
+                    </label>
+                    <input
+                      type="datetime-local"
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+                      value={roundForm.endTime}
+                      onChange={(e) =>
+                        handleRoundFormChange("endTime", e.target.value)
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </ModalShell>
       )}
