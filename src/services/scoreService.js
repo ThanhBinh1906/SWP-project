@@ -9,6 +9,8 @@ const scoreService = {
 
   update: (scoreRecordId, data) =>
     api.put(`/api/scores/${scoreRecordId}`, data),
+
+  getHistory: (params = {}) => api.get("/api/scores/history", { params }),
 };
 
 export default scoreService;

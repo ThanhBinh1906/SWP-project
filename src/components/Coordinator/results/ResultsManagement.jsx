@@ -743,7 +743,7 @@ export function ResultsManagement() {
           <ChevronDown className="h-5 w-5 text-slate-400 transition-transform group-open:rotate-180" />
         </summary>
         <div className="mt-4">
-          <PrizeManagement trackId={selectedTrackId} roundId={selectedRoundId} />
+          <PrizeManagement eventId={selectedEventId} />
         </div>
       </details>
 

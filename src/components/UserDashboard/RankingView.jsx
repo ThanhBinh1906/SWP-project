@@ -5,7 +5,6 @@ import {
   EventTop3Podium,
   RankingBoard,
   extractEventRankingSections,
-  extractRankingRows,
 } from "../shared/RankingBoard";
 
 function getApiMessage(error, fallback) {
@@ -43,8 +42,6 @@ export function RankingView() {
   const myTeam = useSelector((state) => state.team.myTeam);
   const activeEvent = useSelector((state) => state.event.activeEvent);
   const activeEventId = useSelector((state) => state.event.activeEventId);
-  const [scope, setScope] = useState("track");
-  const [trackRanking, setTrackRanking] = useState(null);
   const [eventRanking, setEventRanking] = useState(null);
   const [eventSections, setEventSections] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -54,9 +51,7 @@ export function RankingView() {
     : [];
 
   const loadRanking = useCallback(async () => {
-    const targetId = scope === "track" ? myTeam?.trackId : activeEventId;
-    if (!targetId) {
-      setTrackRanking(null);
+    if (!activeEventId) {
       setEventRanking(null);
       setEventSections([]);
       setError("");
@@ -66,34 +61,18 @@ export function RankingView() {
     setLoading(true);
     setError("");
     try {
-      if (scope === "track") {
-        const response = await rankingService.getTrackLeaderboard(targetId);
-        setTrackRanking(response.data?.data || null);
-        setEventRanking(null);
-        setEventSections([]);
-      } else {
-        const response = await rankingService.getEventLeaderboard(targetId);
-        const payload = response.data?.data || null;
-        setEventRanking(payload);
-        setEventSections(extractEventRankingSections(payload));
-        setTrackRanking(null);
-      }
+      const response = await rankingService.getEventLeaderboard(activeEventId);
+      const payload = response.data?.data || null;
+      setEventRanking(payload);
+      setEventSections(extractEventRankingSections(payload));
     } catch (requestError) {
-      setTrackRanking(null);
       setEventRanking(null);
       setEventSections([]);
-      setError(
-        scope === "event"
-          ? getEventRankingMessage(requestError)
-          : getApiMessage(
-              requestError,
-              "Không thể tải bảng xếp hạng. Kết quả có thể chưa được công bố.",
-            ),
-      );
+      setError(getEventRankingMessage(requestError));
     } finally {
       setLoading(false);
     }
-  }, [activeEventId, myTeam?.trackId, scope]);
+  }, [activeEventId]);
 
   useEffect(() => {
     loadRanking();
@@ -104,7 +83,7 @@ export function RankingView() {
       <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
         <p className="font-bold text-slate-900">Bạn chưa có đội thi</p>
         <p className="mt-1 text-sm text-slate-500">
-          Bảng xếp hạng theo track sẽ xuất hiện sau khi tài khoản tham gia một team.
+          Bảng xếp hạng chung cuộc sẽ xuất hiện sau khi kết quả sự kiện được công bố.
         </p>
       </div>
     );
@@ -124,42 +103,12 @@ export function RankingView() {
             Track #{myTeam.trackId} · {activeEvent?.name || "Sự kiện hiện tại"}
           </p>
         </div>
-        <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
-          {[
-            ["track", "Track của đội"],
-            ["event", "Chung cuộc Event"],
-          ].map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setScope(value)}
-              className={`rounded-md px-4 py-2 text-sm font-bold transition ${
-                scope === value
-                  ? "bg-white text-orange-700 shadow-sm"
-                  : "text-slate-500 hover:text-slate-900"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+        <div className="rounded-lg border border-orange-200 bg-orange-50 px-4 py-2 text-sm font-bold text-orange-700">
+          Chung cuộc Event
         </div>
       </div>
 
-      {scope === "track" ? (
-        <RankingBoard
-          title={trackRanking?.trackName || "Bảng xếp hạng chung cuộc của track"}
-          subtitle={
-            trackRanking?.roundName ||
-            trackRanking?.finalRoundName ||
-            "Hệ thống tự chọn vòng chung kết của track"
-          }
-          rows={extractRankingRows(trackRanking)}
-          loading={loading}
-          error={error}
-          onReload={loadRanking}
-          highlightTeamId={myTeam.id}
-        />
-      ) : loading || error ? (
+      {loading || error ? (
         <RankingBoard
           title={activeEvent?.name || "Bảng xếp hạng toàn sự kiện"}
           subtitle="Top 3 và bảng đầy đủ của Final Round"
