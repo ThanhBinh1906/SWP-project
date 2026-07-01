@@ -3,6 +3,7 @@ import {
   AlertCircle,
   FileText,
   GitBranch,
+  Image as ImageIcon,
   Plus,
   ShieldCheck,
   Trash2,
@@ -10,10 +11,13 @@ import {
 } from "lucide-react";
 import eventService from "../../../services/eventService";
 import {
+  uploadEventBannerImage,
   uploadTopicPdf,
+  validateEventBannerImage,
   validateTopicPdf,
 } from "../../../services/cloudinaryService";
 import LoadingActionText from "../../shared/LoadingActionText";
+import RichTextEditor from "../../shared/RichTextEditor";
 import { CoordinatorActionButton, ModalShell } from "../CoordinatorUI";
 
 const inputClass =
@@ -64,6 +68,10 @@ const newFinalTrack = () =>
 const initialForm = () => ({
   name: "",
   description: "",
+  bannerUrl: "",
+  bannerFile: null,
+  location: "",
+  isOnline: false,
   startDate: "",
   endDate: "",
   topic: newTopic(),
@@ -101,6 +109,9 @@ function validate(form) {
     return "Thời gian Event chưa hợp lệ.";
   }
 
+  const bannerError = validateEventBannerImage(form.bannerFile);
+  if (bannerError) return `Ảnh banner: ${bannerError}`;
+
   if (!form.topic.name.trim()) return "Vui lòng nhập tên đề tài chung.";
   const topicFileError = validateTopicPdf(form.topic.file);
   if (topicFileError) return `File đề tài chung: ${topicFileError}`;
@@ -128,26 +139,19 @@ function validate(form) {
     if (!Number.isInteger(maxMembers) || maxMembers < 1) {
       return `Thành viên tối đa của ${trackLabel} phải là số nguyên dương.`;
     }
-    if (!track.rounds.length) return `${trackLabel} phải có ít nhất một Round.`;
-    if (isFinalTrack(track) && track.rounds.length !== 1) {
-      return "Final Track chỉ được có một Final Round.";
-    }
-    if (!isFinalTrack(track) && track.rounds.length !== 1) {
-      return `${trackLabel} chỉ được có một Round.`;
+    if (!track.rounds.length) return `${trackLabel} phải có một Round.`;
+    if (track.rounds.length !== 1) {
+      return `${trackLabel} hiện chỉ được có một Round.`;
     }
 
     for (let ri = 0; ri < track.rounds.length; ri += 1) {
       const round = track.rounds[ri];
       const roundLabel = isFinalRound(track, round)
         ? "Final Round"
-        : `Round ${ri + 1} của ${trackLabel}`;
+        : `Round của ${trackLabel}`;
 
       if (!round.name.trim()) return `${roundLabel} chưa có tên.`;
-      if (
-        !round.startTime ||
-        !round.endTime ||
-        round.endTime <= round.startTime
-      ) {
+      if (!round.startTime || !round.endTime || round.endTime <= round.startTime) {
         return `Thời gian ${roundLabel} chưa hợp lệ.`;
       }
       if (round.startTime < form.startDate || round.endTime > form.endDate) {
@@ -156,7 +160,7 @@ function validate(form) {
 
       if (isFinalRound(track, round)) {
         if (round.advancingSlots !== "") {
-          return "Final Round không cần nhập suất đi tiếp vì đây là vòng chốt kết quả.";
+          return "Final Round không cần nhập suất đi tiếp.";
         }
         continue;
       }
@@ -171,12 +175,6 @@ function validate(form) {
       }
       if (advancingSlots > maxTeams) {
         return `Suất đi tiếp của ${roundLabel} không được vượt quá ${maxTeams} team.`;
-      }
-      if (ri > 0) {
-        const previousSlots = Number(track.rounds[ri - 1].advancingSlots);
-        if (advancingSlots >= previousSlots) {
-          return `Suất đi tiếp của Round ${ri + 1} phải nhỏ hơn Round ${ri} trong cùng ${trackLabel}.`;
-        }
       }
     }
   }
@@ -235,9 +233,7 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
   const addTrack = () => {
     setForm((current) => {
       const finalTrack = current.tracks.find(isFinalTrack) || newFinalTrack();
-      const normalTracks = current.tracks.filter(
-        (track) => !isFinalTrack(track),
-      );
+      const normalTracks = current.tracks.filter((track) => !isFinalTrack(track));
       return { ...current, tracks: [...normalTracks, newTrack(), finalTrack] };
     });
   };
@@ -256,6 +252,13 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
   };
 
   const buildPayload = async () => {
+    let bannerUrl = form.bannerUrl || null;
+    if (form.bannerFile) {
+      setProgressLabel("Đang tải ảnh banner");
+      const upload = await uploadEventBannerImage(form.bannerFile);
+      bannerUrl = upload.secure_url;
+    }
+
     let topicAttachmentUrl = form.topic.attachmentUrl || null;
     if (form.topic.file) {
       setProgressLabel(`Đang tải PDF cho ${form.topic.name}`);
@@ -288,6 +291,9 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
     return {
       name: form.name.trim(),
       description: form.description.trim() || null,
+      bannerUrl,
+      location: form.location.trim() || null,
+      isOnline: Boolean(form.isOnline),
       startDate: new Date(form.startDate).toISOString(),
       endDate: new Date(form.endDate).toISOString(),
       topic,
@@ -327,8 +333,8 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
     <ModalShell
       title="Tạo cấu trúc cuộc thi"
       onClose={() => !saving && onClose?.()}
-      maxWidthClass="max-w-7xl"
-      maxHeightClass="h-[92vh] max-h-[92vh]"
+      maxWidthClass="max-w-[min(1280px,calc(100vw-32px))]"
+      maxHeightClass="h-[94dvh] max-h-[94dvh]"
       actions={
         <>
           <CoordinatorActionButton disabled={saving} onClick={onClose}>
@@ -350,7 +356,7 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
         </>
       }
     >
-      <div className="space-y-5">
+      <div className="mx-auto w-full max-w-6xl space-y-5">
         {error && (
           <div className="flex gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-800">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -358,11 +364,12 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
           </div>
         )}
 
-        <section className="rounded-xl border border-orange-200 bg-orange-50/50 p-4">
+        <section className="rounded-2xl border border-orange-100 bg-orange-50/40 p-5 shadow-sm">
           <div className="mb-4">
             <p className="font-bold text-slate-950">Thông tin Event</p>
             <p className="text-sm text-slate-600">
-              Event được tạo tự động ở trạng thái Registration.
+              Event được tạo ở trạng thái Registration. Mô tả bên dưới sẽ được
+              lưu dưới dạng HTML để hiển thị ở trang public.
             </p>
           </div>
           <div className="grid gap-3 md:grid-cols-2">
@@ -371,23 +378,21 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
                 className={inputClass}
                 value={form.name}
                 onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    name: event.target.value,
-                  }))
+                  setForm((current) => ({ ...current, name: event.target.value }))
                 }
               />
             </Field>
-            <Field label="Mô tả">
+            <Field label="Địa điểm">
               <input
                 className={inputClass}
-                value={form.description}
+                value={form.location}
                 onChange={(event) =>
                   setForm((current) => ({
                     ...current,
-                    description: event.target.value,
+                    location: event.target.value,
                   }))
                 }
+                placeholder={form.isOnline ? "Online" : "VD: FPT University HCM"}
               />
             </Field>
             <Field label="Bắt đầu" required>
@@ -416,10 +421,53 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
                 }
               />
             </Field>
+            <Field label="Hình thức">
+              <label className="flex min-h-[42px] items-center gap-3 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-semibold text-slate-800">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-orange-600"
+                  checked={form.isOnline}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      isOnline: event.target.checked,
+                    }))
+                  }
+                />
+                Tổ chức online
+              </label>
+            </Field>
+            <Field label="Ảnh banner">
+              <ImageFilePicker
+                file={form.bannerFile}
+                url={form.bannerUrl}
+                onFileChange={(file) =>
+                  setForm((current) => ({ ...current, bannerFile: file }))
+                }
+                onUrlChange={(url) =>
+                  setForm((current) => ({ ...current, bannerUrl: url }))
+                }
+              />
+            </Field>
+            <div className="md:col-span-2">
+              <Field
+                label="Mô tả Event"
+                hint="Có thể định dạng tiêu đề, danh sách, link và ảnh. Nội dung sẽ lưu vào description dưới dạng HTML."
+              >
+                <RichTextEditor
+                  value={form.description}
+                  onChange={(html) =>
+                    setForm((current) => ({ ...current, description: html }))
+                  }
+                  minHeightClass="min-h-36"
+                  placeholder="Nhập mô tả sự kiện cho trang public..."
+                />
+              </Field>
+            </div>
           </div>
         </section>
 
-        <section className="rounded-xl border border-orange-200 bg-white p-4">
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="mb-4 flex items-start gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-700">
               <FileText className="h-4 w-4" />
@@ -443,18 +491,14 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
               <input
                 className={inputClass}
                 value={form.topic.description}
-                onChange={(event) =>
-                  updateTopic("description", event.target.value)
-                }
+                onChange={(event) => updateTopic("description", event.target.value)}
               />
             </Field>
             <Field label="Yêu cầu">
               <textarea
                 className={`${inputClass} min-h-24 resize-y`}
                 value={form.topic.requirements}
-                onChange={(event) =>
-                  updateTopic("requirements", event.target.value)
-                }
+                onChange={(event) => updateTopic("requirements", event.target.value)}
               />
             </Field>
             <Field label="File đề PDF">
@@ -490,97 +534,99 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
                 <section
                   className={`rounded-xl border p-4 ${
                     finalTrack
-                      ? "border-orange-200 bg-orange-50/40"
+                      ? "border-orange-200 bg-[#f0f0f0]"
                       : "border-slate-200 bg-white"
                   }`}
                 >
-                <div className="mb-4 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    {finalTrack ? (
-                      <ShieldCheck className="h-5 w-5 text-orange-600" />
-                    ) : (
-                      <GitBranch className="h-5 w-5 text-orange-600" />
-                    )}
-                    <div>
-                      <h3 className="font-bold text-slate-950">
-                        {finalTrack ? "Final Track" : `Track ${ti + 1}`}
-                      </h3>
-                      {finalTrack && (
-                        <p className="text-xs font-medium text-orange-700">
-                          Luôn nằm cuối và không thể xóa.
-                        </p>
+                  {finalTrack && (
+                    <div className="mb-4 h-px bg-gradient-to-r from-transparent via-orange-300 to-transparent" />
+                  )}
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      {finalTrack ? (
+                        <ShieldCheck className="h-5 w-5 text-orange-600" />
+                      ) : (
+                        <GitBranch className="h-5 w-5 text-orange-600" />
                       )}
+                      <div>
+                        <h3 className="font-bold text-slate-950">
+                          {finalTrack ? "Final Track" : `Track ${ti + 1}`}
+                        </h3>
+                        {finalTrack && (
+                          <p className="text-xs font-medium text-orange-700">
+                            Luôn nằm cuối và không thể xóa.
+                          </p>
+                        )}
+                      </div>
                     </div>
+
+                    {!finalTrack && normalTrackCount > 1 && (
+                      <IconButton
+                        label={`Xóa Track ${ti + 1}`}
+                        onClick={() => removeTrack(ti)}
+                      />
+                    )}
                   </div>
 
-                  {!finalTrack && normalTrackCount > 1 && (
-                    <IconButton
-                      label={`Xóa Track ${ti + 1}`}
-                      onClick={() => removeTrack(ti)}
-                    />
-                  )}
-                </div>
+                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+                    <Field label="Tên Track" required>
+                      <input
+                        className={inputClass}
+                        value={track.name}
+                        onChange={(event) =>
+                          updateTrack(ti, "name", event.target.value)
+                        }
+                      />
+                    </Field>
+                    <Field label="Mô tả">
+                      <input
+                        className={inputClass}
+                        value={track.description}
+                        onChange={(event) =>
+                          updateTrack(ti, "description", event.target.value)
+                        }
+                      />
+                    </Field>
+                    <Field label="Team tối đa" required>
+                      <input
+                        required
+                        type="number"
+                        min="1"
+                        step="1"
+                        className={inputClass}
+                        value={track.maxTeams}
+                        onChange={(event) =>
+                          updateTrack(ti, "maxTeams", event.target.value)
+                        }
+                      />
+                    </Field>
+                    <Field label="Thành viên tối đa" required>
+                      <input
+                        required
+                        type="number"
+                        min="1"
+                        step="1"
+                        className={inputClass}
+                        value={track.maxMembers}
+                        onChange={(event) =>
+                          updateTrack(ti, "maxMembers", event.target.value)
+                        }
+                      />
+                    </Field>
+                  </div>
 
-                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-                  <Field label="Tên Track" required>
-                    <input
-                      className={inputClass}
-                      value={track.name}
-                      onChange={(event) =>
-                        updateTrack(ti, "name", event.target.value)
-                      }
-                    />
-                  </Field>
-                  <Field label="Mô tả">
-                    <input
-                      className={inputClass}
-                      value={track.description}
-                      onChange={(event) =>
-                        updateTrack(ti, "description", event.target.value)
-                      }
-                    />
-                  </Field>
-                  <Field label="Team tối đa" required>
-                    <input
-                      required
-                      type="number"
-                      min="1"
-                      step="1"
-                      className={inputClass}
-                      value={track.maxTeams}
-                      onChange={(event) =>
-                        updateTrack(ti, "maxTeams", event.target.value)
-                      }
-                    />
-                  </Field>
-                  <Field label="Thành viên tối đa" required>
-                    <input
-                      required
-                      type="number"
-                      min="1"
-                      step="1"
-                      className={inputClass}
-                      value={track.maxMembers}
-                      onChange={(event) =>
-                        updateTrack(ti, "maxMembers", event.target.value)
-                      }
-                    />
-                  </Field>
-                </div>
+                  <div className="mt-4 space-y-3">
+                    {track.rounds.map((round, ri) => {
+                      const finalRound = isFinalRound(track, round);
 
-                <div className="mt-4 space-y-3">
-                  {track.rounds.map((round, ri) => {
-                    const finalRound = isFinalRound(track, round);
-
-                    return (
-                      <div
-                        key={finalRound ? "final-round" : `round-${ri}`}
-                        className="rounded-xl border border-slate-200 bg-slate-50 p-4"
-                      >
-                        <div className="mb-3 flex items-center justify-between">
-                          <div>
+                      return (
+                        <div
+                          key={finalRound ? "final-round" : `round-${ri}`}
+                          className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                        >
+                          <div className="mb-3">
                             <p className="font-bold text-slate-900">
-                              {finalRound ? "Final Round" : `Round ${ri + 1}`}
+                              {finalRound ? "Final Round" : "Round của Track"}
                             </p>
                             {finalRound && (
                               <p className="text-xs text-slate-600">
@@ -588,80 +634,79 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
                               </p>
                             )}
                           </div>
-                        </div>
 
-                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                          <Field label="Tên Round" required>
-                            <input
-                              className={inputClass}
-                              value={round.name}
-                              onChange={(event) =>
-                                updateRound(ti, ri, "name", event.target.value)
+                          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                            <Field label="Tên Round" required>
+                              <input
+                                className={inputClass}
+                                value={round.name}
+                                onChange={(event) =>
+                                  updateRound(ti, ri, "name", event.target.value)
+                                }
+                              />
+                            </Field>
+                            <Field label="Bắt đầu" required>
+                              <input
+                                type="datetime-local"
+                                className={inputClass}
+                                value={round.startTime}
+                                onChange={(event) =>
+                                  updateRound(
+                                    ti,
+                                    ri,
+                                    "startTime",
+                                    event.target.value,
+                                  )
+                                }
+                              />
+                            </Field>
+                            <Field label="Kết thúc" required>
+                              <input
+                                type="datetime-local"
+                                className={inputClass}
+                                value={round.endTime}
+                                onChange={(event) =>
+                                  updateRound(
+                                    ti,
+                                    ri,
+                                    "endTime",
+                                    event.target.value,
+                                  )
+                                }
+                              />
+                            </Field>
+                            <Field
+                              label="Suất đi tiếp"
+                              required={!finalRound}
+                              hint={
+                                finalRound
+                                  ? "Vòng chung kết không cần suất đi tiếp."
+                                  : ""
                               }
-                            />
-                          </Field>
-                          <Field label="Bắt đầu" required>
-                            <input
-                              type="datetime-local"
-                              className={inputClass}
-                              value={round.startTime}
-                              onChange={(event) =>
-                                updateRound(
-                                  ti,
-                                  ri,
-                                  "startTime",
-                                  event.target.value,
-                                )
-                              }
-                            />
-                          </Field>
-                          <Field label="Kết thúc" required>
-                            <input
-                              type="datetime-local"
-                              className={inputClass}
-                              value={round.endTime}
-                              onChange={(event) =>
-                                updateRound(
-                                  ti,
-                                  ri,
-                                  "endTime",
-                                  event.target.value,
-                                )
-                              }
-                            />
-                          </Field>
-                          <Field
-                            label="Suất đi tiếp"
-                            required={!finalRound}
-                            hint={
-                              finalRound
-                                ? "Vòng chung kết không cần suất đi tiếp."
-                                : ""
-                            }
-                          >
-                            <input
-                              type="number"
-                              min="1"
-                              step="1"
-                              disabled={finalRound}
-                              placeholder={finalRound ? "Final Round" : "VD: 5"}
-                              className={`${inputClass} disabled:bg-slate-100 disabled:text-slate-500`}
-                              value={round.advancingSlots}
-                              onChange={(event) =>
-                                updateRound(
-                                  ti,
-                                  ri,
-                                  "advancingSlots",
-                                  event.target.value,
-                                )
-                              }
-                            />
-                          </Field>
+                            >
+                              <input
+                                type="number"
+                                min="1"
+                                step="1"
+                                disabled={finalRound}
+                                placeholder={finalRound ? "Final Round" : "VD: 5"}
+                                className={`${inputClass} disabled:bg-slate-100 disabled:text-slate-500`}
+                                value={round.advancingSlots}
+                                onChange={(event) =>
+                                  updateRound(
+                                    ti,
+                                    ri,
+                                    "advancingSlots",
+                                    event.target.value,
+                                  )
+                                }
+                              />
+                            </Field>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
                 </section>
               </div>
             );
@@ -709,6 +754,39 @@ function PdfFilePicker({ file, onChange }) {
         <Upload className="h-4 w-4 shrink-0" />
         <span className="min-w-0 truncate">{file?.name || "Chọn PDF"}</span>
       </button>
+    </div>
+  );
+}
+
+function ImageFilePicker({ file, url, onFileChange, onUrlChange }) {
+  const inputRef = useRef(null);
+
+  return (
+    <div className="grid gap-2 md:grid-cols-[180px_1fr]">
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        className="hidden"
+        onChange={(event) => {
+          onFileChange(event.target.files?.[0] || null);
+          event.target.value = "";
+        }}
+      />
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        className="flex min-h-20 w-full min-w-0 items-center justify-center gap-2 overflow-hidden rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 text-sm font-semibold text-slate-700 hover:border-orange-400"
+      >
+        <ImageIcon className="h-4 w-4 shrink-0" />
+        <span className="min-w-0 truncate">{file?.name || "Chọn ảnh"}</span>
+      </button>
+      <input
+        className={inputClass}
+        value={url}
+        onChange={(event) => onUrlChange(event.target.value)}
+        placeholder="Hoặc dán URL banner có sẵn"
+      />
     </div>
   );
 }

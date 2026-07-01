@@ -88,12 +88,11 @@ export default function About() {
         </div>
 
         {/* Stats bar */}
-        <div className="mt-16 bg-white/[0.01] border border-white/[0.05] rounded-2xl p-8 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+        <div className="mt-16 bg-white/[0.01] border border-white/[0.05] rounded-2xl p-8 grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
           {[
             { val: "500+", label: "Participants" },
             { val: "48h", label: "Hacking Time" },
             { val: "50+", label: "Mentors" },
-            { val: "100M+", label: "Prize Pool (VND)" },
           ].map(({ val, label }) => (
             <div key={label} className="space-y-1">
               <p

@@ -2,7 +2,7 @@ import React from "react";
 import { Zap, MapPin, Mail, Phone, Facebook, Github, Youtube, Twitter } from "lucide-react";
 import { AuthButtons } from "./AuthButtons";
 
-const quickLinks = ["Home", "Timeline", "Prizes", "FAQ", "Sponsors"];
+const quickLinks = ["Home", "Timeline", "Prizes", "FAQ"];
 
 const socialLinks = [
   { icon: Facebook, href: "https://facebook.com", label: "Facebook" },

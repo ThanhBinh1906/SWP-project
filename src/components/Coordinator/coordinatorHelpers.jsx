@@ -108,7 +108,7 @@ export function FilterSelect({
         value={value}
         onChange={onChange}
         disabled={disabled}
-        className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50"
+        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-700"
       >
         {children}
       </select>

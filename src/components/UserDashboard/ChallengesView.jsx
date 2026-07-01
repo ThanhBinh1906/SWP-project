@@ -139,6 +139,25 @@ function ChallengeCard({ activeRound }) {
   );
 }
 
+function buildRoundFromTeamTopic(team) {
+  const topic = team?.topic;
+  if (!topic) return null;
+
+  const roundId = topic.roundId ?? team.roundId ?? null;
+
+  return {
+    id: roundId,
+    roundId,
+    roundName:
+      topic.roundName ||
+      topic.round?.name ||
+      team.roundName ||
+      (roundId ? `#${roundId}` : "Vòng thi hiện tại"),
+    topic,
+    source: "my-team",
+  };
+}
+
 function StateMessage({ icon: Icon = AlertCircle, title, description }) {
   return (
     <div className="py-16 text-center">
@@ -172,8 +191,14 @@ export function ChallengesView() {
     setError("");
     try {
       const res = await teamService.getMyActiveRound();
-      setActiveRound(res.data?.data || null);
+      setActiveRound(res.data?.data || buildRoundFromTeamTopic(myTeam));
     } catch (err) {
+      const fallbackRound = buildRoundFromTeamTopic(myTeam);
+      if (fallbackRound) {
+        setActiveRound(fallbackRound);
+        return;
+      }
+
       setError(getApiMessage(err, "Không thể tải vòng thi đang diễn ra."));
       setActiveRound(null);
     } finally {

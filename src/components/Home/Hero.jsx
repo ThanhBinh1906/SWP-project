@@ -1,23 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { ChevronDown, Terminal as TerminalIcon } from 'lucide-react';
-
-function CountdownUnit({ value, label }) {
-  return (
-    <div className="flex flex-col items-center">
-      <div className="bg-[#0E111A] border border-white/[0.06] rounded-xl px-5 py-4 min-w-[80px] text-center shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-        <span
-          className="text-4xl md:text-5xl font-extrabold text-[#F26F21] tabular-nums"
-          style={{ fontFamily: 'Montserrat, sans-serif' }}
-        >
-          {String(value).padStart(2, '0')}
-        </span>
-      </div>
-      <span className="mt-2.5 text-[10px] font-bold tracking-widest uppercase text-slate-500">
-        {label}
-      </span>
-    </div>
-  );
-}
 
 function DeveloperMockup() {
   return (
@@ -88,25 +70,6 @@ function DeveloperMockup() {
 }
 
 export default function Hero({ onRegisterClick }) {
-  const TARGET_DATE = new Date('2026-03-15T08:00:00');
-
-  const getTimeLeft = () => {
-    const diff = TARGET_DATE - new Date();
-    if (diff <= 0) return { days: 0, hours: 0, minutes: 0 };
-    return {
-      days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-      hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
-      minutes: Math.floor((diff / (1000 * 60)) % 60),
-    };
-  };
-
-  const [timeLeft, setTimeLeft] = useState(getTimeLeft());
-
-  useEffect(() => {
-    const timer = setInterval(() => setTimeLeft(getTimeLeft()), 1000 * 60);
-    return () => clearInterval(timer);
-  }, []);
-
   return (
     <section
       id="home"
@@ -148,20 +111,6 @@ export default function Hero({ onRegisterClick }) {
               48 hours. One campus. Unlimited possibilities. Join the premier tech marathon
               at FPT University and collaborate with emerging developers to build solutions that matter.
             </p>
-          </div>
-
-          {/* Countdown */}
-          <div className="space-y-3">
-            <p className="text-[10px] font-bold tracking-widest uppercase text-slate-500">
-              Event Starts In
-            </p>
-            <div className="flex items-start gap-4">
-              <CountdownUnit value={timeLeft.days} label="Days" />
-              <span className="text-3xl font-bold text-slate-700 mt-3">:</span>
-              <CountdownUnit value={timeLeft.hours} label="Hours" />
-              <span className="text-3xl font-bold text-slate-700 mt-3">:</span>
-              <CountdownUnit value={timeLeft.minutes} label="Minutes" />
-            </div>
           </div>
 
           {/* CTAs */}

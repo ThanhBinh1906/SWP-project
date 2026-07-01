@@ -12,7 +12,14 @@ export default function Navbar({ onLoginClick, onRegisterClick }) {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const links = ['Home', 'Timeline', 'Prizes', 'FAQ'];
+  const links = [
+    { label: 'Home', href: '#home' },
+    { label: 'Events', href: '#events' },
+    { label: 'Timeline', href: '#timeline' },
+    { label: 'Prizes', href: '#prizes' },
+    { label: 'Results', href: '/results' },
+    { label: 'FAQ', href: '#faq' },
+  ];
 
   const handleLogin = () => {
     setMenuOpen(false);
@@ -50,11 +57,11 @@ export default function Navbar({ onLoginClick, onRegisterClick }) {
         <div className="hidden md:flex items-center gap-8">
           {links.map((link) => (
             <a
-              key={link}
-              href={`#${link.toLowerCase()}`}
+              key={link.label}
+              href={link.href}
               className="text-slate-300 hover:text-white text-[13px] font-medium tracking-wide uppercase transition-colors duration-200 relative group"
             >
-              {link}
+              {link.label}
               <span className="absolute -bottom-1.5 left-0 w-0 h-[1.5px] bg-[#F26F21] group-hover:w-full transition-all duration-200" />
             </a>
           ))}
@@ -79,12 +86,12 @@ export default function Navbar({ onLoginClick, onRegisterClick }) {
         <div className="md:hidden bg-[#0A0D14]/98 backdrop-blur-lg border-t border-white/[0.06] px-6 py-6 flex flex-col gap-5 shadow-2xl fade-in-up">
           {links.map((link) => (
             <a
-              key={link}
-              href={`#${link.toLowerCase()}`}
+              key={link.label}
+              href={link.href}
               onClick={() => setMenuOpen(false)}
               className="text-slate-300 hover:text-white text-sm font-semibold tracking-wide uppercase transition-colors py-1"
             >
-              {link}
+              {link.label}
             </a>
           ))}
           <div className="h-px bg-white/[0.06] my-2" />

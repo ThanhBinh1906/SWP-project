@@ -7,6 +7,8 @@ const rankingService = {
     api.get(`/api/rankings/rounds/${roundId}/teams/${teamId}`),
   getEventLeaderboard: (eventId) =>
     api.get(`/api/rankings/events/${eventId}`),
+  getPublicEvents: () => api.get("/api/public/events/summary"),
+  getLandingEvents: (params = {}) => api.get("/api/public/events", { params }),
   getPublicEventResults: (eventId) =>
     api.get(`/api/public/events/${eventId}/results`),
   exportRound: (roundId) =>

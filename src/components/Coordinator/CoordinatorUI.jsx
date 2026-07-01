@@ -317,6 +317,8 @@ export function ModalShell({
   actions,
   maxWidthClass = "max-w-xl",
   maxHeightClass = "max-h-[80vh]",
+  overlayClassName = "",
+  panelClassName = "",
 }) {
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -326,9 +328,11 @@ export function ModalShell({
   }, []);
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/55 p-4 animate-fade-in">
+    <div
+      className={`fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/55 p-4 animate-fade-in ${overlayClassName}`}
+    >
       <div
-        className={`relative isolate flex min-w-0 w-full ${maxWidthClass} ${maxHeightClass} flex-col overflow-hidden rounded-2xl bg-white shadow-2xl`}
+        className={`relative isolate flex min-w-0 w-full ${maxWidthClass} ${maxHeightClass} flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ${panelClassName}`}
       >
         <div className="flex flex-shrink-0 items-start justify-between gap-4 px-6 pt-6 pb-5">
           <h3 className="text-lg font-bold text-slate-900">{title}</h3>

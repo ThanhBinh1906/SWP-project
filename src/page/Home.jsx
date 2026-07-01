@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Home/Navbar';
 import Hero from '../components/Home/Hero';
+import PublicEvents from '../components/Home/PublicEvents';
 import About from '../components/Home/About';
 import Timeline from '../components/Home/Timeline';
 import Prizes from '../components/Home/Prizes';
-import Sponsors from '../components/Home/Sponsors';
 import FAQ from '../components/Home/FAQ';
 import Footer from '../components/Home/Footer';
 import LoginModal from '../components/Home/LoginModal';
@@ -44,10 +44,10 @@ export default function Home({ defaultLoginOpen = false, defaultRegisterOpen = f
         <Navbar onLoginClick={openLogin} onRegisterClick={openRegister} />
         <main>
           <Hero onRegisterClick={openRegister} />
+          <PublicEvents />
           <About />
           <Timeline />
           <Prizes />
-          <Sponsors />
           <FAQ />
         </main>
         <Footer onLoginClick={openLogin} onRegisterClick={openRegister} />

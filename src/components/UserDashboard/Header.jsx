@@ -1,37 +1,8 @@
-import { Clock, Menu } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Menu } from "lucide-react";
 import { useSelector } from "react-redux";
 import NotificationBell from "../shared/NotificationBell";
 
-// Deadline: 48 hours from a fixed reference (demo)
-const DEADLINE = new Date(Date.now() + 48 * 60 * 60 * 1000);
-
-function pad(n) {
-  return String(n).padStart(2, "0");
-}
-
-function useCountdown(target) {
-  const [remaining, setRemaining] = useState(0);
-
-  useEffect(() => {
-    const tick = () => {
-      const diff = Math.max(0, target.getTime() - Date.now());
-      setRemaining(diff);
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [target]);
-
-  const totalSecs = Math.floor(remaining / 1000);
-  const hours = Math.floor(totalSecs / 3600);
-  const minutes = Math.floor((totalSecs % 3600) / 60);
-  const seconds = totalSecs % 60;
-  return { hours, minutes, seconds };
-}
-
 export function Header({ onMenuClick, onNotificationsLoaded }) {
-  const { hours, minutes, seconds } = useCountdown(DEADLINE);
   const { user } = useSelector((s) => s.auth); // lấy user thật từ Redux
   return (
     <header
@@ -70,30 +41,6 @@ export function Header({ onMenuClick, onNotificationsLoaded }) {
 
       {/* Right cluster */}
       <div className="flex items-center gap-4">
-        {/* Countdown */}
-        <div
-          className="hidden sm:flex items-center gap-3 px-4 py-2.5 rounded-xl"
-          style={{ background: "#FFF6F0", border: "1px solid #FFD0B5" }}
-        >
-          <Clock className="w-4 h-4" style={{ color: "#F26F21" }} />
-          <div
-            className="flex items-center gap-1 font-mono font-bold text-sm"
-            style={{ color: "#111827" }}
-          >
-            <span className="tabular-nums">{pad(hours)}</span>
-            <span style={{ color: "#F26F21" }}>:</span>
-            <span className="tabular-nums">{pad(minutes)}</span>
-            <span style={{ color: "#F26F21" }}>:</span>
-            <span className="tabular-nums">{pad(seconds)}</span>
-          </div>
-          <span
-            className="text-[10px] font-semibold uppercase tracking-widest"
-            style={{ color: "#F26F21" }}
-          >
-            Remaining
-          </span>
-        </div>
-
         <NotificationBell
           ariaLabel="Leader notifications"
           onNotificationsLoaded={onNotificationsLoaded}

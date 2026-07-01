@@ -1,5 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertCircle, ChevronDown, ExternalLink, Loader2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import * as XLSX from "xlsx";
+import {
+  AlertCircle,
+  ChevronDown,
+  Download,
+  ExternalLink,
+  Loader2,
+  Upload,
+} from "lucide-react";
 import criterionService from "../../../services/criterionService";
 import roundService from "../../../services/roundService";
 import scoreService from "../../../services/scoreService";
@@ -85,6 +93,88 @@ function formatTotalScore(score) {
   const numeric = Number(score || 0);
   if (!Number.isFinite(numeric)) return "0";
   return Number(numeric.toFixed(2));
+}
+
+function normalizeExcelText(value) {
+  return String(value ?? "").trim();
+}
+
+function normalizeExcelNumber(value) {
+  if (typeof value === "number") return value;
+  const text = normalizeExcelText(value).replace(",", ".");
+  if (!text) return NaN;
+  return Number(text);
+}
+
+function makeScoreImportKey(submissionId, criterionId) {
+  return `${submissionId}::${criterionId}`;
+}
+
+function getSubmissionLabel(submission) {
+  return (
+    submission.teamName ||
+    submission.team?.teamName ||
+    submission.teamId ||
+    String(submission.id).slice(0, 8)
+  );
+}
+
+function downloadScoreImportTemplate({
+  selectedRoundId,
+  selectedRoundLabel,
+  submissions,
+  criteria,
+  scores,
+  comments,
+}) {
+  const header = [
+    "roundId",
+    "roundName",
+    "submissionId",
+    "teamId",
+    "teamName",
+    "criterionId",
+    "criterionName",
+    "maxScore",
+    "weight",
+    "score",
+    "comment",
+  ];
+
+  const rows = submissions.flatMap((submission) =>
+    criteria.map((criterion) => [
+      selectedRoundId,
+      selectedRoundLabel,
+      submission.id,
+      submission.teamId || "",
+      getSubmissionLabel(submission),
+      criterion.id,
+      criterion.name || "",
+      Number(criterion.maxScore || 0),
+      normalizeWeight(criterion.weight),
+      scores[submission.id]?.[criterion.id] ?? "",
+      comments[submission.id]?.[criterion.id] ?? "",
+    ]),
+  );
+
+  const sheet = XLSX.utils.aoa_to_sheet([header, ...rows]);
+  sheet["!cols"] = [
+    { wch: 10 },
+    { wch: 32 },
+    { wch: 38 },
+    { wch: 38 },
+    { wch: 24 },
+    { wch: 12 },
+    { wch: 28 },
+    { wch: 10 },
+    { wch: 10 },
+    { wch: 10 },
+    { wch: 36 },
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, sheet, "Scores");
+  XLSX.writeFile(workbook, `score-import-round-${selectedRoundId}.xlsx`);
 }
 
 function validateSubmissionScores(submissionId, criteria, scores) {
@@ -348,6 +438,7 @@ function SubmissionScoringCard({
 }
 
 export function JudgeScoringWorkspace({ initialRoundId = "" }) {
+  const importInputRef = useRef(null);
   const [roundOptions, setRoundOptions] = useState([]);
   const [selectedRoundId, setSelectedRoundId] = useState("");
   const [roundMeta, setRoundMeta] = useState(null);
@@ -506,6 +597,176 @@ export function JudgeScoringWorkspace({ initialRoundId = "" }) {
     }));
   };
 
+  const handleDownloadTemplate = () => {
+    if (!selectedRoundId || submissions.length === 0 || criteria.length === 0) {
+      setError("Cần chọn round có bài nộp và tiêu chí trước khi tải mẫu điểm.");
+      return;
+    }
+
+    downloadScoreImportTemplate({
+      selectedRoundId,
+      selectedRoundLabel,
+      submissions,
+      criteria,
+      scores,
+      comments,
+    });
+  };
+
+  const handleImportScores = (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (!selectedRoundId || submissions.length === 0 || criteria.length === 0) {
+      setError("Cần chọn round có bài nộp và tiêu chí trước khi import điểm.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (loadEvent) => {
+      try {
+        const workbook = XLSX.read(loadEvent.target.result, { type: "array" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+        const [headerRow, ...bodyRows] = rows;
+
+        const headerMap = (headerRow || []).reduce((map, header, index) => {
+          map[normalizeExcelText(header).toLowerCase()] = index;
+          return map;
+        }, {});
+
+        const requiredHeaders = ["submissionid", "criterionid", "score"];
+        const missingHeaders = requiredHeaders.filter((header) => headerMap[header] === undefined);
+        if (missingHeaders.length) {
+          setError(
+            `File thiếu cột bắt buộc: ${missingHeaders.join(", ")}. Hãy tải mẫu điểm mới từ màn hình này.`,
+          );
+          return;
+        }
+
+        const submissionMap = new Map(
+          submissions.map((submission) => [String(submission.id), submission]),
+        );
+        const criterionMap = new Map(criteria.map((criterion) => [String(criterion.id), criterion]));
+        const seenKeys = new Map();
+        const nextScores = {};
+        const nextComments = {};
+        const nextExpanded = {};
+        const errors = [];
+        let importedCount = 0;
+
+        bodyRows.forEach((row, index) => {
+          const line = index + 2;
+          const submissionId = normalizeExcelText(row[headerMap.submissionid]);
+          const criterionId = normalizeExcelText(row[headerMap.criterionid]);
+          const scoreCell = row[headerMap.score];
+          const comment =
+            headerMap.comment === undefined ? "" : normalizeExcelText(row[headerMap.comment]);
+          const hasAnyData = row.some((cell) => normalizeExcelText(cell) !== "");
+
+          if (!hasAnyData) return;
+
+          if (!submissionId || !criterionId) {
+            errors.push(`Dòng ${line}: thiếu submissionId hoặc criterionId.`);
+            return;
+          }
+
+          const roundId =
+            headerMap.roundid === undefined ? "" : normalizeExcelText(row[headerMap.roundid]);
+          if (roundId && String(roundId) !== String(selectedRoundId)) {
+            errors.push(`Dòng ${line}: roundId ${roundId} không khớp round đang chọn.`);
+          }
+
+          const submission = submissionMap.get(submissionId);
+          const criterion = criterionMap.get(criterionId);
+          if (!submission) errors.push(`Dòng ${line}: submissionId không thuộc round hiện tại.`);
+          if (!criterion) errors.push(`Dòng ${line}: criterionId không thuộc round hiện tại.`);
+          if (!submission || !criterion) return;
+
+          if (submission.isDisqualified) {
+            errors.push(`Dòng ${line}: bài nộp đã bị loại nên không thể import điểm.`);
+            return;
+          }
+
+          const key = makeScoreImportKey(submissionId, criterionId);
+          if (seenKeys.has(key)) {
+            errors.push(
+              `Dòng ${line}: trùng điểm với dòng ${seenKeys.get(key)} cho cùng submissionId + criterionId.`,
+            );
+            return;
+          }
+          seenKeys.set(key, line);
+
+          const score = normalizeExcelNumber(scoreCell);
+          const maxScore = Number(criterion.maxScore || 0);
+          if (normalizeExcelText(scoreCell) === "") {
+            errors.push(`Dòng ${line}: chưa nhập score.`);
+            return;
+          }
+          if (!Number.isFinite(score)) {
+            errors.push(`Dòng ${line}: score phải là số.`);
+            return;
+          }
+          if (score < 0 || score > maxScore) {
+            errors.push(`Dòng ${line}: score phải nằm trong khoảng 0 - ${maxScore}.`);
+            return;
+          }
+
+          nextScores[submissionId] = {
+            ...(nextScores[submissionId] || {}),
+            [criterionId]: String(score),
+          };
+          nextComments[submissionId] = {
+            ...(nextComments[submissionId] || {}),
+            [criterionId]: comment,
+          };
+          nextExpanded[submissionId] = true;
+          importedCount += 1;
+        });
+
+        if (errors.length) {
+          setError(errors.slice(0, 8).join("\n"));
+          return;
+        }
+        if (importedCount === 0) {
+          setError("File chưa có dòng điểm hợp lệ để import.");
+          return;
+        }
+
+        setScores((prev) => {
+          const merged = { ...prev };
+          Object.entries(nextScores).forEach(([submissionId, criterionScores]) => {
+            merged[submissionId] = {
+              ...(merged[submissionId] || {}),
+              ...criterionScores,
+            };
+          });
+          return merged;
+        });
+        setComments((prev) => {
+          const merged = { ...prev };
+          Object.entries(nextComments).forEach(([submissionId, criterionComments]) => {
+            merged[submissionId] = {
+              ...(merged[submissionId] || {}),
+              ...criterionComments,
+            };
+          });
+          return merged;
+        });
+        setExpandedSubmissionIds((prev) => ({ ...prev, ...nextExpanded }));
+        setFieldErrors({});
+        setError("");
+        setSuccess(
+          `Đã import ${importedCount} dòng điểm. Hãy kiểm tra lại rồi bấm Gửi điểm hoặc Cập nhật điểm.`,
+        );
+      } catch {
+        setError("Không thể đọc file Excel. Hãy dùng đúng file .xlsx hoặc tải lại mẫu mới.");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
   const handleSubmitScores = async (submission) => {
     const validationErrors = validateSubmissionScores(submission.id, criteria, scores);
     if (Object.keys(validationErrors).length) {
@@ -574,7 +835,7 @@ export function JudgeScoringWorkspace({ initialRoundId = "" }) {
       />
 
       {error && (
-        <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+        <div className="flex items-start gap-2 whitespace-pre-line rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
           <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
           {error}
         </div>
@@ -590,6 +851,41 @@ export function JudgeScoringWorkspace({ initialRoundId = "" }) {
         title="Danh sách bài nộp"
         subtitle={`${selectedRoundLabel} - ${submissions.length} submission(s), ${criteria.length} criteria`}
         icon={judgeIcons.Gavel}
+        actions={
+          <>
+            <JudgeActionButton
+              onClick={handleDownloadTemplate}
+              disabled={
+                loadingData ||
+                !selectedRoundId ||
+                submissions.length === 0 ||
+                criteria.length === 0
+              }
+              icon={Download}
+            >
+              Tải mẫu điểm
+            </JudgeActionButton>
+            <JudgeActionButton
+              onClick={() => importInputRef.current?.click()}
+              disabled={
+                loadingData ||
+                !selectedRoundId ||
+                submissions.length === 0 ||
+                criteria.length === 0
+              }
+              icon={Upload}
+            >
+              Import điểm
+            </JudgeActionButton>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              className="hidden"
+              onChange={handleImportScores}
+            />
+          </>
+        }
       >
         {loadingData ? (
           <div className="flex items-center justify-center gap-2 py-12 text-sm text-slate-400">

@@ -13,11 +13,14 @@ import {
   ChevronRight,
   Copy,
   Crown,
+  FileSpreadsheet,
   Loader2,
 } from "lucide-react";
 import eventService from "../../services/eventService";
 import { CloneCompetitionModal } from "./competition/CloneCompetitionModal";
+import { CompetitionExcelImportModal } from "./competition/CompetitionExcelImportModal";
 import { CompetitionTemplateModal } from "./competition/CompetitionTemplateModal";
+import RichTextEditor from "../shared/RichTextEditor";
 
 // ---------------------------------------------------------------------------
 // Constants & helpers (preserved from originals)
@@ -111,6 +114,9 @@ function isTrackCreateLocked(event) {
 const EVENT_EMPTY = {
   name: "",
   description: "",
+  bannerUrl: "",
+  location: "",
+  isOnline: false,
   startDate: "",
   endDate: "",
   status: "Registration",
@@ -132,6 +138,19 @@ function formatDate(iso) {
 function formatDateTime(iso) {
   if (!iso) return "—";
   return iso.replace("T", " ").slice(0, 16);
+}
+
+function stripHtml(value = "") {
+  return String(value)
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function compactText(value = "", maxLength = 120) {
+  const text = stripHtml(value);
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength).trim()}...`;
 }
 
 function FormError({ msg }) {
@@ -162,6 +181,7 @@ function getCreatedEntityId(response) {
 export function CompetitionSetup() {
   const [cloneSourceEvent, setCloneSourceEvent] = useState(null);
   const [structureModalOpen, setStructureModalOpen] = useState(false);
+  const [excelImportOpen, setExcelImportOpen] = useState(false);
   // === EVENTS ===
   const [events, setEvents] = useState([]);
   const [eventsLoading, setEventsLoading] = useState(true);
@@ -326,6 +346,9 @@ export function CompetitionSetup() {
     setEventForm({
       name: ev.name,
       description: ev.description || "",
+      bannerUrl: ev.bannerUrl || "",
+      location: ev.location || "",
+      isOnline: Boolean(ev.isOnline),
       startDate: formatDate(ev.startDate),
       endDate: formatDate(ev.endDate),
       status: ev.status,
@@ -376,6 +399,9 @@ export function CompetitionSetup() {
       await eventService.update(selectedEvent.id, {
         name: eventForm.name.trim(),
         description: eventForm.description.trim(),
+        bannerUrl: eventForm.bannerUrl?.trim() || null,
+        location: eventForm.location?.trim() || null,
+        isOnline: Boolean(eventForm.isOnline),
         startDate: eventForm.startDate,
         endDate: eventForm.endDate,
         status: eventForm.status,
@@ -703,9 +729,19 @@ export function CompetitionSetup() {
         subtitle="Manage events, tracks, and rounds in a unified tree view"
         icon={icons.CalendarDays}
         actions={
-          <CoordinatorActionButton variant="primary" icon={icons.GitBranch} onClick={() => setStructureModalOpen(true)}>
-            Setup Event
-          </CoordinatorActionButton>
+          <div className="flex flex-wrap gap-2">
+            <CoordinatorActionButton onClick={() => setExcelImportOpen(true)}>
+              <FileSpreadsheet className="h-4 w-4" />
+              Import Excel
+            </CoordinatorActionButton>
+            <CoordinatorActionButton
+              variant="primary"
+              icon={icons.GitBranch}
+              onClick={() => setStructureModalOpen(true)}
+            >
+              Setup Event
+            </CoordinatorActionButton>
+          </div>
         }
       />
 
@@ -800,7 +836,7 @@ export function CompetitionSetup() {
                     <p className="text-xs text-slate-500 mt-0.5 truncate">
                       {formatDate(event.startDate)} →{" "}
                       {formatDate(event.endDate)}
-                      {event.description && ` • ${event.description}`}
+                      {event.description && ` • ${compactText(event.description)}`}
                     </p>
                   </div>
 
@@ -1124,6 +1160,16 @@ export function CompetitionSetup() {
         />
       )}
 
+      {excelImportOpen && (
+        <CompetitionExcelImportModal
+          onClose={() => setExcelImportOpen(false)}
+          onCompleted={async () => {
+            setExcelImportOpen(false);
+            await fetchEvents();
+          }}
+        />
+      )}
+
       {/* =============================================================== */}
       {/* EVENT MODALS (preserved from EventsManagement)                  */}
       {/* =============================================================== */}
@@ -1137,7 +1183,7 @@ export function CompetitionSetup() {
                 onClick={closeEventModal}
                 disabled={eventSaving}
               >
-                Huỷ
+                Hủy
               </CoordinatorActionButton>
               <CoordinatorActionButton
                 variant="primary"
@@ -1162,17 +1208,48 @@ export function CompetitionSetup() {
                 onChange={(e) => handleEventFormChange("name", e.target.value)}
               />
             </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
+                  Địa điểm
+                </label>
+                <input
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+                  placeholder="VD: FPT University HCM"
+                  value={eventForm.location}
+                  onChange={(e) => handleEventFormChange("location", e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
+                  Banner URL
+                </label>
+                <input
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+                  placeholder="https://..."
+                  value={eventForm.bannerUrl}
+                  onChange={(e) => handleEventFormChange("bannerUrl", e.target.value)}
+                />
+              </div>
+            </div>
+            <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-800">
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-orange-600"
+                checked={eventForm.isOnline}
+                onChange={(e) => handleEventFormChange("isOnline", e.target.checked)}
+              />
+              Tổ chức online
+            </label>
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
                 Mô tả
               </label>
-              <textarea
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none min-h-20"
-                placeholder="Mô tả sự kiện"
+              <RichTextEditor
                 value={eventForm.description}
-                onChange={(e) =>
-                  handleEventFormChange("description", e.target.value)
-                }
+                onChange={(html) => handleEventFormChange("description", html)}
+                placeholder="Nhập mô tả sự kiện..."
+                minHeightClass="min-h-40"
               />
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -1224,7 +1301,7 @@ export function CompetitionSetup() {
                 onClick={closeEventModal}
                 disabled={eventSaving}
               >
-                Huỷ
+                Hủy
               </CoordinatorActionButton>
               <CoordinatorActionButton
                 variant="danger"
@@ -1264,7 +1341,7 @@ export function CompetitionSetup() {
                 onClick={closeTrackModal}
                 disabled={trackSaving}
               >
-                Huỷ
+                Hủy
               </CoordinatorActionButton>
               <CoordinatorActionButton
                 variant="primary"
@@ -1443,7 +1520,7 @@ export function CompetitionSetup() {
                 onClick={closeRoundModal}
                 disabled={roundSaving}
               >
-                Huỷ
+                Hủy
               </CoordinatorActionButton>
               <CoordinatorActionButton
                 variant="primary"
@@ -1531,7 +1608,7 @@ export function CompetitionSetup() {
                 onClick={closeRoundModal}
                 disabled={roundSaving}
               >
-                Huỷ
+                Hủy
               </CoordinatorActionButton>
               <CoordinatorActionButton
                 variant="primary"

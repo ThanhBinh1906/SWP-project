@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
+  Award,
   CalendarDays,
+  CheckCircle2,
   Loader2,
   RefreshCw,
   Trophy,
@@ -10,58 +12,71 @@ import {
 import { useSelector } from "react-redux";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
-  EventTop3Podium,
   RankingBoard,
   extractEventRankingSections,
 } from "../components/shared/RankingBoard";
-import eventService from "../services/eventService";
 import rankingService from "../services/rankingService";
-import teamService from "../services/teamService";
-import { getRedirectPathByUser, hasRole } from "../utils/roleHelpers";
+import { getRedirectPathByUser } from "../utils/roleHelpers";
+
+function unwrapData(response) {
+  const data = response?.data?.data;
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  return [];
+}
+
+function getEventId(event) {
+  return event?.eventId ?? event?.id;
+}
+
+function getEventName(event) {
+  return event?.eventName || event?.name || `Event #${getEventId(event)}`;
+}
 
 function getApiMessage(error, fallback) {
   return error?.response?.data?.message || error?.message || fallback;
 }
 
-function getEventRankingMessage(error) {
+function getPublicResultMessage(error) {
   const message = getApiMessage(
     error,
-    "Sự kiện này chưa có bảng xếp hạng chung cuộc hoặc kết quả chưa được công bố.",
+    "Sự kiện này chưa có kết quả công bố hoặc dữ liệu chưa đủ điều kiện hiển thị.",
   );
   const normalized = message.toLowerCase();
 
-  if (normalized.includes("completed") || normalized.includes("hoàn tất")) {
-    return "Kết quả chung cuộc chưa được công bố. Event cần hoàn tất trước khi xem bảng xếp hạng.";
+  if (
+    normalized.includes("completed") ||
+    normalized.includes("closed") ||
+    normalized.includes("đóng") ||
+    normalized.includes("dong")
+  ) {
+    return "Kết quả chưa được công bố. Event cần hoàn tất và Final Round cần đóng trước khi xem kết quả.";
   }
 
   if (
-    normalized.includes("track final") ||
-    normalized.includes("final track") ||
-    normalized.includes("chung kết") ||
-    normalized.includes("chung ket")
+    normalized.includes("prize") ||
+    normalized.includes("giải") ||
+    normalized.includes("giai")
   ) {
-    return "Cấu hình Track Final chưa hợp lệ. Coordinator cần kiểm tra lại Track Final và Final Round.";
+    return "Chưa đủ cấu hình giải thưởng hoặc chưa xác định được Top 1, 2, 3 của Event.";
   }
 
-  if (normalized.includes("closed") || normalized.includes("ranking")) {
-    return "Final Round chưa có bảng xếp hạng đã chốt. Hãy kiểm tra trạng thái vòng chung kết.";
+  if (
+    normalized.includes("ranking") ||
+    normalized.includes("xếp hạng") ||
+    normalized.includes("xep hang")
+  ) {
+    return "Final Round chưa có bảng xếp hạng chính thức.";
   }
 
   return message;
 }
 
-function normalizeEvents(...sources) {
-  const events = new Map();
-  sources.flat().filter(Boolean).forEach((event) => {
-    const id = event.id ?? event.eventId;
-    if (id == null) return;
-    events.set(String(id), {
-      id,
-      name: event.name || event.eventName || `Event #${id}`,
-      status: event.status || "",
-    });
-  });
-  return [...events.values()];
+function formatDate(value) {
+  if (!value) return "Chưa có thời gian";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Chưa có thời gian";
+  return date.toLocaleDateString("vi-VN");
 }
 
 function formatSnapshotTime(value) {
@@ -71,114 +86,313 @@ function formatSnapshotTime(value) {
   return date.toLocaleString("vi-VN");
 }
 
+function sortByRank(rows = []) {
+  return [...rows].sort((left, right) => {
+    const leftRank = Number(left.rankPosition || Number.MAX_SAFE_INTEGER);
+    const rightRank = Number(right.rankPosition || Number.MAX_SAFE_INTEGER);
+    if (leftRank !== rightRank) return leftRank - rightRank;
+    return Number(right.totalScore || 0) - Number(left.totalScore || 0);
+  });
+}
+
+function normalizePrizeWinners(payload) {
+  const candidates = [
+    payload?.prizeWinners,
+    payload?.winners,
+    payload?.prizes,
+  ];
+  return candidates.find(Array.isArray) || [];
+}
+
+function EventPicker({
+  events,
+  selectedEventId,
+  loading,
+  error,
+  onReload,
+  onSelect,
+}) {
+  return (
+    <section className="rounded-xl border border-slate-200 bg-white p-5">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-orange-700">
+            Sự kiện công khai
+          </p>
+          <h2 className="mt-1 text-xl font-black text-slate-950">
+            Chọn sự kiện để xem kết quả
+          </h2>
+        </div>
+        <button
+          type="button"
+          onClick={onReload}
+          disabled={loading}
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 hover:border-orange-300 hover:text-orange-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          Làm mới
+        </button>
+      </div>
+
+      {error ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
+          {error}
+        </div>
+      ) : loading ? (
+        <div className="flex min-h-32 items-center justify-center gap-2 rounded-lg border border-dashed border-slate-200 text-sm text-slate-500">
+          <Loader2 className="h-5 w-5 animate-spin text-orange-600" />
+          Đang tải danh sách sự kiện...
+        </div>
+      ) : events.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-slate-200 px-5 py-8 text-center">
+          <CalendarDays className="mx-auto h-8 w-8 text-slate-300" />
+          <p className="mt-3 font-bold text-slate-800">Chưa có sự kiện public</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Backend hiện chỉ trả Event ở trạng thái Active hoặc Completed.
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-3 lg:grid-cols-2">
+          {events.map((event) => {
+            const eventId = getEventId(event);
+            const selected = String(eventId) === String(selectedEventId);
+            const ready = Boolean(event.resultsAvailable);
+            return (
+              <article
+                key={eventId}
+                className={`rounded-xl border p-4 transition ${
+                  selected
+                    ? "border-orange-300 bg-orange-50"
+                    : "border-slate-200 bg-white"
+                }`}
+              >
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold uppercase text-slate-600">
+                        {event.status || "Public"}
+                      </span>
+                      <span
+                        className={`rounded-full border px-2.5 py-1 text-xs font-bold ${
+                          ready
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                            : "border-amber-200 bg-amber-50 text-amber-700"
+                        }`}
+                      >
+                        {ready ? "Đã có kết quả" : "Chưa có kết quả"}
+                      </span>
+                    </div>
+                    <h3 className="mt-3 text-lg font-black text-slate-950">
+                      {getEventName(event)}
+                    </h3>
+                    <p className="mt-2 text-sm text-slate-500">
+                      {formatDate(event.startDate)} - {formatDate(event.endDate)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onSelect(event)}
+                    disabled={!ready}
+                    className={`inline-flex min-h-10 shrink-0 items-center justify-center rounded-lg px-4 text-sm font-bold ${
+                      ready
+                        ? "bg-orange-600 text-white hover:bg-orange-700"
+                        : "cursor-not-allowed bg-slate-100 text-slate-400"
+                    }`}
+                  >
+                    {ready ? "Xem kết quả" : "Đang chờ"}
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function PrizeWinners({ winners = [] }) {
+  const rows = sortByRank(winners);
+
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-orange-700">
+            Prize Winners
+          </p>
+          <h2 className="mt-1 text-2xl font-black text-slate-950">
+            Danh sách đội đạt giải
+          </h2>
+        </div>
+        <p className="text-sm text-slate-500">
+          Giải thưởng được ghép từ cấu hình Prize của Event và bảng xếp hạng chung cuộc.
+        </p>
+      </div>
+
+      {rows.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-6 py-8 text-center">
+          <Award className="mx-auto h-8 w-8 text-slate-300" />
+          <p className="mt-3 font-bold text-slate-800">Chưa có danh sách đội đạt giải</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Backend sẽ trả dữ liệu sau khi Final Round đã đóng và Prize hạng 1, 2, 3 đã được cấu hình.
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-3 md:grid-cols-3">
+          {rows.map((winner, index) => {
+            const rank = winner.rankPosition || index + 1;
+            const amount =
+              winner.amount == null
+                ? null
+                : Number(winner.amount).toLocaleString("vi-VN");
+            return (
+              <article
+                key={`${winner.teamName || "team"}-${rank}-${index}`}
+                className="rounded-xl border border-orange-100 bg-orange-50/50 p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold uppercase tracking-wider text-orange-700">
+                      Hạng {rank}
+                    </p>
+                    <h3 className="mt-2 truncate text-lg font-black text-slate-950">
+                      {winner.prizeName || `Giải hạng ${rank}`}
+                    </h3>
+                  </div>
+                  <Award className="h-6 w-6 shrink-0 text-orange-600" />
+                </div>
+                <p className="mt-4 font-bold text-slate-950">
+                  {winner.teamName || "Team"}
+                </p>
+                {winner.university && (
+                  <p className="mt-1 text-sm text-slate-500">{winner.university}</p>
+                )}
+                <div className="mt-4 flex items-end justify-between gap-3">
+                  <div>
+                    <p className="text-2xl font-black text-slate-950">
+                      {Number(winner.totalScore || 0).toFixed(2)}
+                    </p>
+                    <p className="text-xs font-bold uppercase text-slate-400">Điểm</p>
+                  </div>
+                  {amount && (
+                    <p className="rounded-full bg-white px-3 py-1 text-xs font-bold text-orange-700">
+                      {amount}
+                    </p>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function ResultPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedEventId = searchParams.get("eventId") || "";
   const user = useSelector((state) => state.auth.user);
-  const reduxTeam = useSelector((state) => state.team.myTeam);
-  const [events, setEvents] = useState([]);
-  const [selectedEventId, setSelectedEventId] = useState(
-    requestedEventId,
-  );
-  const [eventRanking, setEventRanking] = useState(null);
-  const [teamId, setTeamId] = useState(reduxTeam?.id || "");
-  const [loadingEvents, setLoadingEvents] = useState(true);
-  const [loadingRanking, setLoadingRanking] = useState(false);
+  const [publicEvents, setPublicEvents] = useState([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
+  const [eventsError, setEventsError] = useState("");
+  const [selectedEventId, setSelectedEventId] = useState(requestedEventId);
+  const [publicResult, setPublicResult] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const selectedEvent = useMemo(
+    () =>
+      publicEvents.find(
+        (event) => String(getEventId(event)) === String(selectedEventId),
+      ) || null,
+    [publicEvents, selectedEventId],
+  );
+
   const sections = useMemo(
-    () => extractEventRankingSections(eventRanking),
-    [eventRanking],
+    () => extractEventRankingSections(publicResult),
+    [publicResult],
   );
-  const eventTop3 = Array.isArray(eventRanking?.eventTop3)
-    ? eventRanking.eventTop3
-    : [];
-  const selectedEvent = events.find(
-    (event) => String(event.id) === selectedEventId,
-  );
-  const allRows = sections.length
-    ? sections.flatMap((section) => section.rows || [])
-    : eventTop3;
-  const uniqueTeams = new Set(allRows.map((row) => String(row.teamId))).size;
-  const latestSnapshotAt = sections.reduce((latest, section) => {
-    if (!section.calculatedAt) return latest;
-    if (!latest) return section.calculatedAt;
-    return new Date(section.calculatedAt) > new Date(latest)
-      ? section.calculatedAt
-      : latest;
-  }, eventRanking?.calculatedAt || null);
+  const rankings = Array.isArray(publicResult?.rankings)
+    ? publicResult.rankings
+    : sections.flatMap((section) => section.rows || []);
+  const prizeWinners = normalizePrizeWinners(publicResult);
+  const uniqueTeams = new Set(
+    rankings.map((row) => String(row.teamId || row.teamName || row.rankPosition)),
+  ).size;
+  const latestSnapshotAt = publicResult?.calculatedAt || null;
 
-  const discoverEvents = useCallback(async () => {
-    setLoadingEvents(true);
-    setError("");
-    const requestedId = requestedEventId;
+  const loadPublicEvents = useCallback(async () => {
+    setEventsLoading(true);
+    setEventsError("");
     try {
-      const [allResult, activeResult] = await Promise.allSettled([
-        eventService.getAll(),
-        eventService.getActiveEvent(),
-      ]);
-      const allEvents =
-        allResult.status === "fulfilled"
-          ? allResult.value.data?.data || allResult.value.data || []
-          : [];
-      const activeEvent =
-        activeResult.status === "fulfilled"
-          ? activeResult.value.data?.data || activeResult.value.data
-          : null;
-      const options = normalizeEvents(
-        allEvents,
-        activeEvent,
-        requestedId ? [{ id: requestedId }] : [],
-      );
-      setEvents(options);
-      setSelectedEventId((current) => {
-        const preferred = requestedId || current || activeEvent?.id || options[0]?.id;
-        return preferred == null ? "" : String(preferred);
-      });
+      const response = await rankingService.getPublicEvents();
+      setPublicEvents(unwrapData(response));
     } catch (requestError) {
-      setError(getApiMessage(requestError, "Không thể xác định Event để xem kết quả."));
+      setPublicEvents([]);
+      setEventsError(
+        getApiMessage(requestError, "Không thể tải danh sách sự kiện công khai."),
+      );
     } finally {
-      setLoadingEvents(false);
+      setEventsLoading(false);
     }
-  }, [requestedEventId]);
+  }, []);
 
-  const loadRanking = useCallback(async () => {
+  const loadPublicResults = useCallback(async () => {
     if (!selectedEventId) {
-      setEventRanking(null);
+      setPublicResult(null);
+      setError("");
       return;
     }
-    setLoadingRanking(true);
+
+    if (selectedEvent && !selectedEvent.resultsAvailable) {
+      setPublicResult(null);
+      setError("Sự kiện này chưa có kết quả công bố.");
+      return;
+    }
+
+    setLoading(true);
     setError("");
     try {
-      const response = await rankingService.getEventLeaderboard(selectedEventId);
-      setEventRanking(response.data?.data || null);
+      const response = await rankingService.getPublicEventResults(selectedEventId);
+      setPublicResult(response.data?.data || null);
     } catch (requestError) {
-      setEventRanking(null);
-      setError(getEventRankingMessage(requestError));
+      setPublicResult(null);
+      setError(getPublicResultMessage(requestError));
     } finally {
-      setLoadingRanking(false);
+      setLoading(false);
     }
-  }, [selectedEventId]);
+  }, [selectedEvent, selectedEventId]);
 
   useEffect(() => {
-    discoverEvents();
-  }, [discoverEvents]);
+    loadPublicEvents();
+  }, [loadPublicEvents]);
 
   useEffect(() => {
-    loadRanking();
-    if (selectedEventId && requestedEventId !== selectedEventId) {
-      setSearchParams({ eventId: selectedEventId }, { replace: true });
+    if (selectedEventId || publicEvents.length === 0) return;
+    const firstReadyEvent = publicEvents.find((event) => event.resultsAvailable);
+    if (firstReadyEvent) {
+      const eventId = getEventId(firstReadyEvent);
+      setSelectedEventId(String(eventId));
+      setSearchParams({ eventId: String(eventId) }, { replace: true });
     }
-  }, [loadRanking, requestedEventId, selectedEventId, setSearchParams]);
+  }, [publicEvents, selectedEventId, setSearchParams]);
 
   useEffect(() => {
-    if (!hasRole(user, "Leader") || reduxTeam?.id) return;
-    teamService
-      .getMyTeam()
-      .then((response) => setTeamId(response.data?.data?.id || ""))
-      .catch(() => setTeamId(""));
-  }, [reduxTeam?.id, user]);
+    loadPublicResults();
+  }, [loadPublicResults]);
+
+  const handleSelectEvent = (event) => {
+    const eventId = getEventId(event);
+    if (!eventId || !event.resultsAvailable) return;
+    setSelectedEventId(String(eventId));
+    setSearchParams({ eventId: String(eventId) }, { replace: true });
+  };
+
+  const selectedEventName =
+    publicResult?.eventName || (selectedEvent ? getEventName(selectedEvent) : "");
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950">
@@ -186,11 +400,11 @@ export default function ResultPage() {
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <button
             type="button"
-            onClick={() => navigate(getRedirectPathByUser(user))}
+            onClick={() => navigate(user ? getRedirectPathByUser(user) : "/")}
             className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-bold text-slate-700 hover:border-orange-300 hover:text-orange-700"
           >
             <ArrowLeft className="h-4 w-4" />
-            Dashboard
+            {user ? "Dashboard" : "Trang chủ"}
           </button>
           <div className="flex items-center gap-2 text-sm font-black uppercase tracking-wider">
             <Trophy className="h-5 w-5 text-orange-600" />
@@ -204,63 +418,66 @@ export default function ResultPage() {
           <div className="grid lg:grid-cols-[1fr_360px]">
             <div className="p-6 sm:p-8">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-orange-700">
-                Kết quả chính thức
+                Kết quả công khai
               </p>
               <h1 className="mt-3 max-w-3xl text-3xl font-black text-slate-950 sm:text-4xl">
-                {eventRanking?.eventName || selectedEvent?.name || "Bảng xếp hạng sự kiện"}
+                {selectedEventName || "Bảng xếp hạng sự kiện"}
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-                Top 3 chung cuộc và bảng đầy đủ được lấy từ Final Round của Track Final.
+                Danh sách sự kiện được lấy từ API public. Nút xem kết quả chỉ mở khi backend trả về <strong>resultsAvailable</strong>.
               </p>
               <p className="mt-5 text-xs font-semibold uppercase tracking-wider text-slate-400">
                 Cập nhật: {formatSnapshotTime(latestSnapshotAt)}
               </p>
+              {(publicResult?.finalTrackName || publicResult?.finalRoundName) && (
+                <p className="mt-2 text-sm text-slate-500">
+                  {publicResult.finalTrackName || "Track Final"} ·{" "}
+                  {publicResult.finalRoundName || "Final Round"}
+                </p>
+              )}
             </div>
             <div className="border-t border-orange-100 bg-orange-50 p-6 lg:border-l lg:border-t-0">
-              <label className="block">
-                <span className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-orange-800">
-                  <CalendarDays className="h-4 w-4" /> Event
-                </span>
-                <select
-                  value={selectedEventId}
-                  onChange={(event) => setSelectedEventId(event.target.value)}
-                  disabled={loadingEvents || events.length === 0}
-                  className="w-full rounded-lg border border-orange-200 bg-white px-3 py-3 text-sm font-bold text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
-                >
-                  {events.length === 0 ? (
-                    <option value="">Chưa tìm thấy Event</option>
-                  ) : (
-                    events.map((event) => (
-                      <option key={event.id} value={event.id}>
-                        {event.name}{event.status ? ` · ${event.status}` : ""}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </label>
-              <button
-                type="button"
-                onClick={loadRanking}
-                disabled={!selectedEventId || loadingRanking}
-                className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-orange-600 px-4 text-sm font-bold text-white hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <RefreshCw className={`h-4 w-4 ${loadingRanking ? "animate-spin" : ""}`} />
-                Làm mới kết quả
-              </button>
+              <div className="flex h-full flex-col justify-center gap-3">
+                <div className="flex items-center gap-3 rounded-xl bg-white p-4">
+                  <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+                  <div>
+                    <p className="text-sm font-black text-slate-950">
+                      {publicEvents.filter((event) => event.resultsAvailable).length} sự kiện có kết quả
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      Trong {publicEvents.length} sự kiện public
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs leading-5 text-orange-900">
+                  Event chưa đủ Final Ranking hoặc chưa đủ Prize hạng 1, 2, 3 sẽ hiển thị trạng thái chờ.
+                </p>
+              </div>
             </div>
           </div>
         </section>
 
+        <EventPicker
+          events={publicEvents}
+          selectedEventId={selectedEventId}
+          loading={eventsLoading}
+          error={eventsError}
+          onReload={loadPublicEvents}
+          onSelect={handleSelectEvent}
+        />
+
         <div className="grid gap-3 sm:grid-cols-3">
           {[
-            ["Bảng chung kết", sections.length || (eventRanking ? 1 : 0), Trophy],
+            ["Bảng chung kết", sections.length || (publicResult ? 1 : 0), Trophy],
             ["Team có thứ hạng", uniqueTeams, Users],
-            ["Kết quả", eventRanking ? "Đã công bố" : "Chưa công bố", CalendarDays],
+            ["Giải thưởng", prizeWinners.length, Award],
           ].map(([label, value, Icon]) => (
             <div key={label} className="rounded-xl border border-slate-200 bg-white p-5">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{label}</p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    {label}
+                  </p>
                   <p className="mt-2 text-2xl font-black text-slate-950">{value}</p>
                 </div>
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-50 text-orange-700">
@@ -271,25 +488,32 @@ export default function ResultPage() {
           ))}
         </div>
 
-        {loadingEvents || loadingRanking ? (
+        {loading ? (
           <div className="flex min-h-64 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-sm text-slate-500">
             <Loader2 className="h-5 w-5 animate-spin text-orange-600" />
             Đang tải kết quả Event...
           </div>
         ) : error ? (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm font-semibold text-red-700">
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm font-semibold text-amber-800">
             {error}
           </div>
-        ) : eventTop3.length > 0 ? (
+        ) : !selectedEventId ? (
+          <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
+            <Trophy className="mx-auto h-9 w-9 text-slate-300" />
+            <p className="mt-3 font-bold text-slate-800">Chưa chọn sự kiện</p>
+            <p className="mt-1 text-sm text-slate-500">
+              Chọn một sự kiện đã có kết quả ở danh sách bên trên để xem bảng xếp hạng công khai.
+            </p>
+          </div>
+        ) : (
           <div className="space-y-7">
-            <EventTop3Podium rows={eventTop3} />
+            <PrizeWinners winners={prizeWinners} />
             {sections.length === 0 ? (
               <RankingBoard
-                title={selectedEvent?.name || "Bảng xếp hạng sự kiện"}
+                title={selectedEventName || "Bảng xếp hạng sự kiện"}
                 subtitle="Bảng đầy đủ của Final Round"
-                rows={[]}
-                onReload={loadRanking}
-                highlightTeamId={teamId || reduxTeam?.id}
+                rows={rankings}
+                onReload={loadPublicResults}
               />
             ) : (
               sections.map((section) => (
@@ -298,30 +522,9 @@ export default function ResultPage() {
                   title={section.name}
                   subtitle={`Bảng đầy đủ - ${section.roundName}`}
                   rows={section.rows}
-                  highlightTeamId={teamId || reduxTeam?.id}
                 />
               ))
             )}
-          </div>
-        ) : sections.length === 0 ? (
-          <RankingBoard
-            title={selectedEvent?.name || "Bảng xếp hạng sự kiện"}
-            subtitle="Bảng đầy đủ của Final Round"
-            rows={[]}
-            onReload={loadRanking}
-            highlightTeamId={teamId || reduxTeam?.id}
-          />
-        ) : (
-          <div className="space-y-7">
-            {sections.map((section) => (
-            <RankingBoard
-              key={section.id}
-              title={section.name}
-              subtitle={`Bảng đầy đủ - ${section.roundName}`}
-              rows={section.rows}
-              highlightTeamId={teamId || reduxTeam?.id}
-            />
-            ))}
           </div>
         )}
       </main>

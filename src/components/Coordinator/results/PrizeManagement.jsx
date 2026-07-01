@@ -13,7 +13,7 @@ import { getApiMessage } from "../coordinatorHelpers";
 
 const EMPTY_FORM = { name: "", description: "", rankPosition: "", amount: "" };
 const inputClass =
-  "w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100";
+  "w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-950 placeholder:text-slate-500 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100";
 
 function parseDownloadName(headers, eventId) {
   const disposition = headers?.["content-disposition"] || "";
@@ -225,8 +225,8 @@ export function PrizeManagement({ eventId }) {
           Đang tải giải thưởng...
         </div>
       ) : (
-        <div className="grid gap-5 xl:grid-cols-2">
-          <div>
+        <div className="grid min-w-0 gap-5 2xl:grid-cols-2">
+          <div className="min-w-0">
             <h4 className="mb-3 font-bold text-slate-900">
               Cấu hình giải của Event
             </h4>
@@ -245,7 +245,7 @@ export function PrizeManagement({ eventId }) {
                 }
                 if (key === "actions") {
                   return (
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <CoordinatorActionButton
                         icon={icons.Edit3}
                         onClick={() => openEdit(row)}
@@ -266,7 +266,7 @@ export function PrizeManagement({ eventId }) {
               }}
             />
           </div>
-          <div>
+          <div className="min-w-0">
             <h4 className="mb-3 font-bold text-slate-900">
               Đội đạt giải của Event
             </h4>

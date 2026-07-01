@@ -1,23 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Trophy, Lock, ShieldCheck, Clock } from 'lucide-react';
-
-function CountdownUnit({ value, label }) {
-  return (
-    <div className="flex flex-col items-center">
-      <div className="bg-[#0E111A] border border-white/[0.06] rounded-xl px-4 sm:px-5 py-3 sm:py-4 min-w-[64px] sm:min-w-[80px] text-center shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-        <span
-          className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-[#F26F21] tabular-nums"
-          style={{ fontFamily: 'Montserrat, sans-serif' }}
-        >
-          {String(value).padStart(2, '0')}
-        </span>
-      </div>
-      <span className="mt-2 text-[9px] sm:text-[10px] font-bold tracking-widest uppercase text-slate-500">
-        {label}
-      </span>
-    </div>
-  );
-}
+import React from 'react';
+import { Trophy, Lock, ShieldCheck } from 'lucide-react';
 
 const reviewSteps = [
   { label: 'Submissions Collected', done: true },
@@ -26,25 +8,7 @@ const reviewSteps = [
   { label: 'Results Published', done: false },
 ];
 
-export default function ResultLockScreen({ announcementTime }) {
-  const getTimeLeft = () => {
-    const diff = new Date(announcementTime) - new Date();
-    if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
-    return {
-      days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-      hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
-      minutes: Math.floor((diff / (1000 * 60)) % 60),
-      seconds: Math.floor((diff / 1000) % 60),
-    };
-  };
-
-  const [timeLeft, setTimeLeft] = useState(getTimeLeft());
-
-  useEffect(() => {
-    const timer = setInterval(() => setTimeLeft(getTimeLeft()), 1000);
-    return () => clearInterval(timer);
-  }, [announcementTime]);
-
+export default function ResultLockScreen() {
   return (
     <div className="min-h-screen bg-[#080A0F] dot-bg flex items-center justify-center relative overflow-hidden">
       {/* Ambient glows */}
@@ -74,25 +38,6 @@ export default function ResultLockScreen({ announcementTime }) {
           The organizing committee is reviewing all submissions and scores.
           Official results will be announced once the review process is complete.
         </p>
-
-        {/* Countdown */}
-        <div className="space-y-4 mb-12">
-          <div className="flex items-center justify-center gap-2 text-slate-500">
-            <Clock className="w-3.5 h-3.5" />
-            <p className="text-[10px] font-bold tracking-widest uppercase">
-              Announcement In
-            </p>
-          </div>
-          <div className="flex items-start justify-center gap-2 sm:gap-4">
-            <CountdownUnit value={timeLeft.days} label="Days" />
-            <span className="text-2xl sm:text-3xl font-bold text-slate-700 mt-2 sm:mt-3">:</span>
-            <CountdownUnit value={timeLeft.hours} label="Hours" />
-            <span className="text-2xl sm:text-3xl font-bold text-slate-700 mt-2 sm:mt-3">:</span>
-            <CountdownUnit value={timeLeft.minutes} label="Min" />
-            <span className="text-2xl sm:text-3xl font-bold text-slate-700 mt-2 sm:mt-3">:</span>
-            <CountdownUnit value={timeLeft.seconds} label="Sec" />
-          </div>
-        </div>
 
         {/* Review progress */}
         <div className="max-w-sm mx-auto">

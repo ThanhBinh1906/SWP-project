@@ -166,6 +166,60 @@ h1, h2, h3, h4, h5, h6 {
   background: rgba(242, 111, 33, 0.42);
 }
 
+.rich-text-editor {
+  color: #0f172a;
+  min-height: inherit;
+}
+
+.rich-text-editor p.is-editor-empty:first-child::before {
+  color: #94a3b8;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.rich-text-editor a {
+  color: #ea580c;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.rich-text-editor img {
+  max-width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
+}
+
+.event-rich-content {
+  color: inherit;
+}
+
+.event-rich-content :where(h1, h2, h3) {
+  color: inherit;
+  font-family: var(--font-display);
+  margin-top: 1.15em;
+  margin-bottom: 0.45em;
+}
+
+.event-rich-content :where(p, ul, ol, blockquote) {
+  margin-top: 0.75em;
+  margin-bottom: 0.75em;
+}
+
+.event-rich-content :where(a) {
+  color: #fb923c;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.event-rich-content :where(img) {
+  max-width: 100%;
+  border-radius: 1rem;
+  margin: 1rem 0;
+}
+
 /* ==========================================================================
    Premium SaaS Form Controls Accessibility & Contrast Overrides
    ========================================================================== */

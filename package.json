@@ -9,7 +9,13 @@
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.12.0",
+    "@tiptap/extension-image": "^3.27.1",
+    "@tiptap/extension-link": "^3.27.1",
+    "@tiptap/extension-placeholder": "^3.27.1",
+    "@tiptap/react": "^3.27.1",
+    "@tiptap/starter-kit": "^3.27.1",
     "axios": "^1.16.1",
+    "dompurify": "^3.4.11",
     "lucide-react": "^0.400.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
