@@ -19,6 +19,8 @@ import { JudgeBadge } from "../shared/JudgeBadge";
 import { JudgePanel } from "../shared/JudgePanel";
 import { judgeIcons } from "../shared/judgeIcons";
 
+const BATCH_SUBMIT_ID = "__all_scores__";
+
 function normalizeWeight(weight) {
   const numeric = Number(weight || 0);
   if (!Number.isFinite(numeric)) return 0;
@@ -767,6 +769,30 @@ export function JudgeScoringWorkspace({ initialRoundId = "" }) {
     reader.readAsArrayBuffer(file);
   };
 
+  const saveSubmissionScores = async (submission) => {
+    for (const criterion of criteria) {
+      const scoreValue = Number(scores[submission.id]?.[criterion.id]);
+      const comment = comments[submission.id]?.[criterion.id]?.trim() || null;
+      const existingRecord = (scoreRecords[submission.id] || []).find(
+        (record) => record.criterionId === criterion.id,
+      );
+
+      if (existingRecord) {
+        await scoreService.update(existingRecord.id || existingRecord.scoreRecordId, {
+          updatedScore: scoreValue,
+          updatedComment: comment,
+        });
+      } else {
+        await scoreService.submit(submission.id, {
+          criterionId: criterion.id,
+          score: scoreValue,
+          comment,
+          isCalibration: false,
+        });
+      }
+    }
+  };
+
   const handleSubmitScores = async (submission) => {
     const validationErrors = validateSubmissionScores(submission.id, criteria, scores);
     if (Object.keys(validationErrors).length) {
@@ -805,6 +831,63 @@ export function JudgeScoringWorkspace({ initialRoundId = "" }) {
       await loadRoundData();
     } catch (err) {
       setError(getApiMessage(err, "Gửi điểm thất bại."));
+    } finally {
+      setSubmittingId("");
+    }
+  };
+
+  const handleSubmitAllScores = async () => {
+    const eligibleSubmissions = submissions.filter(
+      (submission) => !submission.isDisqualified,
+    );
+
+    if (!eligibleSubmissions.length) {
+      setError("Không có bài nộp hợp lệ để gửi điểm.");
+      return;
+    }
+
+    const nextFieldErrors = {};
+    eligibleSubmissions.forEach((submission) => {
+      const validationErrors = validateSubmissionScores(
+        submission.id,
+        criteria,
+        scores,
+      );
+      if (Object.keys(validationErrors).length) {
+        nextFieldErrors[submission.id] = validationErrors;
+      }
+    });
+
+    if (Object.keys(nextFieldErrors).length) {
+      setFieldErrors(nextFieldErrors);
+      setExpandedSubmissionIds((prev) => {
+        const expanded = { ...prev };
+        Object.keys(nextFieldErrors).forEach((submissionId) => {
+          expanded[submissionId] = true;
+        });
+        return expanded;
+      });
+      setError(
+        "Có bài nộp chưa đủ điểm hoặc điểm chưa hợp lệ. Vui lòng kiểm tra các ô được báo lỗi.",
+      );
+      setSuccess("");
+      return;
+    }
+
+    setSubmittingId(BATCH_SUBMIT_ID);
+    setFieldErrors({});
+    setError("");
+    setSuccess("");
+
+    try {
+      for (const submission of eligibleSubmissions) {
+        await saveSubmissionScores(submission);
+      }
+
+      setSuccess(`Đã gửi điểm cho ${eligibleSubmissions.length} bài nộp.`);
+      await loadRoundData();
+    } catch (err) {
+      setError(getApiMessage(err, "Gửi toàn bộ điểm thất bại."));
     } finally {
       setSubmittingId("");
     }
@@ -857,6 +940,7 @@ export function JudgeScoringWorkspace({ initialRoundId = "" }) {
               onClick={handleDownloadTemplate}
               disabled={
                 loadingData ||
+                !!submittingId ||
                 !selectedRoundId ||
                 submissions.length === 0 ||
                 criteria.length === 0
@@ -869,6 +953,7 @@ export function JudgeScoringWorkspace({ initialRoundId = "" }) {
               onClick={() => importInputRef.current?.click()}
               disabled={
                 loadingData ||
+                !!submittingId ||
                 !selectedRoundId ||
                 submissions.length === 0 ||
                 criteria.length === 0
@@ -876,6 +961,20 @@ export function JudgeScoringWorkspace({ initialRoundId = "" }) {
               icon={Upload}
             >
               Import điểm
+            </JudgeActionButton>
+            <JudgeActionButton
+              variant="primary"
+              onClick={handleSubmitAllScores}
+              disabled={
+                loadingData ||
+                !!submittingId ||
+                !selectedRoundId ||
+                submissions.length === 0 ||
+                criteria.length === 0
+              }
+              icon={submittingId === BATCH_SUBMIT_ID ? Loader2 : judgeIcons.CheckCircle2}
+            >
+              {submittingId === BATCH_SUBMIT_ID ? "Đang gửi tất cả..." : "Gửi tất cả điểm"}
             </JudgeActionButton>
             <input
               ref={importInputRef}
@@ -927,7 +1026,9 @@ export function JudgeScoringWorkspace({ initialRoundId = "" }) {
                 scores={scores}
                 comments={comments}
                 errors={fieldErrors}
-                submitting={submittingId === submission.id}
+                submitting={
+                  submittingId === submission.id || submittingId === BATCH_SUBMIT_ID
+                }
                 expanded={!!expandedSubmissionIds[submission.id]}
                 onToggleExpanded={handleToggleSubmission}
                 onScoreChange={handleScoreChange}

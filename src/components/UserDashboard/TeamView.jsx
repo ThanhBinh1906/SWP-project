@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useSelector, useDispatch } from "react-redux";
+import * as XLSX from "xlsx";
 import { fetchMyTeam, updateMyTeam } from "../../store/teamSlice";
 import trackService from "../../services/trackService";
 import {
@@ -21,6 +22,8 @@ import {
   Lock,
   Edit2,
   X,
+  Download,
+  Upload,
 } from "lucide-react";
 import teamService from "../../services/teamService";
 import LoadingActionText from "../shared/LoadingActionText";
@@ -38,6 +41,47 @@ const EMPTY_MEMBER = {
   university: "",
   isFPTStudent: false,
 };
+
+const MEMBER_IMPORT_HEADERS = [
+  "fullName",
+  "studentCode",
+  "email",
+  "phone",
+  "university",
+  "isFPTStudent",
+];
+
+const MEMBER_SAMPLE_ROWS = [
+  ["Nguyen Van A", "SE180001", "nguyenvana@example.com", "0911111111", "FPT University", "TRUE"],
+  ["Tran Thi B", "SE180002", "tranthib@example.com", "0922222222", "FPT University", "TRUE"],
+  ["Le Minh C", "SE180003", "leminhc@example.com", "0933333333", "University of Science", "FALSE"],
+  ["Pham Gia D", "SE180004", "phamgiad@example.com", "0944444444", "HUTECH University", "FALSE"],
+];
+
+function normalizeImportText(value) {
+  return String(value ?? "").trim();
+}
+
+function parseBooleanCell(value) {
+  const text = normalizeImportText(value).toLowerCase();
+  return ["true", "yes", "y", "1", "x", "có", "co"].includes(text);
+}
+
+function downloadMemberTemplate() {
+  const sheet = XLSX.utils.aoa_to_sheet([MEMBER_IMPORT_HEADERS, ...MEMBER_SAMPLE_ROWS]);
+  sheet["!cols"] = [
+    { wch: 24 },
+    { wch: 14 },
+    { wch: 28 },
+    { wch: 14 },
+    { wch: 24 },
+    { wch: 14 },
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, sheet, "Members");
+  XLSX.writeFile(workbook, "team-members-import-template.xlsx");
+}
 
 function isValidGithubUrl(value) {
   if (!value?.trim()) return false;
@@ -124,7 +168,7 @@ function ApiError({ message }) {
   if (!message) return null;
   return (
     <div
-      className="flex items-start gap-3 p-3 rounded-xl text-sm"
+      className="flex items-start gap-3 p-3 rounded-xl text-sm whitespace-pre-line"
       style={{
         background: "rgba(239,68,68,0.06)",
         border: "1px solid rgba(239,68,68,0.2)",
@@ -245,6 +289,7 @@ function TeamCreateForm({
   tracksError,
 }) {
   const { user } = useSelector((s) => s.auth);
+  const memberImportInputRef = useRef(null);
 
   const [teamForm, setTeamForm] = useState({
     teamName: "",
@@ -298,6 +343,106 @@ function TeamCreateForm({
   const removeMember = (i) => {
     setMembers((p) => p.filter((_, idx) => idx !== i));
     setMemberErrors((p) => p.filter((_, idx) => idx !== i));
+  };
+
+  const importMembersFromRows = (rows) => {
+    const [headerRow, ...bodyRows] = rows;
+    const headerMap = (headerRow || []).reduce((map, header, index) => {
+      map[normalizeImportText(header).toLowerCase()] = index;
+      return map;
+    }, {});
+
+    const missingHeaders = MEMBER_IMPORT_HEADERS.filter(
+      (header) => headerMap[header.toLowerCase()] === undefined,
+    );
+    if (missingHeaders.length) {
+      return [`File thiếu cột: ${missingHeaders.join(", ")}. Hãy tải lại mẫu thành viên.`];
+    }
+
+    const nextMembers = [];
+    const seenEmails = new Set();
+    const seenStudentCodes = new Set();
+    const errors = [];
+
+    bodyRows.forEach((row, index) => {
+      const line = index + 2;
+      const hasAnyData = row.some((cell) => normalizeImportText(cell) !== "");
+      if (!hasAnyData) return;
+
+      const member = {
+        fullName: normalizeImportText(row[headerMap.fullname]),
+        studentCode: normalizeImportText(row[headerMap.studentcode]).toUpperCase(),
+        email: normalizeImportText(row[headerMap.email]),
+        phone: normalizeImportText(row[headerMap.phone]),
+        university: normalizeImportText(row[headerMap.university]),
+        isFPTStudent: parseBooleanCell(row[headerMap.isfptstudent]),
+      };
+
+      if (nextMembers.length >= MAX_MEMBERS) {
+        errors.push(`Dòng ${line}: đội chỉ được thêm tối đa ${MAX_MEMBERS} thành viên ngoài leader.`);
+        return;
+      }
+
+      if (!member.fullName) errors.push(`Dòng ${line}: thiếu họ tên.`);
+      if (!member.studentCode) errors.push(`Dòng ${line}: thiếu mã sinh viên.`);
+      if (!member.email) errors.push(`Dòng ${line}: thiếu email.`);
+      if (!member.phone) errors.push(`Dòng ${line}: thiếu số điện thoại.`);
+      if (!member.university) errors.push(`Dòng ${line}: thiếu trường.`);
+
+      if (member.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(member.email)) {
+        errors.push(`Dòng ${line}: email không hợp lệ.`);
+      }
+
+      const emailKey = member.email.toLowerCase();
+      const studentCodeKey = member.studentCode.toLowerCase();
+      if (emailKey && emailKey === String(user?.email || "").toLowerCase()) {
+        errors.push(`Dòng ${line}: email bị trùng với leader.`);
+      }
+      if (emailKey && seenEmails.has(emailKey)) {
+        errors.push(`Dòng ${line}: email bị trùng trong file.`);
+      }
+      if (studentCodeKey && seenStudentCodes.has(studentCodeKey)) {
+        errors.push(`Dòng ${line}: mã sinh viên bị trùng trong file.`);
+      }
+
+      seenEmails.add(emailKey);
+      seenStudentCodes.add(studentCodeKey);
+      nextMembers.push(member);
+    });
+
+    if (!errors.length && nextMembers.length < MIN_MEMBERS) {
+      errors.push(`File cần ít nhất ${MIN_MEMBERS} thành viên ngoài leader.`);
+    }
+
+    if (errors.length) return errors;
+
+    setMembers(nextMembers);
+    setMemberErrors([]);
+    setTeamErrors((prev) => ({ ...prev, members: "" }));
+    setApiError("");
+    return [];
+  };
+
+  const handleImportMembers = (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (loadEvent) => {
+      try {
+        const workbook = XLSX.read(loadEvent.target.result, { type: "array" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+        const errors = importMembersFromRows(rows);
+        if (errors.length) {
+          setApiError(errors.slice(0, 8).join("\n"));
+        }
+      } catch {
+        setApiError("Không thể đọc file Excel. Hãy dùng đúng file .xlsx hoặc tải lại mẫu thành viên.");
+      }
+    };
+    reader.readAsArrayBuffer(file);
   };
 
   const validate = () => {
@@ -574,7 +719,7 @@ function TeamCreateForm({
           boxShadow: "0 4px 12px rgba(0,0,0,0.03)",
         }}
       >
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <SectionTitle number="2" title="Thông tin Leader (bạn)" />
           <span
             className="text-[10px] px-2 py-1 rounded-lg font-semibold"
@@ -640,14 +785,47 @@ function TeamCreateForm({
           boxShadow: "0 4px 12px rgba(0,0,0,0.03)",
         }}
       >
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <SectionTitle
             number="3"
             title="Thành viên khác"
             subtitle={`(${members.length}/${MAX_MEMBERS}) — chưa tính leader`}
           />
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={downloadMemberTemplate}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150"
+              style={{
+                background: "#FFFFFF",
+                border: "1px solid #CBD5E1",
+                color: "#334155",
+              }}
+            >
+              <Download className="w-3.5 h-3.5" /> Tải mẫu
+            </button>
+            <button
+              type="button"
+              onClick={() => memberImportInputRef.current?.click()}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150"
+              style={{
+                background: "rgba(242,111,33,0.08)",
+                border: "1px solid rgba(242,111,33,0.2)",
+                color: "#F26F21",
+              }}
+            >
+              <Upload className="w-3.5 h-3.5" /> Import Excel
+            </button>
+            <input
+              ref={memberImportInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              className="hidden"
+              onChange={handleImportMembers}
+            />
           {members.length < MAX_MEMBERS && (
             <button
+              type="button"
               onClick={addMember}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150"
               style={{
@@ -665,6 +843,7 @@ function TeamCreateForm({
               <UserPlus className="w-3.5 h-3.5" /> Thêm thành viên
             </button>
           )}
+        </div>
         </div>
 
         {members.length === 0 ? (
@@ -1435,7 +1614,7 @@ function TeamInfoView({
               <Edit2 className="w-3.5 h-3.5" /> Sửa thông tin
             </button>
           )}
-        </div>
+          </div>
         <div className="space-y-2">
           <InfoRow label="Tên team" value={team.teamName} />
           <InfoRow label="Trường" value={team.university} />

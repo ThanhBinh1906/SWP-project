@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   CoordinatorActionButton,
   CoordinatorBadge,
@@ -14,9 +14,16 @@ import {
   Copy,
   Crown,
   FileSpreadsheet,
+  ImageIcon,
   Loader2,
+  Upload,
+  X,
 } from "lucide-react";
 import eventService from "../../services/eventService";
+import {
+  uploadEventBannerImage,
+  validateEventBannerImage,
+} from "../../services/cloudinaryService";
 import { CloneCompetitionModal } from "./competition/CloneCompetitionModal";
 import { CompetitionExcelImportModal } from "./competition/CompetitionExcelImportModal";
 import { CompetitionTemplateModal } from "./competition/CompetitionTemplateModal";
@@ -115,6 +122,7 @@ const EVENT_EMPTY = {
   name: "",
   description: "",
   bannerUrl: "",
+  bannerFile: null,
   location: "",
   isOnline: false,
   startDate: "",
@@ -166,6 +174,85 @@ function FormError({ msg }) {
     >
       <AlertCircle className="w-4 h-4 flex-shrink-0" />
       {msg}
+    </div>
+  );
+}
+
+function EventBannerPicker({ file, url, disabled, onFileChange, onUrlChange }) {
+  const inputRef = useRef(null);
+  const [previewUrl, setPreviewUrl] = useState(url || "");
+
+  useEffect(() => {
+    if (!file) {
+      setPreviewUrl(url || "");
+      return undefined;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [file, url]);
+
+  const clearBanner = () => {
+    onFileChange(null);
+    onUrlChange("");
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+        {previewUrl ? (
+          <img
+            src={previewUrl}
+            alt="Event banner preview"
+            className="h-44 w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-44 flex-col items-center justify-center gap-2 text-slate-500">
+            <ImageIcon className="h-8 w-8 text-slate-400" />
+            <p className="text-sm font-semibold">Chưa có ảnh banner</p>
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          className="hidden"
+          disabled={disabled}
+          onChange={(event) => {
+            onFileChange(event.target.files?.[0] || null);
+            event.target.value = "";
+          }}
+        />
+        <CoordinatorActionButton
+          icon={Upload}
+          disabled={disabled}
+          onClick={() => inputRef.current?.click()}
+        >
+          Chọn ảnh
+        </CoordinatorActionButton>
+        {(file || url) && (
+          <CoordinatorActionButton
+            icon={X}
+            disabled={disabled}
+            onClick={clearBanner}
+          >
+            Xóa ảnh
+          </CoordinatorActionButton>
+        )}
+      </div>
+
+      <p className="text-xs leading-relaxed text-slate-500">
+        Hỗ trợ JPG, PNG, WEBP hoặc GIF, tối đa 5MB. Ảnh sẽ được tải lên Cloudinary khi lưu thay đổi.
+      </p>
+      {file && (
+        <p className="truncate rounded-xl bg-orange-50 px-3 py-2 text-xs font-semibold text-orange-700">
+          Đã chọn: {file.name}
+        </p>
+      )}
     </div>
   );
 }
@@ -347,6 +434,7 @@ export function CompetitionSetup() {
       name: ev.name,
       description: ev.description || "",
       bannerUrl: ev.bannerUrl || "",
+      bannerFile: null,
       location: ev.location || "",
       isOnline: Boolean(ev.isOnline),
       startDate: formatDate(ev.startDate),
@@ -388,6 +476,11 @@ export function CompetitionSetup() {
       setEventFormError(err);
       return;
     }
+    const bannerError = validateEventBannerImage(eventForm.bannerFile);
+    if (bannerError) {
+      setEventFormError(`Ảnh banner: ${bannerError}`);
+      return;
+    }
     if (isEventStatusRollback(selectedEvent?.status, eventForm.status)) {
       setEventFormError(
         `Không thể chuyển Event từ ${selectedEvent?.status} về ${eventForm.status}. Trạng thái Event chỉ được đi tới, không được quay lại.`,
@@ -396,10 +489,16 @@ export function CompetitionSetup() {
     }
     setEventSaving(true);
     try {
+      let bannerUrl = eventForm.bannerUrl?.trim() || null;
+      if (eventForm.bannerFile) {
+        const upload = await uploadEventBannerImage(eventForm.bannerFile);
+        bannerUrl = upload.secure_url;
+      }
+
       await eventService.update(selectedEvent.id, {
         name: eventForm.name.trim(),
         description: eventForm.description.trim(),
-        bannerUrl: eventForm.bannerUrl?.trim() || null,
+        bannerUrl,
         location: eventForm.location?.trim() || null,
         isOnline: Boolean(eventForm.isOnline),
         startDate: eventForm.startDate,
@@ -1222,13 +1321,14 @@ export function CompetitionSetup() {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
-                  Banner URL
+                  Ảnh banner
                 </label>
-                <input
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-                  placeholder="https://..."
-                  value={eventForm.bannerUrl}
-                  onChange={(e) => handleEventFormChange("bannerUrl", e.target.value)}
+                <EventBannerPicker
+                  file={eventForm.bannerFile}
+                  url={eventForm.bannerUrl}
+                  disabled={eventSaving}
+                  onFileChange={(file) => handleEventFormChange("bannerFile", file)}
+                  onUrlChange={(url) => handleEventFormChange("bannerUrl", url)}
                 />
               </div>
             </div>

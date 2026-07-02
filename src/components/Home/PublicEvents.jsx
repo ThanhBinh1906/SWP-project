@@ -6,6 +6,7 @@ import {
   MapPin,
   Monitor,
   Search,
+  X,
 } from "lucide-react";
 import rankingService from "../../services/rankingService";
 import SafeHtml from "../shared/SafeHtml";
@@ -29,15 +30,35 @@ function formatDate(value) {
 }
 
 function getPlainDescription(html) {
-  return String(html || "")
+  const raw = String(html || "");
+  if (typeof document !== "undefined") {
+    const container = document.createElement("div");
+    container.innerHTML = raw;
+    return (container.textContent || container.innerText || "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  return raw
     .replace(/<[^>]+>/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
 
-function EventCard({ event }) {
-  const description = event.description || "";
-  const fallbackDescription = getPlainDescription(description);
+function getSummary(html, limit = 190) {
+  const text = getPlainDescription(html);
+  if (!text) return "";
+  if (text.length <= limit) return text;
+  return `${text.slice(0, limit).trim()}...`;
+}
+
+function getEventDescription(event) {
+  return event.descriptionHtml || event.description || "";
+}
+
+function EventCard({ event, onOpenDetail }) {
+  const description = getEventDescription(event);
+  const summary = getSummary(description);
 
   return (
     <article className="group overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.035] shadow-[0_18px_60px_rgba(0,0,0,0.22)] transition duration-300 hover:-translate-y-1 hover:border-orange-400/35 hover:bg-white/[0.055]">
@@ -87,24 +108,18 @@ function EventCard({ event }) {
           </span>
         </div>
 
-        {description ? (
-          <SafeHtml
-            html={description}
-            className="event-rich-content prose prose-invert prose-sm max-w-none line-clamp-5 text-slate-300 prose-strong:text-white prose-headings:text-white"
-          />
-        ) : (
-          <p className="text-sm leading-6 text-slate-400">
-            {fallbackDescription || "Thông tin sự kiện sẽ được cập nhật sớm."}
-          </p>
-        )}
+        <p className="min-h-[72px] text-sm leading-6 text-slate-400">
+          {summary || "Thông tin sự kiện sẽ được cập nhật sớm."}
+        </p>
 
         <div className="flex items-center justify-between border-t border-white/[0.08] pt-4">
-          <a
-            href="/register"
-            className="inline-flex items-center gap-2 rounded-lg bg-[#F26F21] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#d95b13] active:scale-[0.98]"
+          <button
+            type="button"
+            onClick={() => onOpenDetail(event)}
+            className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold text-white transition hover:border-orange-300/40 hover:bg-orange-500/10 active:scale-[0.98]"
           >
-            Đăng ký
-          </a>
+            Xem chi tiết
+          </button>
           <a
             href="/results"
             className="inline-flex items-center gap-2 text-sm font-bold text-orange-200 transition hover:text-white"
@@ -118,8 +133,93 @@ function EventCard({ event }) {
   );
 }
 
+function EventDetailModal({ event, onClose, onRegisterClick }) {
+  if (!event) return null;
+
+  const description = getEventDescription(event);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6 backdrop-blur-sm">
+      <article className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#080A0F] shadow-[0_28px_90px_rgba(0,0,0,0.5)]">
+        <div className="flex items-start justify-between gap-4 border-b border-white/[0.08] px-5 py-4 sm:px-7">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-300">
+              {event.status || "Registration"}
+            </p>
+            <h3 className="mt-2 text-2xl font-black leading-tight text-white sm:text-3xl">
+              {event.name}
+            </h3>
+            <p className="mt-2 text-sm text-slate-400">
+              {formatDate(event.startDate)} - {formatDate(event.endDate)}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-300 transition hover:border-orange-300/40 hover:text-white"
+            aria-label="Đóng chi tiết sự kiện"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="overflow-y-auto px-5 py-5 sm:px-7">
+          {event.bannerUrl && (
+            <img
+              src={event.bannerUrl}
+              alt={`Banner ${event.name}`}
+              className="mb-6 max-h-[360px] w-full rounded-2xl object-cover"
+            />
+          )}
+
+          <div className="mb-6 flex flex-wrap gap-2 text-sm text-slate-300">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1">
+              {event.isOnline ? (
+                <Monitor className="h-4 w-4 text-orange-300" />
+              ) : (
+                <MapPin className="h-4 w-4 text-orange-300" />
+              )}
+              {event.isOnline ? "Online" : event.location || "Địa điểm sẽ cập nhật"}
+            </span>
+            {event.trackCount !== undefined && (
+              <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1">
+                {event.trackCount} track
+              </span>
+            )}
+          </div>
+
+          {description ? (
+            <SafeHtml
+              html={description}
+              className="event-rich-content prose prose-invert max-w-none text-slate-300 prose-headings:text-white prose-strong:text-white prose-li:marker:text-orange-300"
+            />
+          ) : (
+            <p className="text-sm leading-6 text-slate-400">
+              Thông tin sự kiện sẽ được cập nhật sớm.
+            </p>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-3 border-t border-white/[0.08] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+          <p className="text-xs text-slate-500">
+            Hãy đọc kỹ thông tin sự kiện trước khi đăng ký để chuẩn bị đúng yêu cầu.
+          </p>
+          <button
+            type="button"
+            onClick={onRegisterClick}
+            className="inline-flex items-center justify-center rounded-xl bg-[#F26F21] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#d95b13] active:scale-[0.98]"
+          >
+            Đăng ký tham gia
+          </button>
+        </div>
+      </article>
+    </div>
+  );
+}
+
 export default function PublicEvents() {
   const [events, setEvents] = useState([]);
+  const [selectedEvent, setSelectedEvent] = useState(null);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -172,8 +272,8 @@ export default function PublicEvents() {
               Chọn một cuộc thi phù hợp rồi bắt đầu với đội của bạn.
             </h2>
             <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-400 md:text-base">
-              Danh sách này lấy trực tiếp từ hệ thống public event. Nội dung mô
-              tả hỗ trợ rich text từ Tiptap.
+              Theo dõi các cuộc thi đang mở, xem chủ đề phù hợp và chuẩn bị đội hình trước khi
+              đăng ký tham gia.
             </p>
           </div>
 
@@ -209,7 +309,11 @@ export default function PublicEvents() {
         ) : featured.length ? (
           <div className="grid gap-5 lg:grid-cols-3">
             {featured.map((event) => (
-              <EventCard key={event.id} event={event} />
+              <EventCard
+                key={event.id}
+                event={event}
+                onOpenDetail={setSelectedEvent}
+              />
             ))}
           </div>
         ) : (
@@ -224,6 +328,15 @@ export default function PublicEvents() {
           </div>
         )}
       </div>
+
+      <EventDetailModal
+        event={selectedEvent}
+        onClose={() => setSelectedEvent(null)}
+        onRegisterClick={() => {
+          setSelectedEvent(null);
+          window.location.href = "/register";
+        }}
+      />
     </section>
   );
 }
