@@ -9,6 +9,8 @@ const teamService = {
 
   getAdminTeams: (params) => api.get("/api/admin/teams", { params }),
   getGroupedTeams: (params) => api.get("/api/admin/teams/grouped", { params }),
+  importTeams: (eventId, data) =>
+    api.post(`/api/admin/events/${eventId}/teams/import`, data),
   approveTeam: (id) => api.put(`/api/teams/${id}/approve`),
   disqualifyTeam: (id, reason) =>
     api.put(`/api/teams/${id}/disqualify`, { reason }),

@@ -27,6 +27,7 @@ import {
 import { CloneCompetitionModal } from "./competition/CloneCompetitionModal";
 import { CompetitionExcelImportModal } from "./competition/CompetitionExcelImportModal";
 import { CompetitionTemplateModal } from "./competition/CompetitionTemplateModal";
+import { DemoDataImportModal } from "./competition/DemoDataImportModal";
 import RichTextEditor from "../shared/RichTextEditor";
 
 // ---------------------------------------------------------------------------
@@ -269,6 +270,7 @@ export function CompetitionSetup() {
   const [cloneSourceEvent, setCloneSourceEvent] = useState(null);
   const [structureModalOpen, setStructureModalOpen] = useState(false);
   const [excelImportOpen, setExcelImportOpen] = useState(false);
+  const [demoImportOpen, setDemoImportOpen] = useState(false);
   // === EVENTS ===
   const [events, setEvents] = useState([]);
   const [eventsLoading, setEventsLoading] = useState(true);
@@ -833,6 +835,10 @@ export function CompetitionSetup() {
               <FileSpreadsheet className="h-4 w-4" />
               Import Excel
             </CoordinatorActionButton>
+            <CoordinatorActionButton onClick={() => setDemoImportOpen(true)}>
+              <Upload className="h-4 w-4" />
+              Import dữ liệu demo
+            </CoordinatorActionButton>
             <CoordinatorActionButton
               variant="primary"
               icon={icons.GitBranch}
@@ -1266,6 +1272,14 @@ export function CompetitionSetup() {
             setExcelImportOpen(false);
             await fetchEvents();
           }}
+        />
+      )}
+
+      {demoImportOpen && (
+        <DemoDataImportModal
+          events={events}
+          onClose={() => setDemoImportOpen(false)}
+          onCompleted={fetchEvents}
         />
       )}
 

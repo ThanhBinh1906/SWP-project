@@ -880,9 +880,20 @@ export function JudgeScoringWorkspace({ initialRoundId = "" }) {
     setSuccess("");
 
     try {
-      for (const submission of eligibleSubmissions) {
-        await saveSubmissionScores(submission);
-      }
+      const scoreItems = eligibleSubmissions.flatMap((submission) =>
+        criteria.map((criterion) => ({
+          submissionId: submission.id,
+          criterionId: criterion.id,
+          score: Number(scores[submission.id]?.[criterion.id]),
+          comment: comments[submission.id]?.[criterion.id] || "",
+          isCalibration: false,
+        })),
+      );
+
+      await scoreService.importScores(selectedRoundId, {
+        scores: scoreItems,
+        items: scoreItems,
+      });
 
       setSuccess(`Đã gửi điểm cho ${eligibleSubmissions.length} bài nộp.`);
       await loadRoundData();

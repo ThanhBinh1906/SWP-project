@@ -7,6 +7,9 @@ const submissionService = {
   getByRound: (roundId) =>
     api.get(`/api/rounds/${roundId}/submissions`),
 
+  importSubmissions: (roundId, data) =>
+    api.post(`/api/admin/rounds/${roundId}/submissions/import`, data),
+
   getById: (id) => api.get(`/api/submissions/${id}`),
 
   update: (id, data) => api.put(`/api/submissions/${id}`, data),

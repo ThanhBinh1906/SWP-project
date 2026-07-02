@@ -10,6 +10,9 @@ const scoreService = {
   update: (scoreRecordId, data) =>
     api.put(`/api/scores/${scoreRecordId}`, data),
 
+  importScores: (roundId, data) =>
+    api.post(`/api/admin/rounds/${roundId}/scores/import`, data),
+
   getHistory: (params = {}) => api.get("/api/scores/history", { params }),
 };
 
