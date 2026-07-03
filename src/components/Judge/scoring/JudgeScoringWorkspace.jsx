@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
+import { useSelector } from "react-redux";
 import {
   AlertCircle,
   ChevronDown,
@@ -441,6 +442,7 @@ function SubmissionScoringCard({
 
 export function JudgeScoringWorkspace({ initialRoundId = "" }) {
   const importInputRef = useRef(null);
+  const currentUser = useSelector((state) => state.auth.user);
   const [roundOptions, setRoundOptions] = useState([]);
   const [selectedRoundId, setSelectedRoundId] = useState("");
   const [roundMeta, setRoundMeta] = useState(null);
@@ -837,9 +839,19 @@ export function JudgeScoringWorkspace({ initialRoundId = "" }) {
   };
 
   const handleSubmitAllScores = async () => {
+    const judgeId =
+      currentUser?.judgeId ||
+      currentUser?.accountId ||
+      currentUser?.userId ||
+      currentUser?.id;
     const eligibleSubmissions = submissions.filter(
       (submission) => !submission.isDisqualified,
     );
+
+    if (!judgeId) {
+      setError("Không tìm thấy mã giám khảo trong phiên đăng nhập.");
+      return;
+    }
 
     if (!eligibleSubmissions.length) {
       setError("Không có bài nộp hợp lệ để gửi điểm.");
@@ -880,20 +892,41 @@ export function JudgeScoringWorkspace({ initialRoundId = "" }) {
     setSuccess("");
 
     try {
+      let rowNumber = 2;
       const scoreItems = eligibleSubmissions.flatMap((submission) =>
         criteria.map((criterion) => ({
+          rowNumber: rowNumber++,
+          judgeId,
           submissionId: submission.id,
           criterionId: criterion.id,
-          score: Number(scores[submission.id]?.[criterion.id]),
-          comment: comments[submission.id]?.[criterion.id] || "",
-          isCalibration: false,
+          scoreValue: Number(scores[submission.id]?.[criterion.id]),
+          note: comments[submission.id]?.[criterion.id] || "",
         })),
       );
 
-      await scoreService.importScores(selectedRoundId, {
+      const response = await scoreService.importScores(selectedRoundId, {
         scores: scoreItems,
         items: scoreItems,
       });
+      const importResult = response?.data?.data || {};
+      const failedRows = Array.isArray(importResult.failed)
+        ? importResult.failed
+        : [];
+
+      if (failedRows.length) {
+        setError(
+          failedRows
+            .slice(0, 8)
+            .map(
+              (item) =>
+                `Dòng ${item.rowNumber || "-"}: ${item.reason || "Không rõ lỗi."}`,
+            )
+            .join("\n"),
+        );
+        setSuccess("");
+        await loadRoundData();
+        return;
+      }
 
       setSuccess(`Đã gửi điểm cho ${eligibleSubmissions.length} bài nộp.`);
       await loadRoundData();

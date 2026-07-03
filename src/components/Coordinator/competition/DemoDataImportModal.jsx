@@ -87,6 +87,7 @@ const teamTemplate = {
       "fullName",
       "studentCode",
       "email",
+      "username",
       "university",
       "phone",
       "isFPTStudent",
@@ -96,6 +97,7 @@ const teamTemplate = {
       "Nguyen Van A2",
       "SE180011",
       "member2.web.01@seal.local",
+      "member2.web.01",
       "FPT University",
       "0901000011",
       true,
@@ -105,6 +107,7 @@ const teamTemplate = {
       "Nguyen Van A3",
       "SE180012",
       "member3.web.01@seal.local",
+      "member3.web.01",
       "FPT University",
       "0901000012",
       true,
@@ -114,6 +117,7 @@ const teamTemplate = {
       "Nguyen Van A4",
       "SE180013",
       "member4.web.01@seal.local",
+      "member4.web.01",
       "FPT University",
       "0901000013",
       true,
@@ -123,6 +127,7 @@ const teamTemplate = {
       "Nguyen Van A5",
       "SE180014",
       "member5.web.01@seal.local",
+      "member5.web.01",
       "FPT University",
       "0901000014",
       true,
@@ -132,6 +137,7 @@ const teamTemplate = {
       "Tran Van B2",
       "SE180021",
       "member2.web.02@seal.local",
+      "member2.web.02",
       "University of Science",
       "0901000021",
       false,
@@ -141,6 +147,7 @@ const teamTemplate = {
       "Le Van C2",
       "SE180111",
       "member2.ai.01@seal.local",
+      "member2.ai.01",
       "HUTECH University",
       "0902000011",
       false,
@@ -150,8 +157,9 @@ const teamTemplate = {
     ["Cot", "Ghi chu"],
     ["trackName", "Phai trung ten track trong event dang chon."],
     ["teamName", "Dung de ghep thanh vien va bai nop."],
-    ["Members", "Moi team nen co 4 dong thanh vien; leader nam o sheet Teams."],
-    ["password", "Neu bo trong, FE se gui mac dinh 12345."],
+      ["Members", "Moi team nen co 4 dong thanh vien; leader nam o sheet Teams."],
+      ["username", "Bat buoc de tao tai khoan thanh vien."],
+      ["password", "Neu bo trong, FE se gui mac dinh 12345."],
   ],
 };
 
@@ -300,6 +308,15 @@ function getErrorMessage(error) {
   );
 }
 
+function normalizeImportResult(raw, fallbackCount) {
+  const data = raw?.data || raw || {};
+  return {
+    created: Array.isArray(data.created) ? data.created : [],
+    failed: Array.isArray(data.failed) ? data.failed : [],
+    fallbackCount,
+  };
+}
+
 async function fetchApprovedTeamsByEvent(eventId, tracks) {
   const responses = await Promise.all(
     tracks.map((track) =>
@@ -378,6 +395,7 @@ export function DemoDataImportModal({ events = [], onClose, onCompleted }) {
       const current = membersByTeam.get(key) || [];
       current.push({
         rowNumber: row.__rowNumber,
+        username: asText(getCell(row, "username")),
         fullName: asText(getCell(row, "fullName")),
         studentCode: asText(getCell(row, "studentCode")),
         email: asText(getCell(row, "email")),
@@ -428,11 +446,13 @@ export function DemoDataImportModal({ events = [], onClose, onCompleted }) {
       teams,
       items: teams,
     });
+    const raw = unwrap(response);
 
     return {
       title: "Import Team hoàn tất",
       count: teams.length,
-      raw: unwrap(response),
+      ...normalizeImportResult(raw, teams.length),
+      raw,
     };
   };
 
@@ -508,19 +528,27 @@ export function DemoDataImportModal({ events = [], onClose, onCompleted }) {
     const summaries = [];
     for (const [roundId, submissions] of itemsByRound.entries()) {
       const response = await submissionService.importSubmissions(roundId, {
+        autoCreateRoundTeam: true,
         submissions,
         items: submissions,
       });
+      const raw = unwrap(response);
       summaries.push({
         roundId,
         count: submissions.length,
-        response: unwrap(response),
+        ...normalizeImportResult(raw, submissions.length),
+        response: raw,
       });
     }
+
+    const created = summaries.flatMap((summary) => summary.created);
+    const failed = summaries.flatMap((summary) => summary.failed);
 
     return {
       title: "Import Submission hoàn tất",
       count: submissionRows.length,
+      created,
+      failed,
       raw: summaries,
     };
   };
@@ -673,11 +701,50 @@ export function DemoDataImportModal({ events = [], onClose, onCompleted }) {
         )}
 
         {result && (
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-            <p className="font-bold text-emerald-800">{result.title}</p>
-            <p className="mt-1 text-sm text-emerald-700">
-              Đã xử lý {result.count} dòng dữ liệu.
+          <div
+            className={`rounded-2xl border p-4 ${
+              result.failed?.length
+                ? "border-amber-200 bg-amber-50"
+                : "border-emerald-200 bg-emerald-50"
+            }`}
+          >
+            <p
+              className={`font-bold ${
+                result.failed?.length ? "text-amber-800" : "text-emerald-800"
+              }`}
+            >
+              {result.title}
             </p>
+            <p
+              className={`mt-1 text-sm ${
+                result.failed?.length ? "text-amber-700" : "text-emerald-700"
+              }`}
+            >
+              Thành công {result.created?.length || 0} dòng, lỗi{" "}
+              {result.failed?.length || 0} dòng.
+            </p>
+            {result.failed?.length > 0 && (
+              <div className="mt-3 max-h-52 overflow-y-auto rounded-xl border border-amber-200 bg-white">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-700">
+                    <tr>
+                      <th className="px-3 py-2">Dòng</th>
+                      <th className="px-3 py-2">Lý do</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-amber-100 text-slate-800">
+                    {result.failed.map((item, index) => (
+                      <tr key={`${item.rowNumber || "row"}-${index}`}>
+                        <td className="w-20 px-3 py-2 font-semibold">
+                          {item.rowNumber || "-"}
+                        </td>
+                        <td className="px-3 py-2">{item.reason || "Không rõ lỗi."}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
       </div>
