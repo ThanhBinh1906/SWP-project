@@ -113,6 +113,14 @@ function makeScoreImportKey(submissionId, criterionId) {
   return `${submissionId}::${criterionId}`;
 }
 
+function getImportRows(result, key) {
+  const direct = result?.[key];
+  const pascal = result?.[key.charAt(0).toUpperCase() + key.slice(1)];
+  if (Array.isArray(direct)) return direct;
+  if (Array.isArray(pascal)) return pascal;
+  return [];
+}
+
 function getSubmissionLabel(submission) {
   return (
     submission.teamName ||
@@ -853,6 +861,11 @@ export function JudgeScoringWorkspace({ initialRoundId = "" }) {
       return;
     }
 
+    if (roundMeta?.status && roundMeta.status !== "Scoring") {
+      setError("Chỉ có thể gửi điểm hàng loạt khi round đang ở trạng thái Scoring.");
+      return;
+    }
+
     if (!eligibleSubmissions.length) {
       setError("Không có bài nộp hợp lệ để gửi điểm.");
       return;
@@ -909,9 +922,9 @@ export function JudgeScoringWorkspace({ initialRoundId = "" }) {
         items: scoreItems,
       });
       const importResult = response?.data?.data || {};
-      const failedRows = Array.isArray(importResult.failed)
-        ? importResult.failed
-        : [];
+      const createdRows = getImportRows(importResult, "created");
+      const updatedRows = getImportRows(importResult, "updated");
+      const failedRows = getImportRows(importResult, "failed");
 
       if (failedRows.length) {
         setError(
@@ -923,12 +936,18 @@ export function JudgeScoringWorkspace({ initialRoundId = "" }) {
             )
             .join("\n"),
         );
-        setSuccess("");
+        setSuccess(
+          createdRows.length || updatedRows.length
+            ? `Đã lưu ${createdRows.length + updatedRows.length} dòng hợp lệ. Còn ${failedRows.length} dòng cần kiểm tra.`
+            : "",
+        );
         await loadRoundData();
         return;
       }
 
-      setSuccess(`Đã gửi điểm cho ${eligibleSubmissions.length} bài nộp.`);
+      setSuccess(
+        `Đã gửi điểm: tạo mới ${createdRows.length} dòng, cập nhật ${updatedRows.length} dòng.`,
+      );
       await loadRoundData();
     } catch (err) {
       setError(getApiMessage(err, "Gửi toàn bộ điểm thất bại."));
