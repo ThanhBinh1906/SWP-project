@@ -14,7 +14,7 @@ const inputClass =
 const modes = {
   teams: {
     title: "Import Team",
-    hint: "Tạo nhanh nhiều team đã duyệt trong các track của event.",
+    hint: "Tạo nhanh nhiều team trong các track của event.",
   },
   submissions: {
     title: "Import Submission",
@@ -163,6 +163,9 @@ const teamTemplate = {
   ],
 };
 
+const teamTemplateHeader = teamTemplate.Teams[0];
+const memberTemplateHeader = teamTemplate.Members[0];
+
 const submissionTemplate = {
   Submissions: [
     ["trackName", "roundName", "teamName", "topicTitle", "presentationUrl"],
@@ -197,6 +200,8 @@ const submissionTemplate = {
     ["presentationUrl", "Link slide/presentation public."],
   ],
 };
+
+const submissionTemplateHeader = submissionTemplate.Submissions[0];
 
 function unwrap(response) {
   return response?.data?.data ?? response?.data ?? response;
@@ -279,12 +284,192 @@ function getTrackName(track) {
   return track?.name ?? track?.trackName;
 }
 
+function getTrackCurrentTeamCount(track) {
+  return (
+    track?.currentTeamCount ??
+    track?.currentTeams ??
+    track?.teamCount ??
+    track?.registeredTeamCount ??
+    0
+  );
+}
+
+function getTrackMaxTeams(track) {
+  const value = Number(track?.maxTeams || 0);
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function getTrackMaxMembers(track) {
+  const value = Number(track?.maxMembers || 5);
+  return Number.isFinite(value) && value > 0 ? value : 5;
+}
+
+function getTeamTrackId(team) {
+  return team?.trackId ?? team?.track?.id;
+}
+
+function isFinalTrack(track) {
+  const name = normalizeKey(getTrackName(track));
+  return Boolean(track?.isFinal || track?.isFinalTrack) || name.includes("final");
+}
+
+function slugify(value) {
+  return String(value || "track")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 24) || "track";
+}
+
+function padNumber(value, size = 2) {
+  return String(value).padStart(size, "0");
+}
+
+function buildTeamTemplateFromTracks({ eventId, tracks }) {
+  const normalTracks = tracks.filter((track) => !isFinalTrack(track));
+  const targetTracks = normalTracks.length ? normalTracks : tracks;
+  const teamRows = [teamTemplateHeader];
+  const memberRows = [memberTemplateHeader];
+  const guideRows = [
+    ["Cot", "Ghi chu"],
+    ["trackName", "Duoc tao tu event dang chon, khong nen doi neu khong can."],
+    ["teamName", "Moi team co leader o sheet Teams va thanh vien o sheet Members."],
+    ["studentCode/email/username", "Duoc sinh kem eventId va trackId de han che trung du lieu demo."],
+    ["Final Track", "File mau khong tao team vao Final Track de giu dung flow vao vong trong."],
+  ];
+
+  targetTracks.forEach((track) => {
+    const trackId = getTrackId(track);
+    const trackName = getTrackName(track);
+    const maxTeams = getTrackMaxTeams(track);
+    const currentTeams = getTrackCurrentTeamCount(track);
+    const remainingTeams = Math.max(maxTeams - currentTeams, 0);
+    const memberCount = Math.max(2, Math.min(getTrackMaxMembers(track) - 1, 4));
+    const slug = slugify(trackName);
+
+    for (let index = 1; index <= remainingTeams; index += 1) {
+      const sequence = currentTeams + index;
+      const teamCode = `E${eventId}T${trackId}N${padNumber(sequence)}`;
+      const teamName = `${trackName} Team ${padNumber(sequence)}`;
+      const university =
+        index % 3 === 0
+          ? "HUTECH University"
+          : index % 2 === 0
+            ? "University of Science"
+            : "FPT University";
+
+      teamRows.push([
+        trackName,
+        teamName,
+        university,
+        `https://github.com/seal-demo/${slug}-team-${padNumber(sequence)}`,
+        `leader.${slug}.${padNumber(sequence)}`,
+        `leader.${slug}.${padNumber(sequence)}@seal.local`,
+        `Leader ${trackName} ${padNumber(sequence)}`,
+        `${teamCode}M1`,
+        `09${padNumber(trackId, 2)}${padNumber(sequence, 2)}0001`,
+        university,
+        university === "FPT University",
+        "12345",
+      ]);
+
+      for (let memberIndex = 2; memberIndex <= memberCount + 1; memberIndex += 1) {
+        memberRows.push([
+          teamName,
+          `Thanh vien ${memberIndex} - ${teamName}`,
+          `${teamCode}M${memberIndex}`,
+          `member${memberIndex}.${slug}.${padNumber(sequence)}@seal.local`,
+          `member${memberIndex}.${slug}.${padNumber(sequence)}`,
+          university,
+          `09${padNumber(trackId, 2)}${padNumber(sequence, 2)}000${memberIndex}`,
+          university === "FPT University",
+        ]);
+      }
+    }
+  });
+
+  if (teamRows.length === 1) {
+    guideRows.push([
+      "Khong co slot trong",
+      "Tat ca track thuong cua event dang chon da du so doi theo maxTeams.",
+    ]);
+  }
+
+  return {
+    Teams: teamRows,
+    Members: memberRows,
+    HuongDan: guideRows,
+  };
+}
+
 function getRoundId(round) {
   return round?.id ?? round?.roundId;
 }
 
 function getRoundName(round) {
   return round?.name ?? round?.roundName;
+}
+
+function buildSubmissionTemplateFromContext({
+  tracks,
+  rounds,
+  teams,
+  topicsByRound,
+}) {
+  const submissionRows = [submissionTemplateHeader];
+  const guideRows = [
+    ["Cot", "Ghi chu"],
+    ["trackName", "Duoc lay tu event dang chon."],
+    ["roundName", "Duoc lay tu round cua track tuong ung."],
+    ["teamName", "Phai giu nguyen ten team da tao trong event."],
+    ["topicTitle", "Neu round co topic, file mau se dien topic dau tien."],
+    ["presentationUrl", "Thay bang link slide/presentation public cua team."],
+  ];
+
+  const trackById = new Map(
+    tracks.map((track) => [String(getTrackId(track)), track]),
+  );
+  const roundByTrackId = new Map();
+  rounds.forEach((round) => {
+    const trackId = String(round.trackId ?? round.track?.id ?? "");
+    if (trackId && !roundByTrackId.has(trackId)) {
+      roundByTrackId.set(trackId, round);
+    }
+  });
+
+  teams.forEach((team, index) => {
+    const trackId = String(getTeamTrackId(team) || "");
+    const track = trackById.get(trackId);
+    const round = roundByTrackId.get(trackId);
+    if (!track || !round) return;
+
+    const roundId = getRoundId(round);
+    const topics = topicsByRound.get(String(roundId)) || [];
+    const topic = topics[0];
+    const teamName = team.teamName || team.name || `Team ${index + 1}`;
+
+    submissionRows.push([
+      getTrackName(track),
+      getRoundName(round),
+      teamName,
+      topic?.title || "",
+      `https://docs.google.com/presentation/d/demo-${slugify(teamName)}`,
+    ]);
+  });
+
+  if (submissionRows.length === 1) {
+    guideRows.push([
+      "Chua co du lieu",
+      "Can co team Approved trong event va round cua track truoc khi tao mau submission.",
+    ]);
+  }
+
+  return {
+    Submissions: submissionRows,
+    HuongDan: guideRows,
+  };
 }
 
 function createWorkbook(sheets, fileName) {
@@ -338,7 +523,9 @@ export function DemoDataImportModal({ events = [], onClose, onCompleted }) {
   const [mode, setMode] = useState("teams");
   const [eventId, setEventId] = useState(events[0]?.id || "");
   const [file, setFile] = useState(null);
+  const [teamImportStatus, setTeamImportStatus] = useState("Pending");
   const [saving, setSaving] = useState(false);
+  const [templateLoading, setTemplateLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
 
@@ -355,12 +542,43 @@ export function DemoDataImportModal({ events = [], onClose, onCompleted }) {
 
   const canImport = Boolean(eventId && file && !saving);
 
-  const downloadTemplate = () => {
-    if (mode === "teams") {
-      createWorkbook(teamTemplate, "SEAL_Team_Import_Template.xlsx");
-      return;
+  const downloadTemplate = async () => {
+    setError("");
+    setTemplateLoading(true);
+    try {
+      if (mode === "teams") {
+        const { tracks } = await loadEventContext();
+        createWorkbook(
+          buildTeamTemplateFromTracks({ eventId, tracks }),
+          "SEAL_Team_Import_Template.xlsx",
+        );
+        return;
+      }
+      const { tracks, rounds } = await loadEventContext();
+      const teams = await fetchApprovedTeamsByEvent(eventId, tracks);
+      const topicsByRound = new Map();
+      await Promise.all(
+        rounds.map(async (round) => {
+          const roundId = getRoundId(round);
+          if (!roundId) return;
+          const response = await topicService.getByRound(roundId);
+          topicsByRound.set(String(roundId), unwrap(response) || []);
+        }),
+      );
+      createWorkbook(
+        buildSubmissionTemplateFromContext({
+          tracks,
+          rounds,
+          teams,
+          topicsByRound,
+        }),
+        "SEAL_Submission_Import_Template.xlsx",
+      );
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setTemplateLoading(false);
     }
-    createWorkbook(submissionTemplate, "SEAL_Submission_Import_Template.xlsx");
   };
 
   const readWorkbook = async () => {
@@ -442,7 +660,7 @@ export function DemoDataImportModal({ events = [], onClose, onCompleted }) {
 
     const response = await teamService.importTeams(eventId, {
       defaultPassword: "12345",
-      defaultStatus: "Approved",
+      defaultStatus: teamImportStatus,
       teams,
       items: teams,
     });
@@ -654,11 +872,40 @@ export function DemoDataImportModal({ events = [], onClose, onCompleted }) {
             </select>
           </label>
 
-          <CoordinatorActionButton onClick={downloadTemplate} disabled={saving}>
+          <CoordinatorActionButton
+            onClick={downloadTemplate}
+            disabled={saving || templateLoading || !eventId}
+          >
             <Download className="h-4 w-4" />
-            Tải mẫu {mode === "teams" ? "Team" : "Submission"}
+            {templateLoading ? (
+              <LoadingActionText>Đang tạo mẫu</LoadingActionText>
+            ) : (
+              <>Tải mẫu {mode === "teams" ? "Team" : "Submission"}</>
+            )}
           </CoordinatorActionButton>
         </div>
+
+        {mode === "teams" && (
+          <label className="block space-y-2 rounded-2xl border border-slate-200 bg-white p-4">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
+              Trạng thái team sau khi import
+            </span>
+            <select
+              value={teamImportStatus}
+              onChange={(event) => setTeamImportStatus(event.target.value)}
+              className={inputClass}
+              disabled={saving}
+            >
+              <option value="Pending">Pending - chưa chặn kích hoạt Event</option>
+              <option value="Approved">
+                Approved - chỉ dùng khi team đã có Mentor
+              </option>
+            </select>
+            <p className="text-sm text-slate-600">
+              Event không thể Active nếu còn team Approved chưa được gán Mentor.
+            </p>
+          </label>
+        )}
 
         <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">
           <input

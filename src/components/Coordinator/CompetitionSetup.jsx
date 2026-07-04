@@ -115,6 +115,16 @@ function sortTracksWithFinalLast(tracks = []) {
   });
 }
 
+function getTrackCurrentTeamCount(track) {
+  return (
+    track?.currentTeamCount ??
+    track?.currentTeams ??
+    track?.teamCount ??
+    track?.registeredTeamCount ??
+    0
+  );
+}
+
 function isTrackCreateLocked(event) {
   return ["Active", "Scoring", "Completed", "Closed"].includes(event?.status);
 }
@@ -1089,7 +1099,7 @@ export function CompetitionSetup() {
                                 </div>
 
                                 <div className="hidden flex-shrink-0 text-right text-sm font-semibold text-slate-700 sm:block">
-                                  {track.currentTeams ?? 0}/{track.maxTeams}
+                                  {getTrackCurrentTeamCount(track)}/{track.maxTeams}
                                 </div>
 
                                 <div
