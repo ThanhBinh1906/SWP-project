@@ -277,7 +277,7 @@ export function TopicsManagement() {
       ) : apiError ? (
         <ApiErrorState message={apiError} onRetry={fetchTopics} />
       ) : !roundCheck.roundId ? null : topics.length === 0 ? (
-        <p className="py-12 text-center text-sm text-slate-400">
+        <p className="py-12 text-center text-sm text-slate-600">
           Chưa có đề tài cho vòng này.
         </p>
       ) : (
@@ -291,11 +291,11 @@ export function TopicsManagement() {
               style={{ borderColor: "#E5E7EB" }}
             >
               <h3 className="font-bold text-slate-900">{topic.title}</h3>
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-slate-700">
                 {selectedTrack?.name} • {selectedRound?.name}
               </p>
               {topic.description && (
-                <p className="mt-2 text-xs text-slate-500 line-clamp-2">
+                <p className="mt-2 text-xs text-slate-700 line-clamp-2">
                   {topic.description}
                 </p>
               )}
@@ -459,7 +459,7 @@ export function TopicsManagement() {
 function TopicDetailRow({ label, children }) {
   return (
     <div className="min-w-0">
-      <p className="mb-1 text-xs font-bold uppercase tracking-wider text-slate-500">
+      <p className="mb-1 text-xs font-bold uppercase tracking-wider text-slate-700">
         {label}
       </p>
       <div className="max-w-full break-words leading-6 text-slate-700">
@@ -505,7 +505,7 @@ function TopicPdfUpload({
         <span className="mt-3 text-sm font-bold text-slate-800">
           Chọn file PDF đề bài
         </span>
-        <span className="mt-1 text-xs text-slate-500">
+        <span className="mt-1 text-xs text-slate-700">
           Kéo thả/chọn file PDF, tối đa {maxSizeMb}MB
         </span>
       </label>
@@ -517,7 +517,7 @@ function TopicPdfUpload({
               <p className="truncate text-sm font-semibold text-slate-900">
                 {file.name}
               </p>
-              <p className="mt-0.5 text-xs text-slate-500">
+              <p className="mt-0.5 text-xs text-slate-700">
                 {(file.size / 1024 / 1024).toFixed(2)}MB
               </p>
             </div>
@@ -532,7 +532,7 @@ function TopicPdfUpload({
           </div>
           {progress > 0 && (
             <div className="mt-3">
-              <div className="mb-1 flex items-center justify-between text-xs font-semibold text-slate-500">
+              <div className="mb-1 flex items-center justify-between text-xs font-semibold text-slate-700">
                 <span>Đang upload Cloudinary</span>
                 <span>{progress}%</span>
               </div>

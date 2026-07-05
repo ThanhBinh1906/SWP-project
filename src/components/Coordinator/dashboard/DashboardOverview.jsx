@@ -82,7 +82,7 @@ function DashboardSkeleton() {
         {[1, 2, 3, 4].map((item) => (
           <div
             key={item}
-            className="h-36 animate-pulse rounded-2xl border border-slate-200 bg-white p-5"
+            className="h-36 animate-pulse rounded-lg border border-slate-200 bg-white p-5"
           >
             <div className="h-4 w-28 rounded bg-slate-100" />
             <div className="mt-5 h-9 w-20 rounded bg-slate-100" />
@@ -90,19 +90,19 @@ function DashboardSkeleton() {
           </div>
         ))}
       </div>
-      <div className="h-80 animate-pulse rounded-2xl border border-slate-200 bg-white" />
+      <div className="h-80 animate-pulse rounded-lg border border-slate-200 bg-white" />
     </div>
   );
 }
 
 function EmptyRoundState() {
   return (
-    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
-      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm">
+    <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
+      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm">
         <icons.CalendarDays className="h-5 w-5" />
       </div>
       <p className="font-bold text-slate-900">Chưa có vòng thi đang hiển thị</p>
-      <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
+      <p className="mx-auto mt-1 max-w-md text-sm text-slate-700">
         Khi có vòng thi được thiết lập, bảng điều phối sẽ tự nhóm theo sự kiện
         và track tại đây.
       </p>
@@ -260,7 +260,7 @@ export function DashboardOverview() {
           </CoordinatorActionButton>
         }
       >
-        <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+        <div className="rounded-md border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
           {error}
         </div>
       </CoordinatorPanel>
@@ -269,7 +269,7 @@ export function DashboardOverview() {
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm shadow-slate-200/40">
         <div className="grid gap-0 xl:grid-cols-[1.15fr_0.85fr]">
           <div className="border-b border-slate-100 p-5 sm:p-6 xl:border-b-0 xl:border-r">
             <div className="flex flex-wrap items-center gap-2">
@@ -296,21 +296,21 @@ export function DashboardOverview() {
 
           <div
             className="p-5 sm:p-6"
-            style={{ background: "#FFF7ED", color: "#111827" }}
+            style={{ background: "#F8FAFC", color: "#111827" }}
           >
             <p
               className="text-xs font-bold uppercase tracking-[0.24em]"
-              style={{ color: "#D94B0D" }}
+              style={{ color: "#475569" }}
             >
               Trạng thái round
             </p>
             <div className="mt-4 grid grid-cols-2 gap-3">
               {Object.keys(statusCounts).length === 0 ? (
                 <div
-                  className="col-span-2 rounded-xl border p-4 text-sm"
+                  className="col-span-2 rounded-md border p-4 text-sm"
                   style={{
                     background: "#FFFFFF",
-                    borderColor: "#FED7AA",
+                    borderColor: "#E2E8F0",
                     color: "#475569",
                   }}
                 >
@@ -320,10 +320,10 @@ export function DashboardOverview() {
                 Object.entries(statusCounts).map(([status, count]) => (
                   <div
                     key={status}
-                    className="rounded-xl border p-4"
+                    className="rounded-md border p-4"
                     style={{
                       background: "#FFFFFF",
-                      borderColor: "#FED7AA",
+                      borderColor: "#E2E8F0",
                     }}
                   >
                     <p className="text-2xl font-black text-slate-950">{count}</p>
@@ -368,11 +368,11 @@ export function DashboardOverview() {
             {Array.from(groupedEvents.values()).map((event) => (
               <div
                 key={event.name}
-                className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4"
+                className="rounded-lg border border-slate-200 bg-slate-50/70 p-4"
               >
                 <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-700">
                       Event
                     </p>
                     <h3 className="text-lg font-black text-slate-950">
@@ -388,7 +388,7 @@ export function DashboardOverview() {
                   {Array.from(event.tracks.values()).map((track) => (
                     <div
                       key={`${event.name}-${track.name}`}
-                      className="rounded-xl border border-slate-200 bg-white p-4"
+                      className="rounded-md border border-slate-200 bg-white p-4"
                     >
                       <div className="mb-3 flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -408,13 +408,13 @@ export function DashboardOverview() {
                         {track.rounds.map((round) => (
                           <div
                             key={round.id}
-                            className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 px-3 py-2.5"
+                            className="flex items-center justify-between gap-3 rounded-md border border-slate-100 px-3 py-2.5"
                           >
                             <div className="min-w-0">
                               <p className="truncate text-sm font-bold text-slate-800">
                                 {round.roundName}
                               </p>
-                              <p className="mt-0.5 text-xs text-slate-400">
+                              <p className="mt-0.5 text-xs text-slate-600">
                                 {event.name} / {track.name}
                               </p>
                             </div>
@@ -449,23 +449,23 @@ export function DashboardOverview() {
         }
       >
         {loadingVariance ? (
-          <div className="py-6 text-center text-sm text-slate-500 animate-pulse">
+          <div className="py-6 text-center text-sm text-slate-700 animate-pulse">
             Đang tính toán phương sai...
           </div>
         ) : varianceError ? (
-          <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+          <div className="rounded-md border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
             {varianceError}
           </div>
         ) : variances.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
+          <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
             <p className="font-bold text-slate-900">Chưa có dữ liệu phân tích</p>
-            <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
+            <p className="mx-auto mt-1 max-w-md text-sm text-slate-700">
               Cần ít nhất 2 giám khảo chấm cùng một bài nộp theo cùng một tiêu chí để tính toán phương sai điểm chấm chéo.
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-3">
+            <div className="max-h-[420px] overflow-y-auto rounded-lg border border-slate-200 bg-white">
               {variances.map((v) => {
                 // Phương sai tối đa hiển thị tương đối là 2.0 (ở thang điểm 10)
                 const percent = Math.min((v.variance / 2) * 100, 100);
@@ -492,11 +492,11 @@ export function DashboardOverview() {
                 return (
                   <div
                     key={v.criterionId}
-                    className="rounded-xl border border-slate-100 bg-slate-50/50 p-4 transition hover:bg-slate-50"
+                    className="grid gap-3 border-b border-slate-100 px-4 py-3 transition last:border-b-0 hover:bg-slate-50 md:grid-cols-[minmax(0,1.5fr)_minmax(220px,0.8fr)] md:items-center"
                   >
-                    <div className="mb-2 flex items-start justify-between gap-3">
-                      <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    <div className="flex min-w-0 items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
                           {v.trackName} / {v.roundName}
                         </span>
                         <h4 className="font-bold text-slate-800 line-clamp-1">{v.criterionName}</h4>
@@ -504,12 +504,12 @@ export function DashboardOverview() {
                       <CoordinatorBadge tone={badgeTone}>{statusLabel}</CoordinatorBadge>
                     </div>
 
-                    <div className="mt-4">
-                      <div className="mb-1 flex items-center justify-between text-xs">
-                        <span className="text-slate-500">
+                    <div>
+                      <div className="mb-1 flex items-center justify-between gap-3 text-xs">
+                        <span className="text-slate-700">
                           Phương sai: <strong className="text-slate-900">{v.variance.toFixed(3)}</strong>
                         </span>
-                        <span className="text-slate-500">
+                        <span className="text-slate-700">
                           {v.submissionsCount} bài nộp được đối chiếu
                         </span>
                       </div>
@@ -529,7 +529,7 @@ export function DashboardOverview() {
               })}
             </div>
 
-            <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-4 text-xs text-blue-900">
+            <div className="hidden">
               <h5 className="font-bold mb-1 flex items-center gap-1.5">
                 <icons.ShieldCheck className="h-4.5 w-4.5 text-blue-600 shrink-0" />
                 Hướng dẫn phân tích độ tin cậy liên đánh giá viên (RBL)
@@ -540,6 +540,9 @@ export function DashboardOverview() {
                 <li>Nếu phương sai <strong>&gt; 1.0</strong>, ban tổ chức cần họp hiệu chuẩn các giám khảo để làm rõ các tiêu chí chấm điểm và đạt độ tin cậy đánh giá cao hơn.</li>
               </ul>
             </div>
+            <p className="text-xs leading-5 text-slate-700">
+              Phương sai càng gần 0 thì điểm chấm càng đồng nhất; trên 1.0 nên hiệu chuẩn lại giám khảo.
+            </p>
           </div>
         )}
       </CoordinatorPanel>

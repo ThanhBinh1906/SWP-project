@@ -66,7 +66,7 @@ export function FormError({ msg }) {
 
 export function LoadingState({ label = "Đang tải..." }) {
   return (
-    <div className="flex items-center justify-center py-12 gap-2 text-sm text-slate-400">
+    <div className="flex items-center justify-center py-12 gap-2 text-sm text-slate-600">
       <icons.Clock
         className="w-4 h-4 animate-spin"
         style={{ color: "#F26F21" }}
@@ -85,7 +85,7 @@ export function FormField({ label, hint, icon: Icon, required, children }) {
         {required && <span className="text-red-500">*</span>}
       </label>
       {children}
-      {hint && <p className="text-[10px] leading-relaxed text-slate-400">{hint}</p>}
+      {hint && <p className="text-[10px] leading-relaxed text-slate-600">{hint}</p>}
     </div>
   );
 }
@@ -100,7 +100,7 @@ export function FilterSelect({
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+      <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-700">
         {Icon && <Icon className="w-3 h-3 text-[#F26F21]" />}
         {label}
       </label>

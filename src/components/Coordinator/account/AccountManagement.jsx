@@ -42,7 +42,7 @@ function getAssignedTeamsFromApiData(data) {
 
 function renderCompactAssignmentList(items, getPrimary, getSecondary, emptyText) {
   if (!Array.isArray(items) || items.length === 0) {
-    return <span className="text-sm text-slate-400">{emptyText}</span>;
+    return <span className="text-sm text-slate-600">{emptyText}</span>;
   }
 
   return (
@@ -56,14 +56,14 @@ function renderCompactAssignmentList(items, getPrimary, getSecondary, emptyText)
             {getPrimary(item)}
           </p>
           {getSecondary?.(item) && (
-            <p className="truncate text-[11px] text-slate-500">
+            <p className="truncate text-[11px] text-slate-700">
               {getSecondary(item)}
             </p>
           )}
         </div>
       ))}
       {items.length > 3 && (
-        <p className="text-[11px] font-semibold text-slate-400">
+        <p className="text-[11px] font-semibold text-slate-600">
           +{items.length - 3} mục khác
         </p>
       )}
@@ -541,7 +541,7 @@ function StaffTab() {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center py-12 gap-2 text-sm text-slate-400">
+        <div className="flex items-center justify-center py-12 gap-2 text-sm text-slate-600">
           <Loader2
             className="w-4 h-4 animate-spin"
             style={{ color: "#F26F21" }}
@@ -556,7 +556,7 @@ function StaffTab() {
           </CoordinatorActionButton>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="py-12 text-center text-sm text-slate-400">
+        <div className="py-12 text-center text-sm text-slate-600">
           Chưa có staff nào.
         </div>
       ) : (
@@ -569,7 +569,7 @@ function StaffTab() {
               return (
                 <div>
                   <p className="font-bold text-slate-900">{row.username}</p>
-                  <p className="text-xs text-slate-500">{row.email}</p>
+                  <p className="text-xs text-slate-700">{row.email}</p>
                 </div>
               );
             if (key === "eventRole")
@@ -676,12 +676,12 @@ function StaffTab() {
             </div>
             {roundJudgesError && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{roundJudgesError}</div>}
             {!roundJudgesLoading && !roundJudgesError && roundJudges.length === 0 ? (
-              <p className="py-6 text-center text-sm text-slate-500">Chưa có Judge hoặc chưa chọn Round.</p>
+              <p className="py-6 text-center text-sm text-slate-700">Chưa có Judge hoặc chưa chọn Round.</p>
             ) : (
               <div className="space-y-2">
                 {roundJudges.map((judge) => (
                   <div key={judge.judgeId} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-3">
-                    <div><p className="font-bold text-slate-900">{judge.username}</p><p className="text-xs text-slate-500">{judge.email}</p></div>
+                    <div><p className="font-bold text-slate-900">{judge.username}</p><p className="text-xs text-slate-700">{judge.email}</p></div>
                     <CoordinatorBadge tone="purple">{judge.judgeType || "Judge"}</CoordinatorBadge>
                   </div>
                 ))}
@@ -806,7 +806,7 @@ function StaffTab() {
           }
         >
           <div className="space-y-3">
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-700">
               Assign{" "}
               <strong className="text-slate-800">
                 {assignRoundModal.username}
@@ -840,7 +840,7 @@ function StaffTab() {
                 ))}
               </select>
               {!eventRoundsLoading && eventRounds.length === 0 && !assignError && (
-                <p className="mt-2 text-xs text-slate-500">
+                <p className="mt-2 text-xs text-slate-700">
                   Event hiện tại chưa có Round phù hợp để phân công Judge.
                 </p>
               )}
@@ -889,7 +889,7 @@ function StaffTab() {
               <div className={`rounded-xl border px-3 py-2 ${mentorTrackAssigned ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-orange-200 bg-orange-50 text-orange-700"}`}>
                 1. Gán Mentor vào Track
               </div>
-              <div className={`rounded-xl border px-3 py-2 ${mentorTrackAssigned ? "border-orange-200 bg-orange-50 text-orange-700" : "border-slate-200 bg-slate-50 text-slate-400"}`}>
+              <div className={`rounded-xl border px-3 py-2 ${mentorTrackAssigned ? "border-orange-200 bg-orange-50 text-orange-700" : "border-slate-200 bg-slate-50 text-slate-600"}`}>
                 2. Chọn team phụ trách
               </div>
             </div>
@@ -916,13 +916,13 @@ function StaffTab() {
                   </option>
                 ))}
               </select>
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-xs text-slate-600">
                 Chọn Track để kiểm tra trạng thái phân công của Mentor.
               </p>
             </div>
 
             {selectedTrackId && mentorAssignLoading && (
-              <div className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 py-8 text-sm text-slate-500">
+              <div className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 py-8 text-sm text-slate-700">
                 <Loader2 className="h-4 w-4 animate-spin text-orange-500" />
                 Đang kiểm tra phân công Mentor trong Track...
               </div>
@@ -952,7 +952,7 @@ function StaffTab() {
                     <p className="text-xs font-bold uppercase tracking-wider text-slate-600">
                       Team trong track
                     </p>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-slate-600">
                       Đã chọn {selectedTeamIds.length}/{trackTeams.length} team.
                     </p>
                   </div>
@@ -971,7 +971,7 @@ function StaffTab() {
                 )}
 
                 {trackTeams.length === 0 ? (
-                  <p className="py-6 text-center text-sm text-slate-400">
+                  <p className="py-6 text-center text-sm text-slate-600">
                     Chưa có team Approved trong track này.
                   </p>
                 ) : (
@@ -1039,10 +1039,10 @@ function StaffTab() {
                             <span
                               className={`block truncate text-xs ${
                                 assignedToOtherMentor
-                                  ? "font-semibold text-slate-500"
+                                  ? "font-semibold text-slate-700"
                                   : assignedToCurrentMentor
                                     ? "font-semibold text-emerald-600"
-                                    : "text-slate-400"
+                                    : "text-slate-600"
                               }`}
                             >
                               {statusText}

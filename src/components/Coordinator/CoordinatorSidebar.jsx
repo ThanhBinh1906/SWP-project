@@ -59,7 +59,6 @@ export function CoordinatorSidebar({ active, onNav, isOpen, onClose }) {
       brandTitle="SEAL"
       brandSubtitle="Coordinator Console"
       brandMeta="Hackathon Operations"
-      BrandIcon={icons.Trophy}
       userName={user?.username || user?.email || "Coordinator"}
       roleLabel="Coordinator"
     />

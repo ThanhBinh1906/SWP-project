@@ -733,7 +733,7 @@ export function CriteriaManagement() {
         ) : apiError ? (
           <ApiErrorState message={apiError} onRetry={fetchCriteria} />
         ) : !roundCheck.roundId ? null : criteria.length === 0 ? (
-          <p className="py-10 text-center text-sm text-slate-400">
+          <p className="py-10 text-center text-sm text-slate-600">
             Chưa có tiêu chí cho vòng này.
           </p>
         ) : (
@@ -901,7 +901,7 @@ export function CriteriaManagement() {
             <FormError msg={formError} />
             <div className="space-y-2">
               {templates.length === 0 ? (
-                <p className="text-sm text-slate-400 text-center py-4">
+                <p className="text-sm text-slate-600 text-center py-4">
                   Chưa có template nào.
                 </p>
               ) : (
@@ -922,7 +922,7 @@ export function CriteriaManagement() {
                       <p className="text-sm font-semibold text-slate-800">
                         {t.name}
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-slate-700">
                         {t.items?.length ?? 0} tiêu chí •{" "}
                         {t.description || "Không có mô tả"}
                       </p>
@@ -940,7 +940,7 @@ export function CriteriaManagement() {
                           event.stopPropagation();
                           openTemplateEditor(t);
                         }}
-                        className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-orange-50 hover:text-orange-600"
+                        className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-600 transition hover:bg-orange-50 hover:text-orange-600"
                         title="Xem và chỉnh sửa template"
                       >
                         <icons.Edit3 className="h-3.5 w-3.5" />
@@ -1045,27 +1045,27 @@ export function CriteriaManagement() {
                   </thead>
                   <tbody>
                     <tr style={{ borderTop: "1px solid #F3F4F6" }}>
-                      <td className="px-2 py-1.5 text-slate-500">
+                      <td className="px-2 py-1.5 text-slate-700">
                         Tính sáng tạo
                       </td>
-                      <td className="px-2 py-1.5 text-slate-500">
+                      <td className="px-2 py-1.5 text-slate-700">
                         Ý tưởng độc đáo
                       </td>
-                      <td className="px-2 py-1.5 text-slate-500">10</td>
-                      <td className="px-2 py-1.5 text-slate-500">30</td>
+                      <td className="px-2 py-1.5 text-slate-700">10</td>
+                      <td className="px-2 py-1.5 text-slate-700">30</td>
                     </tr>
                     <tr style={{ borderTop: "1px solid #F3F4F6" }}>
-                      <td className="px-2 py-1.5 text-slate-500">Kỹ thuật</td>
-                      <td className="px-2 py-1.5 text-slate-500">
+                      <td className="px-2 py-1.5 text-slate-700">Kỹ thuật</td>
+                      <td className="px-2 py-1.5 text-slate-700">
                         Chất lượng code
                       </td>
-                      <td className="px-2 py-1.5 text-slate-500">10</td>
-                      <td className="px-2 py-1.5 text-slate-500">70</td>
+                      <td className="px-2 py-1.5 text-slate-700">10</td>
+                      <td className="px-2 py-1.5 text-slate-700">70</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-700">
                 ⚠️ Tổng cột <strong>weight/percentage</strong> phải đúng bằng{" "}
                 <strong>100%</strong>. Chấp nhận 20, 20%, hoặc 0.2.
               </p>
@@ -1152,7 +1152,7 @@ export function CriteriaManagement() {
                       {["Tên", "Max Score", "Weight (%)"].map((h) => (
                         <th
                           key={h}
-                          className="px-3 py-2 text-left font-semibold text-slate-500"
+                          className="px-3 py-2 text-left font-semibold text-slate-700"
                         >
                           {h}
                         </th>
@@ -1173,7 +1173,7 @@ export function CriteriaManagement() {
                         <td className="px-3 py-2 font-medium text-slate-800">
                           {it.name}
                         </td>
-                        <td className="px-3 py-2 text-slate-500">
+                        <td className="px-3 py-2 text-slate-700">
                           {it.maxScore}
                         </td>
                         <td className="px-3 py-2">
@@ -1249,7 +1249,7 @@ export function CriteriaManagement() {
                 </div>
                 <div className="overflow-x-auto rounded-xl border border-slate-200">
                   <table className="min-w-[850px] w-full text-sm">
-                    <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="px-3 py-2 text-left">Tiêu chí</th><th className="px-3 py-2 text-left">Mô tả</th><th className="px-3 py-2 text-left">Max score</th><th className="px-3 py-2 text-left">Weight (%)</th></tr></thead>
+                    <thead className="bg-slate-50 text-xs uppercase text-slate-700"><tr><th className="px-3 py-2 text-left">Tiêu chí</th><th className="px-3 py-2 text-left">Mô tả</th><th className="px-3 py-2 text-left">Max score</th><th className="px-3 py-2 text-left">Weight (%)</th></tr></thead>
                     <tbody className="divide-y divide-slate-100">{templateEditor.items.map((item, index) => <tr key={index}><td className="p-2"><input className="w-full rounded-lg border border-slate-300 px-2 py-2" value={item.name} onChange={(event) => updateTemplateItem(index, "name", event.target.value)} /></td><td className="p-2"><input className="w-full rounded-lg border border-slate-300 px-2 py-2" value={item.description} onChange={(event) => updateTemplateItem(index, "description", event.target.value)} /></td><td className="p-2"><input type="number" min="0.01" className="w-full rounded-lg border border-slate-300 px-2 py-2" value={item.maxScore} onChange={(event) => updateTemplateItem(index, "maxScore", event.target.value)} /></td><td className="p-2"><input type="number" min="0.01" max="100" className="w-full rounded-lg border border-slate-300 px-2 py-2" value={item.weight} onChange={(event) => updateTemplateItem(index, "weight", event.target.value)} /></td></tr>)}</tbody>
                   </table>
                 </div>

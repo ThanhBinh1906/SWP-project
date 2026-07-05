@@ -47,7 +47,7 @@ function FilterBar({ status, onStatus, onSearch, search }) {
   return (
     <div className="flex flex-wrap items-center gap-3 mb-4">
       <div className="relative flex-1 min-w-48">
-        <icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
         <input
           className="w-full rounded-xl border border-slate-200 py-2 pl-9 pr-3 text-sm outline-none"
           placeholder="Tìm tên team, trường..."
@@ -262,7 +262,7 @@ export function TeamsManagement() {
       return (
         <div>
           <p className="font-bold text-slate-900">{row.teamName}</p>
-          <p className="text-xs text-slate-500 truncate max-w-48">
+          <p className="text-xs text-slate-700 truncate max-w-48">
             {row.university} • {row.memberCount ?? 0} members
           </p>
         </div>
@@ -280,7 +280,7 @@ export function TeamsManagement() {
       return (
         <span
           className={`text-sm font-semibold ${
-            row.mentorId ? "text-slate-700" : "text-slate-400"
+            row.mentorId ? "text-slate-700" : "text-slate-600"
           }`}
         >
           {getTeamMentorLabel(row)}
@@ -382,7 +382,7 @@ export function TeamsManagement() {
         />
 
         {loading ? (
-          <div className="flex items-center justify-center py-14 gap-2 text-sm text-slate-400">
+          <div className="flex items-center justify-center py-14 gap-2 text-sm text-slate-600">
             <Loader2
               className="w-4 h-4 animate-spin"
               style={{ color: "#F26F21" }}
@@ -397,7 +397,7 @@ export function TeamsManagement() {
             </CoordinatorActionButton>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="py-14 text-center text-sm text-slate-400">
+          <div className="py-14 text-center text-sm text-slate-600">
             Chưa có team nào.
           </div>
         ) : (
@@ -431,7 +431,7 @@ export function TeamsManagement() {
           }
         >
           <div className="space-y-2 text-sm">
-            {detailLoading && <div className="flex justify-center gap-2 py-4 text-slate-500"><Loader2 className="h-4 w-4 animate-spin" />Đang tải chi tiết...</div>}
+            {detailLoading && <div className="flex justify-center gap-2 py-4 text-slate-700"><Loader2 className="h-4 w-4 animate-spin" />Đang tải chi tiết...</div>}
             <InfoRow label="Tên team" value={detailTeam.teamName} />
             <InfoRow label="Trường" value={detailTeam.university} />
             <InfoRow
@@ -451,8 +451,8 @@ export function TeamsManagement() {
             {detailTeam.topic && <InfoRow label="Đề tài" value={detailTeam.topic.title} />}
             {detailTeam.members?.length > 0 && (
               <div className="rounded-xl border border-slate-200 p-3">
-                <p className="mb-2 text-xs font-bold uppercase text-slate-500">Danh sách thành viên</p>
-                <div className="space-y-2">{detailTeam.members.map((member) => <div key={member.id} className="flex justify-between gap-3 text-sm"><span className="font-semibold text-slate-800">{member.fullName}</span><span className="text-slate-500">{member.studentCode}</span></div>)}</div>
+                <p className="mb-2 text-xs font-bold uppercase text-slate-700">Danh sách thành viên</p>
+                <div className="space-y-2">{detailTeam.members.map((member) => <div key={member.id} className="flex justify-between gap-3 text-sm"><span className="font-semibold text-slate-800">{member.fullName}</span><span className="text-slate-700">{member.studentCode}</span></div>)}</div>
               </div>
             )}
             {detailTeam.disqualifyReason && (
@@ -529,7 +529,7 @@ export function TeamsManagement() {
 function InfoRow({ label, value, isLink }) {
   return (
     <div className="flex items-start justify-between gap-4">
-      <span className="text-xs text-slate-400 flex-shrink-0 w-24">{label}</span>
+      <span className="text-xs text-slate-600 flex-shrink-0 w-24">{label}</span>
       {isLink ? (
         <a
           href={value}

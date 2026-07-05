@@ -47,7 +47,6 @@ export function MentorSidebar({ active, onNav, isOpen, onClose }) {
       brandTitle="SEAL"
       brandSubtitle="Mentor Console"
       brandMeta="Team Supervision"
-      BrandIcon={mentorIcons.Handshake}
       userName={user?.username || user?.email || "Mentor"}
       roleLabel="Mentor"
     />

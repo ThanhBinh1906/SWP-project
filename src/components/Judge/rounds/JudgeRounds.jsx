@@ -51,7 +51,7 @@ export function JudgeRounds({ onOpenScoring }) {
         icon={judgeIcons.CalendarDays}
       >
         {loading ? (
-          <div className="flex items-center justify-center gap-2 py-12 text-sm text-slate-400">
+          <div className="flex items-center justify-center gap-2 py-12 text-sm text-slate-600">
             <Loader2 className="h-5 w-5 animate-spin text-orange-500" />
             Đang tải danh sách round...
           </div>
@@ -87,14 +87,14 @@ export function JudgeRounds({ onOpenScoring }) {
                         <h3 className="text-lg font-bold text-slate-900">{round.name}</h3>
                         <RoundStatusBadge status={round.status || "Unknown"} />
                       </div>
-                      <p className="mt-1 text-sm text-slate-500">
+                      <p className="mt-1 text-sm text-slate-700">
                         Track: {round.trackName || "Chưa có track"} • Sự kiện:{" "}
                         {round.eventName || "Chưa có sự kiện"}
                       </p>
 
                       <div className="mt-4 grid gap-3 text-sm md:grid-cols-3">
                         <div className="rounded-xl bg-slate-50 p-3">
-                          <span className="block text-xs font-bold uppercase text-slate-500">
+                          <span className="block text-xs font-bold uppercase text-slate-700">
                             Bắt đầu
                           </span>
                           <span className="font-semibold text-slate-800">
@@ -102,7 +102,7 @@ export function JudgeRounds({ onOpenScoring }) {
                           </span>
                         </div>
                         <div className="rounded-xl bg-slate-50 p-3">
-                          <span className="block text-xs font-bold uppercase text-slate-500">
+                          <span className="block text-xs font-bold uppercase text-slate-700">
                             Kết thúc
                           </span>
                           <span className="font-semibold text-slate-800">
@@ -110,7 +110,7 @@ export function JudgeRounds({ onOpenScoring }) {
                           </span>
                         </div>
                         <div className="rounded-xl bg-slate-50 p-3">
-                          <span className="block text-xs font-bold uppercase text-slate-500">
+                          <span className="block text-xs font-bold uppercase text-slate-700">
                             Submission
                           </span>
                           <span className="font-semibold text-slate-800">

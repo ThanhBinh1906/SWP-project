@@ -13,6 +13,6 @@ export function TeamActivity({ teams = [] }) {
     <div className="space-y-3">{sortedTeams.length ? sortedTeams.map((team) => <div key={team.id} className="flex items-start justify-between gap-3 rounded-xl border border-slate-200 p-4">
       <div className="min-w-0"><p className="truncate font-bold text-slate-950">{team.teamName}</p><p className="mt-1 text-sm text-slate-600">{formatDate(team.latestSubmission?.createdAt)}</p></div>
       <MentorBadge tone={team.submissionStatus === "Submitted" ? "success" : "danger"}>{team.submissionStatus === "Submitted" ? "Đã nộp" : "Chưa nộp"}</MentorBadge>
-    </div>) : <p className="py-8 text-center text-sm text-slate-500">Chưa có hoạt động.</p>}</div>
+    </div>) : <p className="py-8 text-center text-sm text-slate-700">Chưa có hoạt động.</p>}</div>
   </MentorPanel>;
 }

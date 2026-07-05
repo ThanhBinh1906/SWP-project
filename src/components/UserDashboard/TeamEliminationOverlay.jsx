@@ -35,7 +35,7 @@ export default function TeamEliminationOverlay({
           </div>
 
           {teamName && (
-            <p className="mb-2 text-sm font-semibold text-slate-500">
+            <p className="mb-2 text-sm font-semibold text-slate-700">
               {teamName}
             </p>
           )}
@@ -44,14 +44,14 @@ export default function TeamEliminationOverlay({
 
           {reason && (
             <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-700">
                 Lý do
               </p>
               <p className="mt-1 text-sm leading-6 text-slate-700">{reason}</p>
             </div>
           )}
 
-          <p className="mt-5 text-sm leading-6 text-slate-500">
+          <p className="mt-5 text-sm leading-6 text-slate-700">
             Các chức năng xem đề, nộp bài và chỉnh sửa đội đã được khóa. Bạn
             vẫn có thể xem bảng xếp hạng của cuộc thi.
           </p>

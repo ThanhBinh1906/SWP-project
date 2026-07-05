@@ -87,17 +87,17 @@ export default function UserDashboard() {
     }
   }, [dispatch, activeEventId]);
 
-  // Step 2: fetch my-team sau khi có activeEventId
+  // Step 2: fetch my-team independently so completed events can still show ranking/team info.
   useEffect(() => {
-    if (activeEventId && !teamFetched) {
+    if (!teamFetched) {
       dispatch(fetchMyTeam());
     }
-  }, [dispatch, activeEventId, teamFetched]);
+  }, [dispatch, teamFetched]);
 
   const loading =
     notificationsLoading ||
     eventLoading ||
-    (activeEventId && teamLoading && !teamFetched);
+    (teamLoading && !teamFetched);
 
   const isEliminated = Boolean(eliminationNotice);
   const eliminationState = (
@@ -131,7 +131,7 @@ export default function UserDashboard() {
       }}
     >
       <div
-        className="fixed top-0 left-64 right-0 h-96 pointer-events-none"
+        className="fixed top-0 left-[236px] right-0 h-96 pointer-events-none"
         aria-hidden="true"
         style={{
           background:
@@ -156,7 +156,7 @@ export default function UserDashboard() {
         onClose={() => setSidebarOpen(false)}
       />
 
-      <div className="flex-1 flex flex-col min-w-0 min-h-screen md:pl-64">
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen md:pl-[236px]">
         <Header
           onMenuClick={() => setSidebarOpen(true)}
           onNotificationsLoaded={applyNotifications}
@@ -171,7 +171,7 @@ export default function UserDashboard() {
               >
                 {viewTitles[activeNav].title}
               </h2>
-              <p className="text-sm text-slate-500 mt-0.5">
+              <p className="text-sm text-slate-700 mt-0.5">
                 {viewTitles[activeNav].sub}
               </p>
             </div>

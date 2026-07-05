@@ -115,7 +115,7 @@ function Podium({ rows }) {
           />
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-600">
                 Hạng {row.rankPosition || index + 1}
               </p>
               <h4 className="mt-2 truncate font-bold text-slate-950">
@@ -124,14 +124,14 @@ function Podium({ rows }) {
             </div>
             <Medal
               className={`h-6 w-6 shrink-0 ${
-                index === 0 ? "text-orange-600" : "text-slate-400"
+                index === 0 ? "text-orange-600" : "text-slate-600"
               }`}
             />
           </div>
           <p className="mt-5 text-3xl font-black text-slate-950">
             {formatScore(row.totalScore)}
           </p>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
             Tổng điểm
           </p>
         </article>
@@ -157,7 +157,7 @@ export function EventTop3Podium({
             Bục vinh danh chung cuộc
           </h2>
         </div>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-slate-700">
           Danh sách đội đạt thứ hạng cao nhất của sự kiện.
         </p>
       </div>
@@ -166,7 +166,7 @@ export function EventTop3Podium({
         <div className="rounded-xl border border-dashed border-orange-200 bg-white/70 px-6 py-8 text-center">
           <Trophy className="mx-auto h-8 w-8 text-orange-300" />
           <p className="mt-3 font-bold text-slate-900">Chưa có Top 3 chung cuộc</p>
-          <p className="mt-1 text-sm text-slate-500">{emptyMessage}</p>
+          <p className="mt-1 text-sm text-slate-700">{emptyMessage}</p>
         </div>
       ) : (
         <div className="grid gap-3 md:grid-cols-3">
@@ -185,7 +185,7 @@ export function EventTop3Podium({
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-700">
                       Hạng {rank}
                     </p>
                     <h3 className="mt-2 truncate text-lg font-black text-slate-950">
@@ -194,14 +194,14 @@ export function EventTop3Podium({
                   </div>
                   <Medal
                     className={`h-7 w-7 shrink-0 ${
-                      rank === 1 ? "text-amber-600" : "text-slate-500"
+                      rank === 1 ? "text-amber-600" : "text-slate-700"
                     }`}
                   />
                 </div>
                 <p className="mt-6 text-4xl font-black text-slate-950">
                   {formatScore(row.totalScore)}
                 </p>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-700">
                   Tổng điểm
                 </p>
               </article>
@@ -221,6 +221,7 @@ export function RankingBoard({
   error = "",
   onReload,
   highlightTeamId,
+  showPodium = true,
   emptyMessage = "Chưa có bảng xếp hạng cho lựa chọn này.",
 }) {
   const sortedRows = sortRankings(rows);
@@ -234,7 +235,7 @@ export function RankingBoard({
           </div>
           <div>
             <h3 className="font-bold text-slate-950">{title}</h3>
-            {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
+            {subtitle && <p className="mt-1 text-sm text-slate-700">{subtitle}</p>}
           </div>
         </div>
         {onReload && (
@@ -251,7 +252,7 @@ export function RankingBoard({
       </div>
 
       {loading ? (
-        <div className="flex min-h-56 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-sm text-slate-500">
+        <div className="flex min-h-56 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-sm text-slate-700">
           <Loader2 className="h-5 w-5 animate-spin text-orange-600" />
           Đang tải bảng xếp hạng...
         </div>
@@ -263,15 +264,15 @@ export function RankingBoard({
         <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
           <Trophy className="mx-auto h-8 w-8 text-slate-300" />
           <p className="mt-3 font-bold text-slate-800">Chưa có bảng xếp hạng</p>
-          <p className="mt-1 text-sm text-slate-500">{emptyMessage}</p>
+          <p className="mt-1 text-sm text-slate-700">{emptyMessage}</p>
         </div>
       ) : (
         <>
-          <Podium rows={sortedRows} />
+          {showPodium && <Podium rows={sortedRows} />}
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
             <div className="overflow-x-auto">
               <table className="min-w-full border-collapse text-left text-sm">
-                <thead className="bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-500">
+                <thead className="bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-700">
                   <tr>
                     <th className="px-4 py-3">Hạng</th>
                     <th className="px-4 py-3">Team</th>
@@ -300,7 +301,7 @@ export function RankingBoard({
                             )}
                           </p>
                           {row.university && (
-                            <p className="mt-1 text-xs text-slate-500">{row.university}</p>
+                            <p className="mt-1 text-xs text-slate-700">{row.university}</p>
                           )}
                         </td>
                         <td className="px-4 py-3 text-slate-600">
@@ -319,7 +320,7 @@ export function RankingBoard({
                               {row.isAdvancing ? "Đi tiếp" : "Dừng lại"}
                             </span>
                           ) : (
-                            <span className="text-slate-400">-</span>
+                            <span className="text-slate-600">-</span>
                           )}
                         </td>
                       </tr>

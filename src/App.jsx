@@ -112,11 +112,7 @@ const router = createBrowserRouter([
   },
   {
     path: "/results",
-    element: (
-      <PublicRoute>
-        <ResultPage />
-      </PublicRoute>
-    ),
+    element: <ResultPage />,
   },
 ]);
 

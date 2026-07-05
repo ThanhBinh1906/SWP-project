@@ -101,7 +101,7 @@ function InputField({ label, required, icon: Icon, error, locked, ...props }) {
       {label && (
         <label className="block text-xs font-bold text-slate-800 mb-1.5 uppercase tracking-wider">
           {label} {required && <span style={{ color: "#F26F21" }}>*</span>}
-          {locked && <Lock className="inline w-3 h-3 ml-1 text-slate-400" />}
+          {locked && <Lock className="inline w-3 h-3 ml-1 text-slate-600" />}
         </label>
       )}
       <div className="relative">
@@ -577,7 +577,7 @@ function TeamCreateForm({
         >
           Đăng ký Team
         </h3>
-        <p className="text-sm text-slate-500 mt-1">
+        <p className="text-sm text-slate-700 mt-1">
           Điền thông tin team và thành viên để tham gia hackathon
         </p>
       </div>
@@ -628,7 +628,7 @@ function TeamCreateForm({
             Track tham gia <span style={{ color: "#F26F21" }}>*</span>
           </label>
           {tracksLoading ? (
-            <div className="flex items-center gap-2 py-2.5 text-xs text-slate-400">
+            <div className="flex items-center gap-2 py-2.5 text-xs text-slate-600">
               <Loader2
                 className="w-4 h-4 animate-spin"
                 style={{ color: "#F26F21" }}
@@ -688,7 +688,7 @@ function TeamCreateForm({
                         {track.name || track.trackName}
                       </p>
                       {track.description && (
-                        <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                        <p className="text-[11px] text-slate-700 mt-0.5 leading-relaxed">
                           {track.description}
                         </p>
                       )}
@@ -847,7 +847,7 @@ function TeamCreateForm({
         </div>
 
         {members.length === 0 ? (
-          <p className="text-xs text-center py-4 text-slate-400">
+          <p className="text-xs text-center py-4 text-slate-600">
             Chưa có thành viên nào. Nhấn "Thêm thành viên" để thêm.
           </p>
         ) : (
@@ -866,7 +866,7 @@ function TeamCreateForm({
         )}
 
         {members.length >= MAX_MEMBERS && (
-          <p className="text-xs text-center text-slate-400">
+          <p className="text-xs text-center text-slate-600">
             Đã đạt tối đa {MAX_TEAM_MEMBERS} thành viên trong đội, bao gồm Leader.
           </p>
         )}
@@ -952,7 +952,7 @@ function TeamCreatedBanner({ team }) {
         >
           Đăng ký thành công!
         </h3>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-slate-700">
           Team <strong className="text-[#111827]">{team.teamName}</strong> đang
           chờ Coordinator duyệt.
         </p>
@@ -1013,7 +1013,7 @@ function TeamCreatedBanner({ team }) {
                 {["#", "Họ và tên", "Mã SV", "Email", "SĐT", "FPT"].map((h) => (
                   <th
                     key={h}
-                    className="px-4 py-2.5 text-left font-semibold text-slate-500 uppercase tracking-wider text-[10px]"
+                    className="px-4 py-2.5 text-left font-semibold text-slate-700 uppercase tracking-wider text-[10px]"
                   >
                     {h}
                   </th>
@@ -1031,13 +1031,13 @@ function TeamCreatedBanner({ team }) {
                         : "none",
                   }}
                 >
-                  <td className="px-4 py-3 text-slate-400">{i + 1}</td>
+                  <td className="px-4 py-3 text-slate-600">{i + 1}</td>
                   <td className="px-4 py-3 font-semibold text-[#111827]">
                     {m.fullName}
                   </td>
-                  <td className="px-4 py-3 text-slate-500">{m.studentCode}</td>
-                  <td className="px-4 py-3 text-slate-500">{m.email}</td>
-                  <td className="px-4 py-3 text-slate-500">{m.phone}</td>
+                  <td className="px-4 py-3 text-slate-700">{m.studentCode}</td>
+                  <td className="px-4 py-3 text-slate-700">{m.email}</td>
+                  <td className="px-4 py-3 text-slate-700">{m.phone}</td>
                   <td className="px-4 py-3">
                     {m.isFPTStudent ? (
                       <span className="text-emerald-600 font-bold">✓</span>
@@ -1052,7 +1052,7 @@ function TeamCreatedBanner({ team }) {
         </div>
       )}
 
-      <p className="text-xs text-center text-slate-400 pb-2">
+      <p className="text-xs text-center text-slate-600 pb-2">
         Bạn sẽ nhận thông báo khi Coordinator duyệt team.
       </p>
     </div>
@@ -1072,7 +1072,7 @@ function SectionTitle({ number, title, subtitle }) {
       </span>
       {title}
       {subtitle && (
-        <span className="text-xs font-normal text-slate-400">{subtitle}</span>
+        <span className="text-xs font-normal text-slate-600">{subtitle}</span>
       )}
     </h4>
   );
@@ -1081,7 +1081,7 @@ function SectionTitle({ number, title, subtitle }) {
 function InfoRow({ label, value, isLink }) {
   return (
     <div className="flex items-center justify-between gap-4">
-      <span className="text-xs text-slate-500 flex-shrink-0">{label}</span>
+      <span className="text-xs text-slate-700 flex-shrink-0">{label}</span>
       {isLink ? (
         <a
           href={value}
@@ -1201,7 +1201,7 @@ function MemberModal({ teamId, member, onClose, onSaved }) {
           </h3>
           <button
             onClick={onClose}
-            className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"
+            className="rounded-lg p-1 text-slate-600 hover:bg-slate-100"
           >
             <X className="w-4 h-4" />
           </button>
@@ -1239,7 +1239,13 @@ function MemberModal({ teamId, member, onClose, onSaved }) {
             value={form.studentCode}
             onChange={(e) => handleChange("studentCode", e.target.value)}
             error={errors.studentCode}
+            locked={isEdit}
           />
+          {isEdit && (
+            <p className="text-xs text-slate-700 -mt-2 col-start-2">
+              Mã sinh viên là thông tin định danh, không thể chỉnh sửa sau khi tạo.
+            </p>
+          )}
           <InputField
             label="Email"
             required
@@ -1367,7 +1373,7 @@ function EditTeamModal({ team, onClose, onSaved }) {
           </h3>
           <button
             onClick={onClose}
-            className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"
+            className="rounded-lg p-1 text-slate-600 hover:bg-slate-100"
           >
             <X className="w-4 h-4" />
           </button>
@@ -1583,7 +1589,7 @@ function TeamInfoView({
         >
           {team.teamName}
         </h3>
-        <p className="text-sm text-slate-500 mt-1">{team.university}</p>
+        <p className="text-sm text-slate-700 mt-1">{team.university}</p>
       </div>
 
       {/* Team info */}
@@ -1697,7 +1703,7 @@ function TeamInfoView({
         )}
 
         {!team.members?.length ? (
-          <p className="text-xs text-center text-slate-400 py-8">
+          <p className="text-xs text-center text-slate-600 py-8">
             Chưa có thành viên nào.
           </p>
         ) : (
@@ -1722,7 +1728,7 @@ function TeamInfoView({
                   (h, i) => (
                     <th
                       key={i}
-                      className="px-3 py-2.5 text-left font-semibold text-slate-500 uppercase tracking-wider text-[10px]"
+                      className="px-3 py-2.5 text-left font-semibold text-slate-700 uppercase tracking-wider text-[10px]"
                     >
                       {h}
                     </th>
@@ -1741,7 +1747,7 @@ function TeamInfoView({
                         : "none",
                   }}
                 >
-                  <td className="px-3 py-3 text-slate-400">{i + 1}</td>
+                  <td className="px-3 py-3 text-slate-600">{i + 1}</td>
                   <td className="px-3 py-3 font-semibold text-[#111827]">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       {m.fullName}
@@ -1759,11 +1765,11 @@ function TeamInfoView({
                       )}
                     </div>
                   </td>
-                  <td className="px-3 py-3 text-slate-500">{m.studentCode}</td>
-                  <td className="px-3 py-3 text-slate-500 truncate max-w-0">
+                  <td className="px-3 py-3 text-slate-700">{m.studentCode}</td>
+                  <td className="px-3 py-3 text-slate-700 truncate max-w-0">
                     {m.email}
                   </td>
-                  <td className="px-3 py-3 text-slate-500">{m.phone}</td>
+                  <td className="px-3 py-3 text-slate-700">{m.phone}</td>
                   <td className="px-3 py-3">
                     {m.isFPTStudent ? (
                       <span className="text-emerald-600 font-bold">✓</span>
@@ -1929,7 +1935,7 @@ export function TeamView({ readOnly = false, lockMessage = "" }) {
 
   if (tracksLoading || (teamLoading && !fetched))
     return (
-      <div className="flex items-center justify-center py-20 gap-3 text-sm text-slate-400">
+      <div className="flex items-center justify-center py-20 gap-3 text-sm text-slate-600">
         <Loader2
           className="w-5 h-5 animate-spin"
           style={{ color: "#F26F21" }}

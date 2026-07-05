@@ -139,7 +139,7 @@ function EventPicker({
           {error}
         </div>
       ) : loading ? (
-        <div className="flex min-h-32 items-center justify-center gap-2 rounded-lg border border-dashed border-slate-200 text-sm text-slate-500">
+        <div className="flex min-h-32 items-center justify-center gap-2 rounded-lg border border-dashed border-slate-200 text-sm text-slate-700">
           <Loader2 className="h-5 w-5 animate-spin text-orange-600" />
           Đang tải danh sách sự kiện...
         </div>
@@ -147,7 +147,7 @@ function EventPicker({
         <div className="rounded-lg border border-dashed border-slate-200 px-5 py-8 text-center">
           <CalendarDays className="mx-auto h-8 w-8 text-slate-300" />
           <p className="mt-3 font-bold text-slate-800">Chưa có sự kiện public</p>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-slate-700">
             Backend hiện chỉ trả Event ở trạng thái Active hoặc Completed.
           </p>
         </div>
@@ -185,7 +185,7 @@ function EventPicker({
                     <h3 className="mt-3 text-lg font-black text-slate-950">
                       {getEventName(event)}
                     </h3>
-                    <p className="mt-2 text-sm text-slate-500">
+                    <p className="mt-2 text-sm text-slate-700">
                       {formatDate(event.startDate)} - {formatDate(event.endDate)}
                     </p>
                   </div>
@@ -196,7 +196,7 @@ function EventPicker({
                     className={`inline-flex min-h-10 shrink-0 items-center justify-center rounded-lg px-4 text-sm font-bold ${
                       ready
                         ? "bg-orange-600 text-white hover:bg-orange-700"
-                        : "cursor-not-allowed bg-slate-100 text-slate-400"
+                        : "cursor-not-allowed bg-slate-100 text-slate-600"
                     }`}
                   >
                     {ready ? "Xem kết quả" : "Đang chờ"}
@@ -225,7 +225,7 @@ function PrizeWinners({ winners = [] }) {
             Danh sách đội đạt giải
           </h2>
         </div>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-slate-700">
           Giải thưởng được ghép từ cấu hình Prize của Event và bảng xếp hạng chung cuộc.
         </p>
       </div>
@@ -234,7 +234,7 @@ function PrizeWinners({ winners = [] }) {
         <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-6 py-8 text-center">
           <Award className="mx-auto h-8 w-8 text-slate-300" />
           <p className="mt-3 font-bold text-slate-800">Chưa có danh sách đội đạt giải</p>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-slate-700">
             Backend sẽ trả dữ liệu sau khi Final Round đã đóng và Prize hạng 1, 2, 3 đã được cấu hình.
           </p>
         </div>
@@ -266,14 +266,14 @@ function PrizeWinners({ winners = [] }) {
                   {winner.teamName || "Team"}
                 </p>
                 {winner.university && (
-                  <p className="mt-1 text-sm text-slate-500">{winner.university}</p>
+                  <p className="mt-1 text-sm text-slate-700">{winner.university}</p>
                 )}
                 <div className="mt-4 flex items-end justify-between gap-3">
                   <div>
                     <p className="text-2xl font-black text-slate-950">
                       {Number(winner.totalScore || 0).toFixed(2)}
                     </p>
-                    <p className="text-xs font-bold uppercase text-slate-400">Điểm</p>
+                    <p className="text-xs font-bold uppercase text-slate-600">Điểm</p>
                   </div>
                   {amount && (
                     <p className="rounded-full bg-white px-3 py-1 text-xs font-bold text-orange-700">
@@ -426,11 +426,11 @@ export default function ResultPage() {
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
                 Danh sách sự kiện được lấy từ API public. Nút xem kết quả chỉ mở khi backend trả về <strong>resultsAvailable</strong>.
               </p>
-              <p className="mt-5 text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <p className="mt-5 text-xs font-semibold uppercase tracking-wider text-slate-600">
                 Cập nhật: {formatSnapshotTime(latestSnapshotAt)}
               </p>
               {(publicResult?.finalTrackName || publicResult?.finalRoundName) && (
-                <p className="mt-2 text-sm text-slate-500">
+                <p className="mt-2 text-sm text-slate-700">
                   {publicResult.finalTrackName || "Track Final"} ·{" "}
                   {publicResult.finalRoundName || "Final Round"}
                 </p>
@@ -444,7 +444,7 @@ export default function ResultPage() {
                     <p className="text-sm font-black text-slate-950">
                       {publicEvents.filter((event) => event.resultsAvailable).length} sự kiện có kết quả
                     </p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-slate-700">
                       Trong {publicEvents.length} sự kiện public
                     </p>
                   </div>
@@ -475,7 +475,7 @@ export default function ResultPage() {
             <div key={label} className="rounded-xl border border-slate-200 bg-white p-5">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-700">
                     {label}
                   </p>
                   <p className="mt-2 text-2xl font-black text-slate-950">{value}</p>
@@ -489,7 +489,7 @@ export default function ResultPage() {
         </div>
 
         {loading ? (
-          <div className="flex min-h-64 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-sm text-slate-500">
+          <div className="flex min-h-64 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-sm text-slate-700">
             <Loader2 className="h-5 w-5 animate-spin text-orange-600" />
             Đang tải kết quả Event...
           </div>
@@ -501,7 +501,7 @@ export default function ResultPage() {
           <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
             <Trophy className="mx-auto h-9 w-9 text-slate-300" />
             <p className="mt-3 font-bold text-slate-800">Chưa chọn sự kiện</p>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-slate-700">
               Chọn một sự kiện đã có kết quả ở danh sách bên trên để xem bảng xếp hạng công khai.
             </p>
           </div>
@@ -513,6 +513,7 @@ export default function ResultPage() {
                 title={selectedEventName || "Bảng xếp hạng sự kiện"}
                 subtitle="Bảng đầy đủ của Final Round"
                 rows={rankings}
+                showPodium={false}
                 onReload={loadPublicResults}
               />
             ) : (
@@ -522,6 +523,7 @@ export default function ResultPage() {
                   title={section.name}
                   subtitle={`Bảng đầy đủ - ${section.roundName}`}
                   rows={section.rows}
+                  showPodium={false}
                 />
               ))
             )}

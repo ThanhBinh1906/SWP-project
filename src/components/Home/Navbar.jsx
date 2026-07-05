@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Menu, X, Zap } from 'lucide-react';
-import { AuthButtons } from './AuthButtons';
+import React, { useState, useEffect } from "react";
+import { Menu, X, Zap } from "lucide-react";
+import { AuthButtons } from "./AuthButtons";
+import logo from "../images/logo_hackathon.png";
 
 export default function Navbar({ onLoginClick, onRegisterClick }) {
   const [scrolled, setScrolled] = useState(false);
@@ -8,17 +9,17 @@ export default function Navbar({ onLoginClick, onRegisterClick }) {
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
-    window.addEventListener('scroll', onScroll);
-    return () => window.removeEventListener('scroll', onScroll);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   const links = [
-    { label: 'Home', href: '#home' },
-    { label: 'Events', href: '#events' },
-    { label: 'Timeline', href: '#timeline' },
-    { label: 'Prizes', href: '#prizes' },
-    { label: 'Results', href: '/results' },
-    { label: 'FAQ', href: '#faq' },
+    { label: "Home", href: "#home" },
+    { label: "Events", href: "#events" },
+    { label: "Timeline", href: "#timeline" },
+    { label: "Prizes", href: "#prizes" },
+    { label: "Results", href: "/results" },
+    { label: "FAQ", href: "#faq" },
   ];
 
   const handleLogin = () => {
@@ -35,22 +36,14 @@ export default function Navbar({ onLoginClick, onRegisterClick }) {
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled
-          ? 'bg-[#080A0F]/80 backdrop-blur-md border-b border-white/[0.06] shadow-[0_4px_30px_rgba(0,0,0,0.4)]'
-          : 'bg-transparent border-b border-transparent'
+          ? "bg-[#080A0F]/80 backdrop-blur-md border-b border-white/[0.06] shadow-[0_4px_30px_rgba(0,0,0,0.4)]"
+          : "bg-transparent border-b border-transparent"
       }`}
     >
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
         {/* Logo */}
         <a href="#home" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-lg bg-[#F26F21] flex items-center justify-center transition-transform duration-300 group-hover:scale-105">
-            <Zap className="w-4 h-4 text-white" />
-          </div>
-          <span
-            className="text-white font-extrabold text-lg tracking-wider"
-            style={{ fontFamily: 'Montserrat, sans-serif' }}
-          >
-            FPTU <span className="text-[#F26F21]">Hackathon</span>
-          </span>
+          <img src={logo} alt="Logo" className="w-20 h-20 rounded-lg" />
         </a>
 
         {/* Desktop links */}

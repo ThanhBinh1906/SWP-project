@@ -2,6 +2,7 @@ import api from "./axiosInstance";
 
 const roundService = {
   getByTrack: (trackId) => api.get(`/api/tracks/${trackId}/rounds`),
+  getTracksRounds: () => api.get("/api/tracks/rounds"),
   getAssigned: () => api.get("/api/rounds/assigned"),
   create: (data) => api.post("/api/rounds", data),
   update: (id, data) => api.put(`/api/rounds/${id}`, data),

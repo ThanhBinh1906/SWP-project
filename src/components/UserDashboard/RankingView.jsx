@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSelector } from "react-redux";
+import { Link } from "react-router-dom";
 import rankingService from "../../services/rankingService";
 import {
   EventTop3Podium,
@@ -9,6 +10,21 @@ import {
 
 function getApiMessage(error, fallback) {
   return error?.response?.data?.message || error?.message || fallback;
+}
+
+function unwrapPublicEvents(response) {
+  const data = response?.data?.data;
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  return [];
+}
+
+function getEventId(event) {
+  return event?.eventId ?? event?.id ?? null;
+}
+
+function getEventName(event) {
+  return event?.eventName || event?.name || "Sự kiện hiện tại";
 }
 
 function getEventRankingMessage(error) {
@@ -44,24 +60,53 @@ export function RankingView() {
   const activeEventId = useSelector((state) => state.event.activeEventId);
   const [eventRanking, setEventRanking] = useState(null);
   const [eventSections, setEventSections] = useState([]);
+  const [fallbackEvent, setFallbackEvent] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const rankingEvent = activeEventId ? activeEvent : fallbackEvent;
+  const rankingEventId = activeEventId || getEventId(fallbackEvent);
+  const rankingEventName = getEventName(rankingEvent);
   const eventTop3 = Array.isArray(eventRanking?.eventTop3)
     ? eventRanking.eventTop3
     : [];
 
+  const loadFallbackEvent = useCallback(async () => {
+    if (activeEventId) {
+      setFallbackEvent(null);
+      return null;
+    }
+
+    const response = await rankingService.getPublicEvents();
+    const readyEvent = unwrapPublicEvents(response).find(
+      (event) => event?.resultsAvailable,
+    );
+    setFallbackEvent(readyEvent || null);
+    return readyEvent || null;
+  }, [activeEventId]);
+
   const loadRanking = useCallback(async () => {
-    if (!activeEventId) {
+    let eventId = rankingEventId;
+    let usePublicResult = !activeEventId;
+
+    if (!eventId) {
+      const readyEvent = await loadFallbackEvent();
+      eventId = getEventId(readyEvent);
+      usePublicResult = true;
+    }
+
+    if (!eventId) {
       setEventRanking(null);
       setEventSections([]);
-      setError("");
+      setError("Chưa có sự kiện nào đã công bố kết quả.");
       return;
     }
 
     setLoading(true);
     setError("");
     try {
-      const response = await rankingService.getEventLeaderboard(activeEventId);
+      const response = usePublicResult
+        ? await rankingService.getPublicEventResults(eventId)
+        : await rankingService.getEventLeaderboard(eventId);
       const payload = response.data?.data || null;
       setEventRanking(payload);
       setEventSections(extractEventRankingSections(payload));
@@ -72,7 +117,7 @@ export function RankingView() {
     } finally {
       setLoading(false);
     }
-  }, [activeEventId]);
+  }, [activeEventId, loadFallbackEvent, rankingEventId]);
 
   useEffect(() => {
     loadRanking();
@@ -81,10 +126,16 @@ export function RankingView() {
   if (!myTeam) {
     return (
       <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
-        <p className="font-bold text-slate-900">Bạn chưa có đội thi</p>
-        <p className="mt-1 text-sm text-slate-500">
-          Bảng xếp hạng chung cuộc sẽ xuất hiện sau khi kết quả sự kiện được công bố.
+        <p className="font-bold text-slate-900">Xem kết quả đã công bố</p>
+        <p className="mt-1 text-sm text-slate-700">
+          Nếu sự kiện đã kết thúc, bạn có thể xem bảng xếp hạng ở trang kết quả công khai.
         </p>
+        <Link
+          to={rankingEventId ? `/results?eventId=${rankingEventId}` : "/results"}
+          className="mt-5 inline-flex min-h-10 items-center justify-center rounded-lg bg-[#F26F21] px-5 text-sm font-semibold text-white transition hover:bg-[#dc5f14]"
+        >
+          Mở trang kết quả
+        </Link>
       </div>
     );
   }
@@ -99,8 +150,8 @@ export function RankingView() {
           <h3 className="mt-1 text-xl font-black text-slate-950">
             {myTeam.teamName || "Đội của bạn"}
           </h3>
-          <p className="mt-1 text-sm text-slate-500">
-            Track #{myTeam.trackId} · {activeEvent?.name || "Sự kiện hiện tại"}
+          <p className="mt-1 text-sm text-slate-700">
+            Track #{myTeam.trackId} · {rankingEventName}
           </p>
         </div>
         <div className="rounded-lg border border-orange-200 bg-orange-50 px-4 py-2 text-sm font-bold text-orange-700">
@@ -110,7 +161,7 @@ export function RankingView() {
 
       {loading || error ? (
         <RankingBoard
-          title={activeEvent?.name || "Bảng xếp hạng toàn sự kiện"}
+          title={rankingEventName || "Bảng xếp hạng toàn sự kiện"}
           subtitle="Top 3 và bảng đầy đủ của Final Round"
           rows={[]}
           loading={loading}
@@ -123,7 +174,7 @@ export function RankingView() {
           <EventTop3Podium rows={eventTop3} />
           {eventSections.length === 0 ? (
             <RankingBoard
-              title={activeEvent?.name || "Bảng xếp hạng toàn sự kiện"}
+              title={rankingEventName || "Bảng xếp hạng toàn sự kiện"}
               subtitle="Bảng đầy đủ của Final Round"
               rows={[]}
               onReload={loadRanking}

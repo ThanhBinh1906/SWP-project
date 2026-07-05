@@ -76,7 +76,7 @@ function SubmissionLink({ submission }) {
     submission?.reportUrl ||
     submission?.demoUrl;
 
-  if (!href) return <span className="text-slate-400">Chưa có link</span>;
+  if (!href) return <span className="text-slate-600">Chưa có link</span>;
 
   return (
     <a
@@ -298,7 +298,7 @@ export function JudgeTieBreakView() {
 
   if (loadingSessions) {
     return (
-      <div className="flex items-center justify-center gap-2 py-16 text-sm text-slate-500">
+      <div className="flex items-center justify-center gap-2 py-16 text-sm text-slate-700">
         <Loader2 className="h-5 w-5 animate-spin text-orange-500" />
         Đang tải tie-break...
       </div>
@@ -352,11 +352,11 @@ export function JudgeTieBreakView() {
                         {session.status || "Pending"}
                       </JudgeBadge>
                     </div>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs text-slate-700">
                       Hạng #{session.rankPosition || session.tieRankPosition || "?"} ·{" "}
                       {session.trackName || "Track"}
                     </p>
-                    <p className="mt-1 text-xs text-slate-400">
+                    <p className="mt-1 text-xs text-slate-600">
                       {formatDateTime(session.createdAt)}
                     </p>
                   </button>
@@ -378,7 +378,7 @@ export function JudgeTieBreakView() {
               )}
 
               {loadingDetail ? (
-                <div className="flex items-center justify-center gap-2 py-16 text-sm text-slate-500">
+                <div className="flex items-center justify-center gap-2 py-16 text-sm text-slate-700">
                   <Loader2 className="h-5 w-5 animate-spin text-orange-500" />
                   Đang tải chi tiết phiên chấm...
                 </div>
@@ -403,7 +403,7 @@ export function JudgeTieBreakView() {
               ) : (
                 <div className="space-y-4">
                   <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-xs font-bold uppercase text-slate-500">
+                    <p className="text-xs font-bold uppercase text-slate-700">
                       Phiên đang chấm
                     </p>
                     <p className="mt-1 font-bold text-slate-950">
@@ -431,7 +431,7 @@ export function JudgeTieBreakView() {
                                 submission.submission?.teamName ||
                                 `TieBreakSubmission ${String(submissionId).slice(0, 8)}`}
                             </p>
-                            <p className="mt-1 font-mono text-xs text-slate-400">
+                            <p className="mt-1 font-mono text-xs text-slate-600">
                               {submissionId}
                             </p>
                           </div>
@@ -450,13 +450,13 @@ export function JudgeTieBreakView() {
                                   <p className="font-bold text-slate-900">
                                     {criterion.name}
                                   </p>
-                                  <p className="mt-1 text-xs text-slate-500">
+                                  <p className="mt-1 text-xs text-slate-700">
                                     Max: {criterion.maxScore} · Weight:{" "}
                                     {Number((normalizeWeight(criterion.weight) * 100).toFixed(2))}%
                                   </p>
                                 </div>
                                 <div>
-                                  <label className="text-[10px] font-bold uppercase text-slate-500">
+                                  <label className="text-[10px] font-bold uppercase text-slate-700">
                                     Điểm
                                   </label>
                                   <input
@@ -484,7 +484,7 @@ export function JudgeTieBreakView() {
                                   )}
                                 </div>
                                 <div>
-                                  <label className="text-[10px] font-bold uppercase text-slate-500">
+                                  <label className="text-[10px] font-bold uppercase text-slate-700">
                                     Ghi chú
                                   </label>
                                   <textarea
@@ -507,7 +507,7 @@ export function JudgeTieBreakView() {
 
                         <div className="mt-4 flex flex-col gap-3 rounded-xl border border-orange-100 bg-orange-50/40 p-4 sm:flex-row sm:items-center sm:justify-between">
                           <div>
-                            <p className="text-xs font-bold uppercase text-slate-500">
+                            <p className="text-xs font-bold uppercase text-slate-700">
                               Tổng tie-break tạm tính
                             </p>
                             <p className="text-2xl font-black text-slate-950">

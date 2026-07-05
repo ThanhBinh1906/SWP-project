@@ -65,7 +65,7 @@ function AuditEntry({ entry, showJudge }) {
                 Tie-break
               </span>
             )}
-            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500">
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700">
               <Clock3 className="h-3.5 w-3.5" />
               {formatDateTime(entry.createdAt)}
             </span>
@@ -78,7 +78,7 @@ function AuditEntry({ entry, showJudge }) {
             {entry.criterionName || "Tiêu chí không xác định"}
             {entry.university ? ` · ${entry.university}` : ""}
           </p>
-          <p className="mt-2 text-xs leading-5 text-slate-500">
+          <p className="mt-2 text-xs leading-5 text-slate-700">
             {[entry.eventName, entry.trackName, entry.roundName]
               .filter(Boolean)
               .join(" / ")}
@@ -99,23 +99,23 @@ function AuditEntry({ entry, showJudge }) {
         <div className="flex shrink-0 items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
           {isUpdate && (
             <>
-              <span className="min-w-8 text-center text-xl font-bold text-slate-500">
+              <span className="min-w-8 text-center text-xl font-bold text-slate-700">
                 {formatScore(entry.oldScore)}
               </span>
-              <ArrowRight className="h-4 w-4 text-slate-400" />
+              <ArrowRight className="h-4 w-4 text-slate-600" />
             </>
           )}
           <span className="min-w-8 text-center text-2xl font-black text-orange-600">
             {formatScore(entry.newScore)}
           </span>
-          <span className="text-xs font-bold uppercase text-slate-500">điểm</span>
+          <span className="text-xs font-bold uppercase text-slate-700">điểm</span>
         </div>
       </div>
 
       {commentChanged && (
         <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
           <div className="rounded-lg bg-slate-50 p-3">
-            <p className="text-xs font-bold uppercase text-slate-500">Nhận xét cũ</p>
+            <p className="text-xs font-bold uppercase text-slate-700">Nhận xét cũ</p>
             <p className="mt-1 whitespace-pre-wrap text-slate-700">
               {entry.oldComment || "Không có nhận xét"}
             </p>
@@ -178,7 +178,7 @@ export default function ScoreAuditLog({ scope = "judge" }) {
           </div>
           <div>
             <h2 className="font-bold text-slate-950">Lịch sử chấm điểm</h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-slate-700">
               {isCoordinator
                 ? "Theo dõi các lần Judge chấm mới hoặc sửa điểm, gồm cả tie-break."
                 : "Các lần chấm mới và sửa điểm của bạn, gồm cả tie-break."}
@@ -219,7 +219,7 @@ export default function ScoreAuditLog({ scope = "judge" }) {
           <p className="mt-3 font-bold text-slate-800">
             Chưa có lịch sử chấm điểm
           </p>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-slate-700">
             Lịch sử sẽ xuất hiện sau khi điểm được tạo hoặc chỉnh sửa.
           </p>
         </div>

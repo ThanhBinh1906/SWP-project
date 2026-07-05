@@ -77,14 +77,14 @@ export default function JudgeDashboard() {
         onClose={() => setSidebarOpen(false)}
       />
 
-      <div className="flex min-w-0 flex-1 flex-col md:pl-64">
+      <div className="flex min-w-0 flex-1 flex-col md:pl-[236px]">
         <JudgeHeader onMenuClick={() => setSidebarOpen(true)} />
         <JudgePageTitle title={title.title} sub={title.sub} />
         <main className="flex-1 px-4 py-6 sm:px-8">
           {views[activeNav] || views.dashboard}
         </main>
         <footer
-          className="border-t bg-white px-4 py-4 text-center text-xs text-slate-500 sm:px-8"
+          className="border-t bg-white px-4 py-4 text-center text-xs text-slate-700 sm:px-8"
           style={{ borderColor: "#E5E7EB" }}
         >
           SEAL Hackathon Judge Console • Không gian chấm điểm

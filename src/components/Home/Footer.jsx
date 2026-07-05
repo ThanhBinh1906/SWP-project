@@ -1,6 +1,16 @@
 import React from "react";
-import { Zap, MapPin, Mail, Phone, Facebook, Github, Youtube, Twitter } from "lucide-react";
+import {
+  Zap,
+  MapPin,
+  Mail,
+  Phone,
+  Facebook,
+  Github,
+  Youtube,
+  Twitter,
+} from "lucide-react";
 import { AuthButtons } from "./AuthButtons";
+import logo from "../images/logo_hackathon.png";
 
 const quickLinks = ["Home", "Timeline", "Prizes", "FAQ"];
 
@@ -19,9 +29,7 @@ export default function Footer({ onLoginClick, onRegisterClick }) {
           {/* Brand col */}
           <div className="md:col-span-1 space-y-4">
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-[#F26F21] flex items-center justify-center">
-                <Zap className="w-3.5 h-3.5 text-white" />
-              </div>
+              <img src={logo} alt="Logo" className="w-20 h-20 rounded-lg" />
               <span
                 className="text-white font-extrabold text-base tracking-wider"
                 style={{ fontFamily: "Montserrat, sans-serif" }}
@@ -30,8 +38,8 @@ export default function Footer({ onLoginClick, onRegisterClick }) {
               </span>
             </div>
             <p className="text-slate-400 text-xs md:text-sm leading-relaxed">
-              The most exciting 48-hour coding competition at FPT
-              University, Vietnam.
+              The most exciting 48-hour coding competition at FPT University,
+              Vietnam.
             </p>
             <div className="space-y-0.5">
               <p
@@ -139,7 +147,8 @@ export default function Footer({ onLoginClick, onRegisterClick }) {
         {/* Bottom bar */}
         <div className="border-t border-white/[0.06] pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-slate-500 text-xs">
-            &copy; 2026 FPTU Hackathon. Organized by FPT University Student Council. All rights reserved.
+            &copy; 2026 FPTU Hackathon. Organized by FPT University Student
+            Council. All rights reserved.
           </p>
           <p className="text-slate-600 text-[10px] font-mono tracking-widest">
             CODE &middot; CREATE &middot; CONQUER

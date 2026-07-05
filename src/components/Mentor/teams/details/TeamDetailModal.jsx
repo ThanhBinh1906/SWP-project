@@ -40,5 +40,5 @@ export function TeamDetailModal({ team, onClose }) {
   </div>, document.body);
 }
 
-function Label({ children }) { return <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{children}</p>; }
+function Label({ children }) { return <p className="text-xs font-bold uppercase tracking-wide text-slate-700">{children}</p>; }
 function Info({ label, value }) { return <div><Label>{label}</Label><p className="mt-1 font-bold text-slate-950">{value}</p></div>; }

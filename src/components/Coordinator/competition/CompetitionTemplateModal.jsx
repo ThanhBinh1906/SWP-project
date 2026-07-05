@@ -86,7 +86,7 @@ function Field({ label, required, children, hint }) {
         {required && <span className="text-orange-600"> *</span>}
       </span>
       {children}
-      {hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
+      {hint && <p className="mt-1 text-xs text-slate-700">{hint}</p>}
     </div>
   );
 }
@@ -422,7 +422,7 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
               />
             </Field>
             <Field label="Hình thức">
-              <label className="flex min-h-[42px] items-center gap-3 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-semibold text-slate-800">
+              <label className="flex min-h-20 items-center gap-3 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-800">
                 <input
                   type="checkbox"
                   className="h-4 w-4 accent-orange-600"
@@ -442,10 +442,11 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
                 file={form.bannerFile}
                 url={form.bannerUrl}
                 onFileChange={(file) =>
-                  setForm((current) => ({ ...current, bannerFile: file }))
-                }
-                onUrlChange={(url) =>
-                  setForm((current) => ({ ...current, bannerUrl: url }))
+                  setForm((current) => ({
+                    ...current,
+                    bannerFile: file,
+                    bannerUrl: file ? "" : current.bannerUrl,
+                  }))
                 }
               />
             </Field>
@@ -758,11 +759,11 @@ function PdfFilePicker({ file, onChange }) {
   );
 }
 
-function ImageFilePicker({ file, url, onFileChange, onUrlChange }) {
+function ImageFilePicker({ file, url, onFileChange }) {
   const inputRef = useRef(null);
 
   return (
-    <div className="grid gap-2 md:grid-cols-[180px_1fr]">
+    <div className="min-w-0">
       <input
         ref={inputRef}
         type="file"
@@ -776,17 +777,13 @@ function ImageFilePicker({ file, url, onFileChange, onUrlChange }) {
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        className="flex min-h-20 w-full min-w-0 items-center justify-center gap-2 overflow-hidden rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 text-sm font-semibold text-slate-700 hover:border-orange-400"
+        className="flex min-h-20 w-full min-w-0 items-center justify-center gap-2 overflow-hidden rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 text-sm font-semibold text-slate-700 transition hover:border-orange-400 hover:bg-orange-50"
       >
         <ImageIcon className="h-4 w-4 shrink-0" />
-        <span className="min-w-0 truncate">{file?.name || "Chọn ảnh"}</span>
+        <span className="min-w-0 truncate">
+          {file?.name || (url ? "Đã có ảnh banner" : "Chọn ảnh banner")}
+        </span>
       </button>
-      <input
-        className={inputClass}
-        value={url}
-        onChange={(event) => onUrlChange(event.target.value)}
-        placeholder="Hoặc dán URL banner có sẵn"
-      />
     </div>
   );
 }

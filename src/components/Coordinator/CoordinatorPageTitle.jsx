@@ -16,7 +16,7 @@ export function CoordinatorPageTitle({ title, sub }) {
           >
             {title}
           </h2>
-          <p className="mt-1 text-sm text-slate-500">{sub}</p>
+          <p className="mt-1 text-sm text-slate-700">{sub}</p>
         </div>
       </div>
     </div>

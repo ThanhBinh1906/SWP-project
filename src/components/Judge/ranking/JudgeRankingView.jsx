@@ -106,7 +106,7 @@ export function JudgeRankingView() {
             <h3 className="mt-1 text-xl font-black text-slate-950">
               Bảng xếp hạng Round được phân công
             </h3>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-slate-700">
               Đây là kết quả đã được Coordinator tính và lưu, hệ thống không tự thay đổi điểm tại màn hình này.
             </p>
           </div>

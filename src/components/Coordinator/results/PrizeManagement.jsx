@@ -220,7 +220,7 @@ export function PrizeManagement({ eventId }) {
         </div>
       )}
       {loading ? (
-        <div className="flex justify-center gap-2 py-10 text-sm text-slate-500">
+        <div className="flex justify-center gap-2 py-10 text-sm text-slate-700">
           <Loader2 className="h-4 w-4 animate-spin" />
           Đang tải giải thưởng...
         </div>
@@ -286,7 +286,7 @@ export function PrizeManagement({ eventId }) {
                   return (
                     <div>
                       <p className="font-bold text-slate-900">{row.teamName}</p>
-                      <p className="text-xs text-slate-500">{row.university}</p>
+                      <p className="text-xs text-slate-700">{row.university}</p>
                     </div>
                   );
                 }

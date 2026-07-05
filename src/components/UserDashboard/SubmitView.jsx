@@ -351,7 +351,7 @@ function SubmissionForm({ eventId }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center gap-2 py-16 text-sm text-slate-400">
+      <div className="flex items-center justify-center gap-2 py-16 text-sm text-slate-600">
         <Loader2 className="h-5 w-5 animate-spin text-[#F26F21]" />
         Đang tải...
       </div>

@@ -20,6 +20,8 @@ import {
   X,
 } from "lucide-react";
 import eventService from "../../services/eventService";
+import roundService from "../../services/roundService";
+import trackService from "../../services/trackService";
 import {
   uploadEventBannerImage,
   validateEventBannerImage,
@@ -31,7 +33,7 @@ import { DemoDataImportModal } from "./competition/DemoDataImportModal";
 import RichTextEditor from "../shared/RichTextEditor";
 
 // ---------------------------------------------------------------------------
-// Constants & helpers (preserved from originals)
+// Constants & helpers for the unified event, track, and round setup view
 // ---------------------------------------------------------------------------
 const EVENT_STATUS_OPTIONS = ["Registration", "Active", "Completed"];
 const EVENT_STATUS_ORDER = {
@@ -219,8 +221,8 @@ function EventBannerPicker({ file, url, disabled, onFileChange, onUrlChange }) {
             className="h-44 w-full object-cover"
           />
         ) : (
-          <div className="flex h-44 flex-col items-center justify-center gap-2 text-slate-500">
-            <ImageIcon className="h-8 w-8 text-slate-400" />
+          <div className="flex h-44 flex-col items-center justify-center gap-2 text-slate-700">
+            <ImageIcon className="h-8 w-8 text-slate-600" />
             <p className="text-sm font-semibold">Chưa có ảnh banner</p>
           </div>
         )}
@@ -256,7 +258,7 @@ function EventBannerPicker({ file, url, disabled, onFileChange, onUrlChange }) {
         )}
       </div>
 
-      <p className="text-xs leading-relaxed text-slate-500">
+      <p className="text-xs leading-relaxed text-slate-700">
         Hỗ trợ JPG, PNG, WEBP hoặc GIF, tối đa 5MB. Ảnh sẽ được tải lên Cloudinary khi lưu thay đổi.
       </p>
       {file && (
@@ -289,6 +291,8 @@ export function CompetitionSetup() {
   // === ACCORDION ===
   const [expandedEvents, setExpandedEvents] = useState(new Set());
   const [expandedTracks, setExpandedTracks] = useState(new Set());
+  const collapsedEventIds = useRef(new Set());
+  const collapsedTrackIds = useRef(new Set());
 
   // === TRACKS (per event, lazy) ===
   const [tracksByEvent, setTracksByEvent] = useState({});
@@ -354,7 +358,7 @@ export function CompetitionSetup() {
       [eventId]: { data: [], loading: true, error: "" },
     }));
     try {
-      const res = await eventService.getTracks(eventId);
+      const res = await trackService.getByEvent(eventId);
       setTracksByEvent((prev) => ({
         ...prev,
         [eventId]: {
@@ -382,7 +386,7 @@ export function CompetitionSetup() {
       [trackId]: { data: [], loading: true, error: "" },
     }));
     try {
-      const res = await eventService.getTracksRounds();
+      const res = await roundService.getTracksRounds();
       const allTracks = res.data?.data || [];
       const match = allTracks.find(
         (t) => String(t.trackId) === String(trackId),
@@ -405,6 +409,54 @@ export function CompetitionSetup() {
   }, []);
 
   useEffect(() => {
+    if (eventsLoading || events.length === 0) return;
+
+    const eventIds = events.map((event) => event.id);
+    const currentEventIds = new Set(eventIds.map(String));
+
+    setExpandedEvents((prev) => {
+      const next = new Set(prev);
+      eventIds.forEach((eventId) => {
+        if (!collapsedEventIds.current.has(String(eventId))) {
+          next.add(eventId);
+        }
+      });
+      Array.from(next).forEach((eventId) => {
+        if (!currentEventIds.has(String(eventId))) next.delete(eventId);
+      });
+      return next;
+    });
+
+    eventIds.forEach((eventId) => {
+      if (!tracksByEvent[eventId]) fetchTracksForEvent(eventId);
+    });
+  }, [events, eventsLoading, fetchTracksForEvent, tracksByEvent]);
+
+  useEffect(() => {
+    const tracks = Object.values(tracksByEvent).flatMap((state) => state?.data || []);
+    if (tracks.length === 0) return;
+
+    const currentTrackIds = new Set(tracks.map((track) => String(track.id)));
+
+    setExpandedTracks((prev) => {
+      const next = new Set(prev);
+      tracks.forEach((track) => {
+        if (!collapsedTrackIds.current.has(String(track.id))) {
+          next.add(track.id);
+        }
+      });
+      Array.from(next).forEach((trackId) => {
+        if (!currentTrackIds.has(String(trackId))) next.delete(trackId);
+      });
+      return next;
+    });
+
+    tracks.forEach((track) => {
+      if (!roundsByTrack[track.id]) fetchRoundsForTrack(track.id);
+    });
+  }, [fetchRoundsForTrack, roundsByTrack, tracksByEvent]);
+
+  useEffect(() => {
     fetchEvents();
   }, [fetchEvents]);
 
@@ -416,8 +468,10 @@ export function CompetitionSetup() {
       const next = new Set(prev);
       if (next.has(eventId)) {
         next.delete(eventId);
+        collapsedEventIds.current.add(String(eventId));
       } else {
         next.add(eventId);
+        collapsedEventIds.current.delete(String(eventId));
         if (!tracksByEvent[eventId]) fetchTracksForEvent(eventId);
       }
       return next;
@@ -429,8 +483,10 @@ export function CompetitionSetup() {
       const next = new Set(prev);
       if (next.has(trackId)) {
         next.delete(trackId);
+        collapsedTrackIds.current.add(String(trackId));
       } else {
         next.add(trackId);
+        collapsedTrackIds.current.delete(String(trackId));
         if (!roundsByTrack[trackId]) fetchRoundsForTrack(trackId);
       }
       return next;
@@ -438,7 +494,7 @@ export function CompetitionSetup() {
   };
 
   // =========================================================================
-  // EVENT HANDLERS (preserved from EventsManagement)
+  // EVENT HANDLERS
   // =========================================================================
   const openEditEvent = (ev) => {
     setSelectedEvent(ev);
@@ -541,7 +597,7 @@ export function CompetitionSetup() {
   };
 
   // =========================================================================
-  // TRACK HANDLERS (preserved from TracksManagement)
+  // TRACK HANDLERS
   // =========================================================================
   const openCreateTrack = (event) => {
     if (isTrackCreateLocked(event)) return;
@@ -610,7 +666,7 @@ export function CompetitionSetup() {
     }
     setTrackSaving(true);
     try {
-      const trackResponse = await eventService.createTrack({
+      const trackResponse = await trackService.create({
         name: trackForm.name.trim(),
         description: trackForm.description.trim(),
         maxTeams: Number(trackForm.maxTeams),
@@ -621,7 +677,7 @@ export function CompetitionSetup() {
       if (!createdTrackId) {
         throw new Error("Không lấy được Track ID sau khi tạo track.");
       }
-      await eventService.createRound({
+      await roundService.create({
         trackId: Number(createdTrackId),
         orderIndex: 1,
         name: roundForm.name.trim(),
@@ -652,7 +708,7 @@ export function CompetitionSetup() {
     }
     setTrackSaving(true);
     try {
-      await eventService.updateTrack(selectedTrack.id, {
+      await trackService.update(selectedTrack.id, {
         name: trackForm.name.trim(),
         description: trackForm.description.trim(),
         maxTeams: Number(trackForm.maxTeams),
@@ -671,7 +727,7 @@ export function CompetitionSetup() {
   };
 
   // =========================================================================
-  // ROUND HANDLERS (preserved from RoundsManagement)
+  // ROUND HANDLERS
   // =========================================================================
   const openCreateRound = (trackId) => {
     setRoundForm({ ...ROUND_EMPTY, trackId: String(trackId) });
@@ -735,7 +791,7 @@ export function CompetitionSetup() {
     }
     setRoundSaving(true);
     try {
-      await eventService.createRound({
+      await roundService.create({
         trackId: Number(roundForm.trackId),
         orderIndex: 1,
         name: roundForm.name.trim(),
@@ -761,7 +817,7 @@ export function CompetitionSetup() {
     }
     setRoundSaving(true);
     try {
-      await eventService.updateRound(selectedRound.roundId, {
+      await roundService.update(selectedRound.roundId, {
         name: roundForm.name.trim(),
         startTime: new Date(roundForm.startTime).toISOString(),
         endTime: new Date(roundForm.endTime).toISOString(),
@@ -801,7 +857,7 @@ export function CompetitionSetup() {
     }
     setRoundSaving(true);
     try {
-      const response = await eventService.updateRoundStatus(selectedRound.roundId, roundStatusValue);
+      const response = await roundService.updateStatus(selectedRound.roundId, roundStatusValue);
       await fetchRoundsForTrack(selectedRound.trackId);
       setRoundStatusNotice(
         response.data?.message ||
@@ -877,7 +933,7 @@ export function CompetitionSetup() {
 
       {/* ─── Event list ─── */}
       {eventsLoading ? (
-        <div className="flex items-center justify-center py-12 gap-2 text-sm text-slate-400">
+        <div className="flex items-center justify-center py-12 gap-2 text-sm text-slate-600">
           <Loader2
             className="w-4 h-4 animate-spin"
             style={{ color: "#F26F21" }}
@@ -892,7 +948,7 @@ export function CompetitionSetup() {
           </CoordinatorActionButton>
         </div>
       ) : events.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-200 py-14 text-center text-sm text-slate-400">
+        <div className="rounded-2xl border border-dashed border-slate-200 py-14 text-center text-sm text-slate-600">
           Chưa có sự kiện nào. Nhấn &quot;Setup Event&quot; để bắt đầu.
         </div>
       ) : (
@@ -922,7 +978,7 @@ export function CompetitionSetup() {
                     {isExpanded ? (
                       <ChevronDown className="w-4 h-4 text-[#F26F21]" />
                     ) : (
-                      <ChevronRight className="w-4 h-4 text-slate-400" />
+                      <ChevronRight className="w-4 h-4 text-slate-600" />
                     )}
                   </button>
 
@@ -948,7 +1004,7 @@ export function CompetitionSetup() {
                         {event.status}
                       </CoordinatorBadge>
                     </div>
-                    <p className="text-xs text-slate-500 mt-0.5 truncate">
+                    <p className="text-xs text-slate-700 mt-0.5 truncate">
                       {formatDate(event.startDate)} →{" "}
                       {formatDate(event.endDate)}
                       {event.description && ` • ${compactText(event.description)}`}
@@ -1003,7 +1059,7 @@ export function CompetitionSetup() {
                     }}
                   >
                     {!tracksState || tracksState.loading ? (
-                      <div className="flex items-center justify-center py-8 gap-2 text-sm text-slate-400">
+                      <div className="flex items-center justify-center py-8 gap-2 text-sm text-slate-600">
                         <Loader2
                           className="w-4 h-4 animate-spin"
                           style={{ color: "#F26F21" }}
@@ -1022,7 +1078,7 @@ export function CompetitionSetup() {
                         </CoordinatorActionButton>
                       </div>
                     ) : tracksState.data.length === 0 ? (
-                      <div className="rounded-xl border border-dashed border-slate-200 py-8 text-center text-sm text-slate-400">
+                      <div className="rounded-xl border border-dashed border-slate-200 py-8 text-center text-sm text-slate-600">
                         Chưa có track nào trong sự kiện này.
                       </div>
                     ) : (
@@ -1067,7 +1123,7 @@ export function CompetitionSetup() {
                                   {isTrackExpanded ? (
                                     <ChevronDown className="w-3.5 h-3.5 text-[#F26F21]" />
                                   ) : (
-                                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                                    <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
                                   )}
                                 </button>
 
@@ -1092,7 +1148,7 @@ export function CompetitionSetup() {
                                       #{track.id}
                                     </CoordinatorBadge>
                                   </div>
-                                  <p className="text-xs text-slate-500 mt-0.5">
+                                  <p className="text-xs text-slate-700 mt-0.5">
                                     {track.description || "—"} • Max teams:{" "}
                                     {track.maxTeams}
                                   </p>
@@ -1122,7 +1178,7 @@ export function CompetitionSetup() {
                                   style={{ borderColor: "#F0F0F0" }}
                                 >
                                   {!roundsState || roundsState.loading ? (
-                                    <div className="flex items-center justify-center py-6 gap-2 text-sm text-slate-400">
+                                    <div className="flex items-center justify-center py-6 gap-2 text-sm text-slate-600">
                                       <Loader2
                                         className="w-4 h-4 animate-spin"
                                         style={{ color: "#F26F21" }}
@@ -1143,7 +1199,7 @@ export function CompetitionSetup() {
                                       </CoordinatorActionButton>
                                     </div>
                                   ) : roundsState.data.length === 0 ? (
-                                    <div className="rounded-lg border border-dashed border-slate-200 py-6 text-center text-sm text-slate-400">
+                                    <div className="rounded-lg border border-dashed border-slate-200 py-6 text-center text-sm text-slate-600">
                                       Chưa có round nào trong track này.
                                     </div>
                                   ) : (
@@ -1192,11 +1248,11 @@ export function CompetitionSetup() {
                                             <h4 className="font-bold text-slate-900 text-sm">
                                               {round.name}
                                             </h4>
-                                            <p className="text-xs text-slate-500 mt-0.5">
+                                            <p className="text-xs text-slate-700 mt-0.5">
                                               {formatDateTime(round.startTime)}{" "}
                                               → {formatDateTime(round.endTime)}
                                             </p>
-                                            <p className="text-xs text-slate-500 mt-0.5">
+                                            <p className="text-xs text-slate-700 mt-0.5">
                                               Suất đi tiếp:{" "}
                                               <span className="font-bold text-slate-700">
                                                 {round.advancingSlots}
@@ -1294,7 +1350,7 @@ export function CompetitionSetup() {
       )}
 
       {/* =============================================================== */}
-      {/* EVENT MODALS (preserved from EventsManagement)                  */}
+      {/* EVENT MODALS                                                    */}
       {/* =============================================================== */}
       {eventModal === "edit" && (
         <ModalShell
@@ -1409,7 +1465,7 @@ export function CompetitionSetup() {
               <select className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none" value={eventForm.status} onChange={(e) => handleEventFormChange("status", e.target.value)}>
                 {EVENT_STATUS_OPTIONS.map((status) => <option key={status} value={status} disabled={isEventStatusRollback(selectedEvent?.status, status)}>{status}</option>)}
               </select>
-              <p className="mt-1.5 text-xs leading-relaxed text-slate-500">Sau khi chuyển lên <strong>Active</strong> hoặc <strong>Completed</strong>, Coordinator không thể quay lại trạng thái trước đó.</p>
+              <p className="mt-1.5 text-xs leading-relaxed text-slate-700">Sau khi chuyển lên <strong>Active</strong> hoặc <strong>Completed</strong>, Coordinator không thể quay lại trạng thái trước đó.</p>
             </div>
           </div>
         </ModalShell>
@@ -1448,7 +1504,7 @@ export function CompetitionSetup() {
       )}
 
       {/* =============================================================== */}
-      {/* TRACK MODALS (preserved from TracksManagement)                  */}
+      {/* TRACK MODALS                                                    */}
       {/* =============================================================== */}
       {(trackModal === "create" || trackModal === "edit") && (
         <ModalShell
@@ -1559,7 +1615,7 @@ export function CompetitionSetup() {
                   <h4 className="text-sm font-bold text-slate-900">
                     Round của Track
                   </h4>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-700">
                     Mỗi track chỉ có một round, vì vậy cần tạo round cùng lúc
                     với track.
                   </p>
@@ -1628,7 +1684,7 @@ export function CompetitionSetup() {
       )}
 
       {/* =============================================================== */}
-      {/* ROUND MODALS (preserved from RoundsManagement)                  */}
+      {/* ROUND MODALS                                                    */}
       {/* =============================================================== */}
       {(roundModal === "create" || roundModal === "edit") && (
         <ModalShell
@@ -1745,13 +1801,13 @@ export function CompetitionSetup() {
           }
         >
           <div className="space-y-3">
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-700">
               Trạng thái hiện tại:{" "}
               <CoordinatorBadge tone={roundStatusTone(selectedRoundEffectiveStatus)}>
                 {selectedRoundEffectiveStatus}
               </CoordinatorBadge>
             </p>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-700">
               Event:{" "}
               <span className="font-semibold text-slate-700">
                 {selectedRound?.eventName || "Unknown"}

@@ -88,7 +88,7 @@ export default function CoordinatorDashboard() {
         onClose={() => setSidebarOpen(false)}
       />
 
-      <div className="flex min-w-0 flex-1 flex-col md:pl-64">
+      <div className="flex min-w-0 flex-1 flex-col md:pl-[236px]">
         <CoordinatorHeader onMenuClick={() => setSidebarOpen(true)} />
         <CoordinatorPageTitle title={title.title} sub={title.sub} />
         <main className="flex-1 px-4 py-6 sm:px-8">
@@ -97,7 +97,7 @@ export default function CoordinatorDashboard() {
           </div>
         </main>
         <footer
-          className="border-t px-4 py-4 text-center text-xs text-slate-400 sm:px-8"
+          className="border-t px-4 py-4 text-center text-xs text-slate-600 sm:px-8"
           style={{ borderColor: "#E5E7EB" }}
         >
           SEAL Hackathon Management System • Coordinator Console

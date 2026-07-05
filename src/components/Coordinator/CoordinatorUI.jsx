@@ -80,7 +80,7 @@ export function CoordinatorBadge({ tone = "neutral", children }) {
 
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${
+      className={`inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-semibold ${
         tones[tone] || tones.neutral
       }`}
     >
@@ -106,12 +106,13 @@ export function CoordinatorActionButton({
   );
   const variants = {
     primary:
-      "text-white border-transparent shadow-sm shadow-orange-200 bg-gradient-to-r from-[#F26F21] to-[#c9520e] hover:shadow-orange-300",
+      "text-white border-[#C2410C] bg-[#C2410C] hover:bg-[#9A3412]",
     secondary:
       "text-slate-700 bg-white border-slate-300 hover:bg-slate-50 hover:border-slate-400",
     ghost:
       "text-slate-600 bg-transparent border-transparent hover:bg-slate-100",
-    danger: "text-red-700 bg-red-50 border-red-300 hover:bg-red-100",
+    danger:
+      "text-red-700 bg-transparent border-transparent hover:border-red-200 hover:bg-red-50",
   };
 
   return (
@@ -119,10 +120,10 @@ export function CoordinatorActionButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`inline-flex items-center justify-center gap-2 rounded-xl border px-3.5 py-2 text-sm font-semibold transition-all ${
+      className={`inline-flex items-center justify-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-semibold transition-colors active:translate-y-px ${
         disabled
-          ? "cursor-not-allowed opacity-50 hover:scale-100"
-          : "hover:scale-[1.02]"
+          ? "cursor-not-allowed opacity-50"
+          : ""
       } ${variants[variant]} ${className}`}
     >
       {Icon && <Icon className="h-4 w-4" />}
@@ -141,30 +142,26 @@ export function CoordinatorPanel({
 }) {
   return (
     <section
-      className={`rounded-2xl border bg-white p-5 transition-all duration-300 hover:shadow-md hover:border-slate-300/50 animate-fade-in ${className}`}
+      className={`rounded-xl border bg-white p-5 transition-colors duration-200 hover:border-slate-300/80 animate-fade-in ${className}`}
       style={{
         borderColor: "#E5E7EB",
-        boxShadow: "0 10px 30px rgba(0,0,0,0.02)",
+        boxShadow: "0 1px 2px rgba(15,23,42,0.03)",
       }}
     >
       {(title || actions) && (
-        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="mb-5 flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3">
             {Icon && (
               <div
-                className="flex h-9 w-9 items-center justify-center rounded-lg"
-                style={{
-                  background: "rgba(242,111,33,0.1)",
-                  border: "1px solid rgba(242,111,33,0.2)",
-                }}
+                className="mt-0.5 flex h-5 w-5 items-center justify-center"
               >
                 <Icon className="h-4 w-4" style={{ color: "#F26F21" }} />
               </div>
             )}
             <div>
-              {title && <h3 className="font-bold text-slate-900">{title}</h3>}
+              {title && <h3 className="text-sm font-semibold uppercase tracking-widest text-slate-700">{title}</h3>}
               {subtitle && (
-                <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
+                <p className="mt-1 text-sm font-normal text-slate-600">{subtitle}</p>
               )}
             </div>
           </div>
@@ -195,20 +192,20 @@ export function CoordinatorStatCard({
 
   return (
     <div
-      className="rounded-2xl border bg-white p-5 transition-all duration-300 hover:scale-[1.015] hover:shadow-md hover:border-slate-300/80"
+      className="rounded-xl border bg-white p-5 transition-colors duration-200 hover:border-slate-300/80"
       style={{
         borderColor: "#E5E7EB",
-        boxShadow: "0 10px 30px rgba(0,0,0,0.02)",
+        boxShadow: "0 1px 2px rgba(15,23,42,0.03)",
       }}
     >
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-slate-500">{label}</p>
-          <p className="mt-2 text-3xl font-bold text-slate-900">{value}</p>
+          <p className="text-sm font-medium text-slate-700">{label}</p>
+          <p className="mt-2 font-mono text-3xl font-semibold tracking-tight text-slate-950">{value}</p>
         </div>
         {Icon && (
           <div
-            className="flex h-11 w-11 items-center justify-center rounded-xl"
+            className="flex h-11 w-11 items-center justify-center rounded-md"
             style={{ background: bg, border: `1px solid ${border}` }}
           >
             <Icon className="h-5 w-5" style={{ color }} />
@@ -218,11 +215,11 @@ export function CoordinatorStatCard({
       {(delta || helper) && (
         <div className="mt-4 flex items-center justify-between gap-2 text-xs">
           {delta && (
-            <span className="font-bold" style={{ color }}>
+            <span className="font-mono font-semibold" style={{ color }}>
               {delta}
             </span>
           )}
-          {helper && <span className="text-slate-500">{helper}</span>}
+          {helper && <span className="text-slate-700">{helper}</span>}
         </div>
       )}
     </div>
@@ -239,9 +236,9 @@ export function CoordinatorProgressBar({
       {(label || value !== undefined) && (
         <div className="mb-2 flex items-center justify-between text-sm">
           {label && (
-            <span className="font-semibold text-slate-700">{label}</span>
+            <span className="font-medium text-slate-700">{label}</span>
           )}
-          <span className="font-bold text-slate-900">{value}%</span>
+          <span className="font-mono font-semibold text-slate-900">{value}%</span>
         </div>
       )}
       <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
@@ -265,24 +262,21 @@ export function CoordinatorTable({
 }) {
   if (!rows?.length) {
     return (
-      <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-500">
+      <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-700">
         {emptyMessage}
       </div>
     );
   }
 
   return (
-    <div
-      className="overflow-x-auto rounded-xl border"
-      style={{ borderColor: "#E5E7EB" }}
-    >
+    <div className="overflow-x-auto">
       <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
-        <thead className="bg-slate-50">
+        <thead>
           <tr>
             {columns.map((column) => (
               <th
                 key={column.key}
-                className="whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-500"
+                className="whitespace-nowrap px-5 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600"
               >
                 {column.label}
               </th>
@@ -293,12 +287,12 @@ export function CoordinatorTable({
           {rows.map((row) => (
             <tr
               key={row.id}
-              className="hover:bg-orange-50/30 transition-colors duration-150"
+              className="transition-colors duration-150 hover:bg-slate-50"
             >
               {columns.map((column) => (
                 <td
                   key={column.key}
-                  className="whitespace-nowrap px-4 py-3 text-slate-700"
+                  className="whitespace-nowrap px-5 py-4 text-slate-700"
                 >
                   {renderCell ? renderCell(row, column.key) : row[column.key]}
                 </td>
@@ -329,17 +323,17 @@ export function ModalShell({
 
   return createPortal(
     <div
-      className={`fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/55 p-4 animate-fade-in ${overlayClassName}`}
+      className={`fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm animate-fade-in ${overlayClassName}`}
     >
       <div
-        className={`relative isolate flex min-w-0 w-full ${maxWidthClass} ${maxHeightClass} flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ${panelClassName}`}
+        className={`relative isolate flex min-w-0 w-full ${maxWidthClass} ${maxHeightClass} flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl ${panelClassName}`}
       >
-        <div className="flex flex-shrink-0 items-start justify-between gap-4 px-6 pt-6 pb-5">
-          <h3 className="text-lg font-bold text-slate-900">{title}</h3>
+        <div className="flex flex-shrink-0 items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
+          <h3 className="text-lg font-semibold tracking-tight text-slate-950">{title}</h3>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"
+            className="rounded-lg p-1 text-slate-700 transition hover:bg-slate-100 hover:text-slate-800"
           >
             <X className="h-5 w-5" />
           </button>

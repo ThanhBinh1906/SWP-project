@@ -71,7 +71,6 @@ export function JudgeSidebar({ active, onNav, isOpen, onClose }) {
       brandTitle="SEAL"
       brandSubtitle="Judge Console"
       brandMeta="Scoring Workspace"
-      BrandIcon={judgeIcons.ShieldCheck}
       userName={user?.username || user?.email || "Judge"}
       roleLabel="Judge"
     />

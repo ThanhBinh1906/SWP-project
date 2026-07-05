@@ -5,7 +5,7 @@ export function MentorTable({ columns, rows, renderCell }) {
         <thead className="bg-slate-50">
           <tr>
             {columns.map((column) => (
-              <th key={column.key} className="whitespace-nowrap px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
+              <th key={column.key} className="whitespace-nowrap px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-700">
                 {column.label}
               </th>
             ))}

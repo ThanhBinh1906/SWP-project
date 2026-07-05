@@ -7,7 +7,7 @@ export function JudgePageTitle({ title, sub }) {
           <h2 className="text-2xl font-bold tracking-tight text-slate-900" style={{ fontFamily: "'Montserrat', 'Inter', sans-serif" }}>
             {title}
           </h2>
-          <p className="mt-1 text-sm text-slate-500">{sub}</p>
+          <p className="mt-1 text-sm text-slate-700">{sub}</p>
         </div>
       </div>
     </div>

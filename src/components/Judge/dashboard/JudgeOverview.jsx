@@ -40,11 +40,11 @@ export function JudgeOverview({ onOpenScoring }) {
           <JudgeProgressBar value={progress} label="Completed" />
           <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
             <div className="rounded-xl bg-slate-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Scoring rounds</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-700">Scoring rounds</p>
               <p className="mt-1 text-xl font-bold text-slate-900">{scoringRounds}</p>
             </div>
             <div className="rounded-xl bg-slate-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Submissions</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-700">Submissions</p>
               <p className="mt-1 text-xl font-bold text-slate-900">{totalSubmissions}</p>
             </div>
           </div>

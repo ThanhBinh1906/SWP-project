@@ -46,7 +46,7 @@ function ChallengeCard({ activeRound }) {
             <FileText className="h-5 w-5" style={{ color: "#F26F21" }} />
           </div>
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-600">
               Đề bài của team
             </p>
             <div className="mt-0.5 flex items-center gap-1">
@@ -92,9 +92,9 @@ function ChallengeCard({ activeRound }) {
                 className="flex h-7 w-7 items-center justify-center rounded-lg"
                 style={{ background: "#E5E7EB" }}
               >
-                <BookOpen className="h-3.5 w-3.5 text-slate-500" />
+                <BookOpen className="h-3.5 w-3.5 text-slate-700" />
               </div>
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-700">
                 Mô tả
               </p>
             </div>
@@ -172,7 +172,7 @@ function StateMessage({ icon: Icon = AlertCircle, title, description }) {
       </div>
       <p className="text-sm font-semibold text-slate-600">{title}</p>
       {description && (
-        <p className="mt-1 text-xs text-slate-400">{description}</p>
+        <p className="mt-1 text-xs text-slate-600">{description}</p>
       )}
     </div>
   );
@@ -223,7 +223,7 @@ export function ChallengesView() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center gap-2 py-16 text-sm text-slate-400">
+      <div className="flex items-center justify-center gap-2 py-16 text-sm text-slate-600">
         <Loader2 className="h-5 w-5 animate-spin text-[#F26F21]" />
         Đang tải vòng thi đang diễn ra...
       </div>

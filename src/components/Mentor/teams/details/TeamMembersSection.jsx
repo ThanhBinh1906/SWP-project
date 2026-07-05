@@ -10,6 +10,6 @@ export function TeamMembersSection({ members = [] }) {
         <td className="whitespace-nowrap px-4 py-4 font-bold text-slate-950">{member.fullName}</td><td className="whitespace-nowrap px-4 py-4 text-slate-700">{member.studentCode || "N/A"}</td><td className="px-4 py-4 text-slate-700">{member.email || "N/A"}</td><td className="px-4 py-4 text-slate-700">{member.university || "N/A"}</td><td className="whitespace-nowrap px-4 py-4 text-slate-700">{member.phone || "N/A"}</td>
         <td className="whitespace-nowrap px-4 py-4"><MentorBadge tone={member.isLeader ? "purple" : member.isFPTStudent ? "orange" : "neutral"}>{member.isLeader ? "Leader" : member.isFPTStudent ? "FPT" : "Thành viên"}</MentorBadge></td>
       </tr>)}</tbody>
-    </table></div> : <p className="py-8 text-center text-sm text-slate-500">Không có dữ liệu thành viên.</p>}
+    </table></div> : <p className="py-8 text-center text-sm text-slate-700">Không có dữ liệu thành viên.</p>}
   </MentorPanel>;
 }

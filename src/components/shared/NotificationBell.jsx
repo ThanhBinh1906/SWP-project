@@ -225,7 +225,7 @@ export default function NotificationBell({
         aria-label={ariaLabel}
         aria-expanded={open}
       >
-        <Bell className="h-4 w-4 text-slate-500" />
+        <Bell className="h-4 w-4 text-slate-700" />
         {unreadCount > 0 && (
           <span className="absolute -right-1 -top-1 flex min-h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#F26F21] px-1 text-[10px] font-bold text-white ring-2 ring-white">
             {unreadCount > 9 ? "9+" : unreadCount}
@@ -239,7 +239,7 @@ export default function NotificationBell({
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-bold text-slate-950">Thông báo</h2>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-700">
                   {unreadCount > 0
                     ? `${unreadCount} thông báo chưa đọc`
                     : "Bạn đã đọc hết thông báo"}
@@ -271,7 +271,7 @@ export default function NotificationBell({
                   className={`flex-1 rounded-full px-3 py-1.5 text-sm font-semibold transition ${
                     filter === item.key
                       ? "bg-white text-slate-950 shadow-sm"
-                      : "text-slate-500 hover:text-slate-800"
+                      : "text-slate-700 hover:text-slate-800"
                   }`}
                   onClick={() => setFilter(item.key)}
                 >
@@ -290,13 +290,13 @@ export default function NotificationBell({
 
           <div className="max-h-[420px] overflow-y-auto px-2 py-2">
             {loading ? (
-              <div className="flex items-center justify-center gap-2 py-10 text-sm font-semibold text-slate-500">
+              <div className="flex items-center justify-center gap-2 py-10 text-sm font-semibold text-slate-700">
                 <Loader2 className="h-4 w-4 animate-spin text-[#F26F21]" />
                 Đang tải thông báo...
               </div>
             ) : visibleNotifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center px-6 py-10 text-center">
-                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-600">
                   <Inbox className="h-5 w-5" />
                 </div>
                 <p className="font-semibold text-slate-900">
@@ -304,7 +304,7 @@ export default function NotificationBell({
                     ? "Không có thông báo chưa đọc"
                     : "Chưa có thông báo"}
                 </p>
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-sm text-slate-700">
                   Khi hệ thống có cập nhật mới, thông báo sẽ xuất hiện tại đây.
                 </p>
               </div>
@@ -345,7 +345,7 @@ export default function NotificationBell({
                         <span className="mt-1 line-clamp-2 text-sm leading-5 text-slate-600">
                           {notification.message || "Bạn có một cập nhật mới."}
                         </span>
-                        <span className="mt-2 flex items-center gap-2 text-xs font-semibold text-slate-400">
+                        <span className="mt-2 flex items-center gap-2 text-xs font-semibold text-slate-600">
                           <span
                             className="rounded-full border px-2 py-0.5"
                             style={{

@@ -483,7 +483,7 @@ export function CompetitionExcelImportModal({ onClose, onCompleted }) {
           >
             <Upload className="h-6 w-6 text-orange-600" />
             Chọn file Excel để kiểm tra và import
-            <span className="text-xs font-medium text-slate-500">
+            <span className="text-xs font-medium text-slate-700">
               Hỗ trợ .xlsx, .xls
             </span>
           </button>
@@ -521,7 +521,7 @@ export function CompetitionExcelImportModal({ onClose, onCompleted }) {
                 ["Members", parsedData.members.length],
               ].map(([label, value]) => (
                 <div key={label} className="rounded-xl border border-slate-200 bg-white p-4">
-                  <p className="text-xs font-bold uppercase text-slate-500">{label}</p>
+                  <p className="text-xs font-bold uppercase text-slate-700">{label}</p>
                   <p className="mt-2 text-2xl font-black text-slate-950">{value}</p>
                 </div>
               ))}
@@ -534,7 +534,7 @@ export function CompetitionExcelImportModal({ onClose, onCompleted }) {
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <label className="block">
-                  <span className="mb-1 block text-xs font-bold uppercase text-slate-500">
+                  <span className="mb-1 block text-xs font-bold uppercase text-slate-700">
                     Event
                   </span>
                   <input
@@ -544,7 +544,7 @@ export function CompetitionExcelImportModal({ onClose, onCompleted }) {
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-xs font-bold uppercase text-slate-500">
+                  <span className="mb-1 block text-xs font-bold uppercase text-slate-700">
                     Topic gửi xuống BE
                   </span>
                   <input
@@ -556,7 +556,7 @@ export function CompetitionExcelImportModal({ onClose, onCompleted }) {
               </div>
               <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200">
                 <table className="min-w-full text-left text-sm">
-                  <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                  <thead className="bg-slate-50 text-xs uppercase text-slate-700">
                     <tr>
                       <th className="px-3 py-2">Track</th>
                       <th className="px-3 py-2">Round</th>

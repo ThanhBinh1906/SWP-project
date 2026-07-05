@@ -141,7 +141,7 @@ function TeamRankingDetails({ ranking }) {
 function DetailRow({ label, value, mono = false }) {
   return (
     <div className="flex items-start justify-between gap-4 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5">
-      <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+      <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
         {label}
       </span>
       <span
@@ -446,7 +446,7 @@ export function ResultsManagement() {
                 </CoordinatorBadge>
               )}
             </div>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-slate-700">
               Chọn vòng thi, kiểm tra điểm và chốt bảng xếp hạng.
             </p>
           </div>
@@ -497,7 +497,7 @@ export function ResultsManagement() {
                   {exporting === "rbl" ? "Đang xuất RBL..." : "Dữ liệu ẩn danh (RBL CSV)"}
                 </button>
                 {!roundCanExport && (
-                  <p className="px-3 pb-1 pt-2 text-xs leading-5 text-slate-400">
+                  <p className="px-3 pb-1 pt-2 text-xs leading-5 text-slate-600">
                     Bảng xếp hạng Round chỉ tải được sau khi vòng thi đã đóng.
                   </p>
                 )}
@@ -634,18 +634,18 @@ export function ResultsManagement() {
             <h3 className="mt-1 text-xl font-black text-slate-950">
               {selectedRound?.name || "Chưa chọn Round"}
             </h3>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-slate-700">
               Cập nhật: {formatDateTime(leaderboard.calculatedAt)}
             </p>
           </div>
           <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-            <p className="text-slate-500">
+            <p className="text-slate-700">
               Đội: <strong className="text-slate-950">{leaderboard.totalTeams || sortedRankings.length}</strong>
             </p>
-            <p className="text-slate-500">
+            <p className="text-slate-700">
               Suất đi tiếp: <strong className="text-slate-950">{leaderboard.advancingSlots || 0}</strong>
             </p>
-            <p className="text-slate-500">
+            <p className="text-slate-700">
               Đã xác định: <strong className="text-emerald-700">{advancingCount}</strong>
             </p>
           </div>
@@ -654,7 +654,7 @@ export function ResultsManagement() {
         <div className="border-t border-slate-100 px-4 py-5 sm:px-6">
           <div className="mb-4 flex items-center justify-between gap-3">
             <h3 className="font-bold text-slate-950">Bảng xếp hạng</h3>
-            <span className="text-xs font-semibold text-slate-400">
+            <span className="text-xs font-semibold text-slate-600">
               {sortedRankings.length} đội
             </span>
           </div>
@@ -663,13 +663,13 @@ export function ResultsManagement() {
         ) : leaderboardError ? (
           <ApiErrorState message={leaderboardError} onRetry={fetchLeaderboard} />
         ) : !roundCheck.roundId ? (
-          <p className="py-12 text-center text-sm text-slate-400">
+          <p className="py-12 text-center text-sm text-slate-600">
             Hãy chọn Event, Track và Round để xem bảng xếp hạng.
           </p>
         ) : sortedRankings.length === 0 ? (
           <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
             <p className="font-bold text-slate-900">Chưa có bảng xếp hạng</p>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-slate-700">
               Bấm “Tính bảng xếp hạng” để hệ thống lập kết quả cho round này.
             </p>
           </div>
@@ -695,7 +695,7 @@ export function ResultsManagement() {
                     >
                       {row.teamName || row.teamId}
                     </button>
-                    <p className="max-w-56 truncate font-mono text-xs text-slate-400">
+                    <p className="max-w-56 truncate font-mono text-xs text-slate-600">
                       {row.teamId}
                     </p>
                   </div>
@@ -717,7 +717,7 @@ export function ResultsManagement() {
               }
               if (key === "calculatedAt") {
                 return (
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs text-slate-700">
                     {formatDateTime(row.calculatedAt)}
                   </span>
                 );
@@ -737,10 +737,10 @@ export function ResultsManagement() {
             </div>
             <div>
               <p className="font-bold text-slate-900">Giải thưởng</p>
-              <p className="text-sm text-slate-500">Cấu hình giải và xem đội chiến thắng</p>
+              <p className="text-sm text-slate-700">Cấu hình giải và xem đội chiến thắng</p>
             </div>
           </div>
-          <ChevronDown className="h-5 w-5 text-slate-400 transition-transform group-open:rotate-180" />
+          <ChevronDown className="h-5 w-5 text-slate-600 transition-transform group-open:rotate-180" />
         </summary>
         <div className="mt-4">
           <PrizeManagement eventId={selectedEventId} />
@@ -787,7 +787,7 @@ export function ResultsManagement() {
             </div>
 
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Round được chốt</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-700">Round được chốt</p>
               <p className="mt-1 font-bold text-slate-950">
                 {selectedRound?.name || `Round #${roundCheck.roundId}`}
               </p>

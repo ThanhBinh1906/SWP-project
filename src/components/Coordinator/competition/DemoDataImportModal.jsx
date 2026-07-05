@@ -5,6 +5,7 @@ import eventService from "../../../services/eventService";
 import submissionService from "../../../services/submissionService";
 import teamService from "../../../services/teamService";
 import topicService from "../../../services/topicService";
+import trackService from "../../../services/trackService";
 import LoadingActionText from "../../shared/LoadingActionText";
 import { CoordinatorActionButton, ModalShell } from "../CoordinatorUI";
 
@@ -588,7 +589,7 @@ export function DemoDataImportModal({ events = [], onClose, onCompleted }) {
 
   const loadEventContext = async () => {
     const [tracksResponse, roundsResponse] = await Promise.all([
-      eventService.getTracks(eventId),
+      trackService.getByEvent(eventId),
       eventService.getRounds(eventId),
     ]);
     const tracks = unwrap(tracksResponse) || [];

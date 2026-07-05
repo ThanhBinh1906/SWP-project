@@ -17,7 +17,7 @@ export function JudgePanel({ title, subtitle, icon: Icon, actions, children, cla
             )}
             <div>
               {title && <h3 className="font-bold text-slate-900">{title}</h3>}
-              {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
+              {subtitle && <p className="mt-1 text-sm text-slate-700">{subtitle}</p>}
             </div>
           </div>
           {actions && <div className="flex flex-wrap gap-2">{actions}</div>}

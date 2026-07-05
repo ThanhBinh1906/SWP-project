@@ -28,7 +28,7 @@ export function TeamTable({ teams, onSelectTeam }) {
       renderCell={(team, key) => {
         if (key === "teamName") {
           const leader = team.members?.find((member) => member.isLeader);
-          return <div><p className="font-bold text-slate-900">{team.teamName}</p><p className="text-xs text-slate-500">Leader: {leader?.fullName || "N/A"}</p></div>;
+          return <div><p className="font-bold text-slate-900">{team.teamName}</p><p className="text-xs text-slate-700">Leader: {leader?.fullName || "N/A"}</p></div>;
         }
         if (key === "track") return `Track #${team.trackId ?? "N/A"}`;
         if (key === "status") return <TeamStatusBadge status={team.status} />;

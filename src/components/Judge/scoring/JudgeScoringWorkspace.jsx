@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
-import { useSelector } from "react-redux";
 import {
   AlertCircle,
   ChevronDown,
@@ -111,14 +110,6 @@ function normalizeExcelNumber(value) {
 
 function makeScoreImportKey(submissionId, criterionId) {
   return `${submissionId}::${criterionId}`;
-}
-
-function getImportRows(result, key) {
-  const direct = result?.[key];
-  const pascal = result?.[key.charAt(0).toUpperCase() + key.slice(1)];
-  if (Array.isArray(direct)) return direct;
-  if (Array.isArray(pascal)) return pascal;
-  return [];
 }
 
 function getSubmissionLabel(submission) {
@@ -251,7 +242,7 @@ function RoundSelector({
 }
 
 function SubmissionLink({ href, label }) {
-  if (!href) return <span className="text-slate-400">Chưa có</span>;
+  if (!href) return <span className="text-slate-600">Chưa có</span>;
 
   return (
     <a
@@ -292,7 +283,7 @@ function SubmissionScoringCard({
             <button
               type="button"
               onClick={() => onToggleExpanded(submission.id)}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
               title={expanded ? "Thu gọn bài nộp" : "Mở form chấm điểm"}
               aria-label={expanded ? "Thu gọn bài nộp" : "Mở form chấm điểm"}
               aria-expanded={expanded}
@@ -301,16 +292,16 @@ function SubmissionScoringCard({
                 className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`}
               />
             </button>
-            <p className="font-mono text-xs font-semibold text-slate-500">
+            <p className="font-mono text-xs font-semibold text-slate-700">
               Submission: {String(submission.id).slice(0, 8)}...
             </p>
             <JudgeBadge tone={statusTone(status)}>{status}</JudgeBadge>
           </div>
-          <p className="font-mono text-xs text-slate-500">
+          <p className="font-mono text-xs text-slate-700">
             Team ID: {String(submission.teamId || "unknown")}
           </p>
           {submission.createdAt && (
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-600">
               Nộp lúc: {new Date(submission.createdAt).toLocaleString("vi-VN")}
             </p>
           )}
@@ -324,7 +315,7 @@ function SubmissionScoringCard({
 
         <div className="grid gap-2 text-sm lg:min-w-[260px]">
           <div className="rounded-xl bg-slate-50 p-3">
-            <p className="text-xs font-bold uppercase text-slate-500">Presentation</p>
+            <p className="text-xs font-bold uppercase text-slate-700">Presentation</p>
             <div className="mt-1">
               <SubmissionLink
                 href={submission.presentationUrl || submission.reportUrl}
@@ -339,7 +330,7 @@ function SubmissionScoringCard({
         <div className="border-t border-slate-100 px-4 pb-4 pt-5">
       <div className="hidden">
         <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-700">
             Tổng tạm tính
           </p>
           <p className="text-2xl font-black text-slate-900">
@@ -375,16 +366,16 @@ function SubmissionScoringCard({
                 >
                   <div className="min-w-0">
                     <p className="font-bold text-slate-900">{criterion.name}</p>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs text-slate-700">
                       {criterion.description || "Không có mô tả"}
                     </p>
-                    <p className="mt-1 text-xs font-semibold text-slate-500">
+                    <p className="mt-1 text-xs font-semibold text-slate-700">
                       Max: {criterion.maxScore} - Weight: {Number(weightPercent.toFixed(2))}%
                     </p>
                   </div>
 
                   <div className="min-w-0">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-700">
                       Điểm
                     </label>
                     <input
@@ -404,7 +395,7 @@ function SubmissionScoringCard({
                   </div>
 
                   <div className="min-w-0">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-700">
                       Ghi chú
                     </label>
                     <textarea
@@ -426,7 +417,7 @@ function SubmissionScoringCard({
 
       <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-orange-100 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-700">
             Tổng tạm tính
           </p>
           <p className="text-2xl font-black text-slate-900">
@@ -450,7 +441,8 @@ function SubmissionScoringCard({
 
 export function JudgeScoringWorkspace({ initialRoundId = "" }) {
   const importInputRef = useRef(null);
-  const currentUser = useSelector((state) => state.auth.user);
+  const submissionCardRefs = useRef({});
+  const pendingScrollSubmissionId = useRef("");
   const [roundOptions, setRoundOptions] = useState([]);
   const [selectedRoundId, setSelectedRoundId] = useState("");
   const [roundMeta, setRoundMeta] = useState(null);
@@ -568,6 +560,20 @@ export function JudgeScoringWorkspace({ initialRoundId = "" }) {
   useEffect(() => {
     loadRoundData();
   }, [loadRoundData]);
+
+  useEffect(() => {
+    if (loadingData) return;
+    const submissionId = pendingScrollSubmissionId.current;
+    if (!submissionId) return;
+
+    const target = submissionCardRefs.current[submissionId];
+    pendingScrollSubmissionId.current = "";
+    if (!target) return;
+
+    requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [loadingData, submissions]);
 
   const handleScoreChange = (submissionId, criterionId, value) => {
     const normalizedValue = value.replace(",", ".");
@@ -807,9 +813,12 @@ export function JudgeScoringWorkspace({ initialRoundId = "" }) {
     const validationErrors = validateSubmissionScores(submission.id, criteria, scores);
     if (Object.keys(validationErrors).length) {
       setFieldErrors((prev) => ({ ...prev, [submission.id]: validationErrors }));
+      setExpandedSubmissionIds((prev) => ({ ...prev, [submission.id]: true }));
       return;
     }
 
+    pendingScrollSubmissionId.current = submission.id;
+    setExpandedSubmissionIds((prev) => ({ ...prev, [submission.id]: true }));
     setSubmittingId(submission.id);
     setError("");
     setSuccess("");
@@ -840,6 +849,7 @@ export function JudgeScoringWorkspace({ initialRoundId = "" }) {
       setSuccess("Gửi điểm thành công.");
       await loadRoundData();
     } catch (err) {
+      pendingScrollSubmissionId.current = "";
       setError(getApiMessage(err, "Gửi điểm thất bại."));
     } finally {
       setSubmittingId("");
@@ -847,19 +857,9 @@ export function JudgeScoringWorkspace({ initialRoundId = "" }) {
   };
 
   const handleSubmitAllScores = async () => {
-    const judgeId =
-      currentUser?.judgeId ||
-      currentUser?.accountId ||
-      currentUser?.userId ||
-      currentUser?.id;
     const eligibleSubmissions = submissions.filter(
       (submission) => !submission.isDisqualified,
     );
-
-    if (!judgeId) {
-      setError("Không tìm thấy mã giám khảo trong phiên đăng nhập.");
-      return;
-    }
 
     if (roundMeta?.status && roundMeta.status !== "Scoring") {
       setError("Chỉ có thể gửi điểm hàng loạt khi round đang ở trạng thái Scoring.");
@@ -905,49 +905,11 @@ export function JudgeScoringWorkspace({ initialRoundId = "" }) {
     setSuccess("");
 
     try {
-      let rowNumber = 2;
-      const scoreItems = eligibleSubmissions.flatMap((submission) =>
-        criteria.map((criterion) => ({
-          rowNumber: rowNumber++,
-          judgeId,
-          submissionId: submission.id,
-          criterionId: criterion.id,
-          scoreValue: Number(scores[submission.id]?.[criterion.id]),
-          note: comments[submission.id]?.[criterion.id] || "",
-        })),
-      );
-
-      const response = await scoreService.importScores(selectedRoundId, {
-        scores: scoreItems,
-        items: scoreItems,
-      });
-      const importResult = response?.data?.data || {};
-      const createdRows = getImportRows(importResult, "created");
-      const updatedRows = getImportRows(importResult, "updated");
-      const failedRows = getImportRows(importResult, "failed");
-
-      if (failedRows.length) {
-        setError(
-          failedRows
-            .slice(0, 8)
-            .map(
-              (item) =>
-                `Dòng ${item.rowNumber || "-"}: ${item.reason || "Không rõ lỗi."}`,
-            )
-            .join("\n"),
-        );
-        setSuccess(
-          createdRows.length || updatedRows.length
-            ? `Đã lưu ${createdRows.length + updatedRows.length} dòng hợp lệ. Còn ${failedRows.length} dòng cần kiểm tra.`
-            : "",
-        );
-        await loadRoundData();
-        return;
+      for (const submission of eligibleSubmissions) {
+        await saveSubmissionScores(submission);
       }
 
-      setSuccess(
-        `Đã gửi điểm: tạo mới ${createdRows.length} dòng, cập nhật ${updatedRows.length} dòng.`,
-      );
+      setSuccess(`Đã gửi điểm cho ${eligibleSubmissions.length} bài nộp.`);
       await loadRoundData();
     } catch (err) {
       setError(getApiMessage(err, "Gửi toàn bộ điểm thất bại."));
@@ -963,7 +925,7 @@ export function JudgeScoringWorkspace({ initialRoundId = "" }) {
 
   if (loadingRounds) {
     return (
-      <div className="flex items-center justify-center gap-2 py-16 text-sm text-slate-400">
+      <div className="flex items-center justify-center gap-2 py-16 text-sm text-slate-600">
         <Loader2 className="h-5 w-5 animate-spin text-orange-500" />
         Đang tải danh sách round...
       </div>
@@ -1050,7 +1012,7 @@ export function JudgeScoringWorkspace({ initialRoundId = "" }) {
         }
       >
         {loadingData ? (
-          <div className="flex items-center justify-center gap-2 py-12 text-sm text-slate-400">
+          <div className="flex items-center justify-center gap-2 py-12 text-sm text-slate-600">
             <Loader2 className="h-5 w-5 animate-spin text-orange-500" />
             Đang tải submissions và criteria...
           </div>
@@ -1081,23 +1043,30 @@ export function JudgeScoringWorkspace({ initialRoundId = "" }) {
         ) : (
           <div className="space-y-4">
             {submissions.map((submission) => (
-              <SubmissionScoringCard
+              <div
                 key={submission.id}
-                submission={submission}
-                criteria={criteria}
-                scoreRecords={scoreRecords[submission.id] || []}
-                scores={scores}
-                comments={comments}
-                errors={fieldErrors}
-                submitting={
-                  submittingId === submission.id || submittingId === BATCH_SUBMIT_ID
-                }
-                expanded={!!expandedSubmissionIds[submission.id]}
-                onToggleExpanded={handleToggleSubmission}
-                onScoreChange={handleScoreChange}
-                onCommentChange={handleCommentChange}
-                onSubmit={handleSubmitScores}
-              />
+                ref={(node) => {
+                  if (node) submissionCardRefs.current[submission.id] = node;
+                  else delete submissionCardRefs.current[submission.id];
+                }}
+              >
+                <SubmissionScoringCard
+                  submission={submission}
+                  criteria={criteria}
+                  scoreRecords={scoreRecords[submission.id] || []}
+                  scores={scores}
+                  comments={comments}
+                  errors={fieldErrors}
+                  submitting={
+                    submittingId === submission.id || submittingId === BATCH_SUBMIT_ID
+                  }
+                  expanded={!!expandedSubmissionIds[submission.id]}
+                  onToggleExpanded={handleToggleSubmission}
+                  onScoreChange={handleScoreChange}
+                  onCommentChange={handleCommentChange}
+                  onSubmit={handleSubmitScores}
+                />
+              </div>
             ))}
           </div>
         )}

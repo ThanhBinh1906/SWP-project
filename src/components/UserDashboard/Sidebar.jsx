@@ -60,7 +60,6 @@ export function Sidebar({ active, onNav, isOpen, onClose }) {
       brandTitle="FPT Hackathon"
       brandSubtitle="Leader Workspace"
       brandMeta={myTeam?.teamName || "Chưa có đội"}
-      BrandIcon={Trophy}
       userName={user?.username || user?.email || "Leader"}
       roleLabel="Leader"
     />

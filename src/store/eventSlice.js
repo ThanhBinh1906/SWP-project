@@ -40,7 +40,7 @@ const eventSlice = createSlice({
         state.loading = false;
         const event = action.payload;
         state.activeEvent = event;
-        state.activeEventId = event?.id || null;
+        state.activeEventId = event?.id ?? event?.eventId ?? null;
       })
       .addCase(fetchActiveEvent.rejected, (state, action) => {
         state.loading = false;
