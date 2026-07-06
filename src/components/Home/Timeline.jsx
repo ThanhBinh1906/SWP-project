@@ -38,7 +38,10 @@ const stages = [
 
 export default function Timeline() {
   return (
-    <section id="timeline" className="relative py-28 overflow-hidden bg-[#080A0F]">
+    <section
+      id="timeline"
+      className="relative py-20 overflow-hidden bg-[#080A0F]"
+    >
       {/* Background glow */}
       <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-[#F26F21]/[0.01] blur-[120px] pointer-events-none" />
 
@@ -63,10 +66,7 @@ export default function Timeline() {
             <div className="absolute top-[22px] left-[10%] right-[10%] h-[1px] bg-white/[0.08]" />
 
             {stages.map(
-              (
-                { icon: Icon, phase, title, date, color, desc },
-                idx,
-              ) => (
+              ({ icon: Icon, phase, title, date, color, desc }, idx) => (
                 <div
                   key={idx}
                   className="relative flex flex-col items-center flex-1 group"
@@ -122,9 +122,7 @@ export default function Timeline() {
                     <Icon className="w-4.5 h-4.5" style={{ color }} />
                   </div>
                   {idx < stages.length - 1 && (
-                    <div
-                      className="w-[1px] flex-1 my-2 bg-white/[0.08]"
-                    />
+                    <div className="w-[1px] flex-1 my-2 bg-white/[0.08]" />
                   )}
                 </div>
 

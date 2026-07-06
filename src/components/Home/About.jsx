@@ -24,7 +24,7 @@ const features = [
 
 export default function About() {
   return (
-    <section id="about" className="relative py-28 overflow-hidden bg-[#080A0F]">
+    <section id="about" className="relative py-20 overflow-hidden bg-[#080A0F]">
       {/* Background accents */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-28 bg-gradient-to-b from-transparent via-white/5 to-transparent" />
       <div className="absolute top-1/4 right-0 w-[350px] h-[350px] rounded-full bg-[#38b6ff]/[0.01] blur-[100px] pointer-events-none" />

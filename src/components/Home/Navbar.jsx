@@ -40,7 +40,7 @@ export default function Navbar({ onLoginClick, onRegisterClick }) {
           : "bg-transparent border-b border-transparent"
       }`}
     >
-      <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
         {/* Logo */}
         <a href="#home" className="flex items-center gap-2.5 group">
           <img src={logo} alt="Logo" className="w-20 h-20 rounded-lg" />
