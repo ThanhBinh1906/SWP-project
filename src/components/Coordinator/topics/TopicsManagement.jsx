@@ -186,6 +186,11 @@ export function TopicsManagement() {
 
   const selectedTrack = tracks.find((t) => String(t.id) === selectedTrackId);
   const selectedRound = rounds.find((r) => String(r.id) === selectedRoundId);
+  const finalSelection = Boolean(
+    selectedTrack?.isFinal ||
+      selectedTrack?.isFinalTrack ||
+      String(selectedTrack?.name || "").toLowerCase().includes("final"),
+  );
 
   return (
     <div className="space-y-6">
@@ -197,9 +202,9 @@ export function TopicsManagement() {
           <CoordinatorActionButton
             variant="primary"
             icon={icons.Plus}
-            disabled={!roundCheck.roundId}
+            disabled={!roundCheck.roundId || finalSelection}
             onClick={() => {
-              if (!roundCheck.roundId) return;
+              if (!roundCheck.roundId || finalSelection) return;
               setForm(EMPTY_FORM);
               setAttachmentFile(null);
               setUploadProgress(0);
@@ -272,11 +277,18 @@ export function TopicsManagement() {
         />
       )}
 
+      {finalSelection && roundCheck.roundId && (
+        <SetupRequiredBanner
+          title="Final Round không cần tạo đề mới."
+          hint="Khi mở Final Round, hệ thống dùng lại đề và bài nộp của các đội đi tiếp."
+        />
+      )}
+
       {loading ? (
         <LoadingState />
       ) : apiError ? (
         <ApiErrorState message={apiError} onRetry={fetchTopics} />
-      ) : !roundCheck.roundId ? null : topics.length === 0 ? (
+      ) : !roundCheck.roundId || finalSelection ? null : topics.length === 0 ? (
         <p className="py-12 text-center text-sm text-slate-600">
           Chưa có đề tài cho vòng này.
         </p>

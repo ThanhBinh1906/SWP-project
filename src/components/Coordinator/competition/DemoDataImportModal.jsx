@@ -429,8 +429,9 @@ function buildSubmissionTemplateFromContext({
     ["presentationUrl", "Thay bang link slide/presentation public cua team."],
   ];
 
+  const normalTracks = tracks.filter((track) => !isFinalTrack(track));
   const trackById = new Map(
-    tracks.map((track) => [String(getTrackId(track)), track]),
+    normalTracks.map((track) => [String(getTrackId(track)), track]),
   );
   const roundByTrackId = new Map();
   rounds.forEach((round) => {
@@ -707,6 +708,9 @@ export function DemoDataImportModal({ events = [], onClose, onCompleted }) {
       if (!track) {
         throw new Error(`Dòng ${row.__rowNumber}: không tìm thấy track "${trackName}".`);
       }
+      if (isFinalTrack(track)) {
+        throw new Error(`Dòng ${row.__rowNumber}: Final Round không import submission thủ công.`);
+      }
       const round = roundsByTrackAndName.get(
         `${getTrackId(track)}:${normalizeKey(roundName)}`,
       );
@@ -727,11 +731,18 @@ export function DemoDataImportModal({ events = [], onClose, onCompleted }) {
         topicsByRound.set(roundId, unwrap(response) || []);
       }
       const topics = topicsByRound.get(roundId);
-      const topic =
-        topics.find((item) => normalizeKey(item.title) === normalizeKey(topicTitle)) ||
-        topics[0];
+      const topic = topicTitle
+        ? topics.find((item) => normalizeKey(item.title) === normalizeKey(topicTitle))
+        : topics[0];
       if (!topic) {
-        throw new Error(`Dòng ${row.__rowNumber}: round này chưa có topic.`);
+        throw new Error(
+          topicTitle
+            ? `Dòng ${row.__rowNumber}: topic "${topicTitle}" không thuộc round "${roundName}".`
+            : `Dòng ${row.__rowNumber}: round này chưa có topic.`,
+        );
+      }
+      if (topic.roundId && String(topic.roundId) !== String(roundId)) {
+        throw new Error(`Dòng ${row.__rowNumber}: topic không thuộc round "${roundName}".`);
       }
 
       const current = itemsByRound.get(roundId) || [];

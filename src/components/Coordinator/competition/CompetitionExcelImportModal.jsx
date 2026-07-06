@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import { AlertCircle, Download, FileSpreadsheet, Upload } from "lucide-react";
 import eventService from "../../../services/eventService";
 import prizeService from "../../../services/prizeService";
+import topicService from "../../../services/topicService";
 import LoadingActionText from "../../shared/LoadingActionText";
 import { CoordinatorActionButton, ModalShell } from "../CoordinatorUI";
 
@@ -18,7 +19,7 @@ const TEMPLATE = {
     ["Event", "Một dòng thông tin event", "Import thật"],
     ["Tracks", "Các track vòng loại và một Final Track", "Import thật"],
     ["Rounds", "Mỗi track đúng một round", "Import thật"],
-    ["Topics", "Mẫu đề theo từng round", "Hiện BE full-template chỉ nhận topic đầu tiên"],
+    ["Topics", "Mẫu đề theo từng round thường", "Import thật sau khi tạo Round"],
     ["Prizes", "Giải thưởng hạng 1, 2, 3", "Import thật sau khi tạo event"],
     ["Teams", "Thông tin team mẫu", "Reference trước khi có API bulk phù hợp"],
     ["Members", "Thành viên mẫu", "Reference"],
@@ -67,8 +68,6 @@ const TEMPLATE = {
     ["AI", "Qualifier Round - AI Proof of Concept", "Learning Risk Detection", "Nhận diện sớm nguy cơ học tập và đề xuất hỗ trợ phù hợp cho sinh viên.", "Có demo, phân tích rủi ro và giải thích quyết định của mô hình.", demoPdf],
     ["IOT", "Qualifier Round - Smart Campus Prototype", "Smart Campus Operations", "Xây dựng prototype phần mềm hoặc IoT để tối ưu một hoạt động trong khuôn viên.", "Có kiến trúc thiết bị/phần mềm, dashboard và dữ liệu mẫu.", demoPdf],
     ["IOT", "Qualifier Round - Smart Campus Prototype", "Smart Energy Monitor", "Theo dõi mức tiêu thụ năng lượng và cảnh báo bất thường trong khuôn viên.", "Có mô phỏng dữ liệu, cảnh báo và báo cáo hiệu quả.", demoPdf],
-    ["FINAL", "Final Round - Event Championship", "Event Final - Product Scale Up", "Hoàn thiện sản phẩm từ vòng loại và chứng minh khả năng mở rộng.", "Có demo ổn định, bằng chứng kiểm thử và kế hoạch triển khai.", demoPdf],
-    ["FINAL", "Final Round - Event Championship", "Event Final - Investor Pitch", "Trình bày giá trị sản phẩm, chiến lược triển khai và khả năng phát triển.", "Có slide public, demo, roadmap và phân tích rủi ro.", demoPdf],
   ],
   prizes: [
     ["rankPosition", "name", "description", "amount"],
@@ -122,6 +121,13 @@ function normalizeBool(value) {
   if (typeof value === "boolean") return value;
   const normalized = String(value || "").trim().toLowerCase();
   return ["true", "1", "yes", "y", "final", "online"].includes(normalized);
+}
+
+function normalizeKey(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
 }
 
 function readRows(workbook, sheetName) {
@@ -263,12 +269,35 @@ function validateWorkbookData(data) {
   });
 
   if (!data.topics.length) {
-    errors.push("Sheet Topics cần ít nhất một dòng. Endpoint hiện tại sẽ dùng dòng đầu tiên làm Topic chính.");
+    errors.push("Sheet Topics cần có đề cho từng round thường.");
   }
-  const firstTopic = data.topics[0];
-  if (firstTopic && !requireText(firstTopic, "title")) {
-    errors.push(`Topics dòng ${firstTopic.__rowNumber}: title không được để trống.`);
-  }
+  data.topics.forEach((topic) => {
+    const label = `Topics dòng ${topic.__rowNumber}`;
+    const code = requireText(topic, "trackcode");
+    const track = data.tracks.find((item) => requireText(item, "trackcode") === code);
+    if (!track) errors.push(`${label}: trackCode không tồn tại trong sheet Tracks.`);
+    if (track && normalizeBool(track.isfinal)) {
+      errors.push(`${label}: Final Track không cần tạo Topic.`);
+    }
+    if (!requireText(topic, "roundname")) errors.push(`${label}: roundName không được để trống.`);
+    if (!requireText(topic, "title")) errors.push(`${label}: title không được để trống.`);
+  });
+
+  data.rounds.forEach((round) => {
+    const code = requireText(round, "trackcode");
+    const track = data.tracks.find((item) => requireText(item, "trackcode") === code);
+    if (!track || normalizeBool(track.isfinal)) return;
+
+    const hasTopic = data.topics.some(
+      (topic) =>
+        requireText(topic, "trackcode") === code &&
+        normalizeKey(requireText(topic, "roundname")) ===
+          normalizeKey(requireText(round, "roundname")),
+    );
+    if (!hasTopic) {
+      errors.push(`Round "${requireText(round, "roundname")}" cần ít nhất một Topic.`);
+    }
+  });
 
   data.prizes.forEach((prize) => {
     const label = `Prizes dòng ${prize.__rowNumber}`;
@@ -330,6 +359,38 @@ function buildImportPayload(data) {
       amount: getNumber(prize.amount),
     })),
   };
+}
+
+async function createRoundTopicsFromWorkbook(createdEvent, data) {
+  const createdTracks = createdEvent?.tracks || createdEvent?.Tracks || [];
+
+  for (const topic of data.topics) {
+    const code = requireText(topic, "trackcode");
+    const sourceTrack = data.tracks.find(
+      (track) => requireText(track, "trackcode") === code,
+    );
+    if (!sourceTrack || normalizeBool(sourceTrack.isfinal)) continue;
+
+    const createdTrack = createdTracks.find(
+      (track) =>
+        normalizeKey(track.name || track.trackName) ===
+        normalizeKey(requireText(sourceTrack, "trackname")),
+    );
+    const createdRound = (createdTrack?.rounds || createdTrack?.Rounds || []).find(
+      (round) =>
+        normalizeKey(round.name || round.roundName) ===
+        normalizeKey(requireText(topic, "roundname")),
+    );
+    const roundId = createdRound?.id ?? createdRound?.roundId;
+    if (!roundId) continue;
+
+    await topicService.create(roundId, {
+      title: requireText(topic, "title"),
+      description: requireText(topic, "description") || null,
+      requirements: requireText(topic, "requirements") || null,
+      attachmentUrl: requireText(topic, "attachmenturl") || null,
+    });
+  }
 }
 
 export function CompetitionExcelImportModal({ onClose, onCompleted }) {
@@ -400,6 +461,8 @@ export function CompetitionExcelImportModal({ onClose, onCompleted }) {
     setProgressLabel("Đang tạo Event, Topic, Track và Round");
     try {
       const response = await eventService.createFull(eventPayload);
+      setProgressLabel("Đang tạo đề cho các vòng loại");
+      await createRoundTopicsFromWorkbook(response.data?.data, parsedData);
       const eventId = extractCreatedEventId(response);
 
       if (eventId && prizes.length) {
@@ -421,11 +484,6 @@ export function CompetitionExcelImportModal({ onClose, onCompleted }) {
       setProgressLabel("");
     }
   };
-
-  const topicNote =
-    parsedData?.topics?.length > 1
-      ? `File có ${parsedData.topics.length} topic. Endpoint full-template hiện tại chỉ nhận một Topic chung, nên FE sẽ dùng dòng đầu tiên.`
-      : "";
 
   return (
     <ModalShell
@@ -505,11 +563,6 @@ export function CompetitionExcelImportModal({ onClose, onCompleted }) {
 
         {parsedData && (
           <div className="space-y-4">
-            {topicNote && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                {topicNote}
-              </div>
-            )}
             <div className="grid gap-3 md:grid-cols-7">
               {[
                 ["Event", parsedData.event.length],
@@ -545,12 +598,12 @@ export function CompetitionExcelImportModal({ onClose, onCompleted }) {
                 </label>
                 <label className="block">
                   <span className="mb-1 block text-xs font-bold uppercase text-slate-700">
-                    Topic gửi xuống BE
+                    Topic vòng loại
                   </span>
                   <input
                     readOnly
                     className={inputClass}
-                    value={requireText(parsedData.topics[0], "title")}
+                    value={`${parsedData.topics.length} đề sẽ được tạo theo từng round thường`}
                   />
                 </label>
               </div>
