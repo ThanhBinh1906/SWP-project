@@ -328,7 +328,13 @@ function padNumber(value, size = 2) {
   return String(value).padStart(size, "0");
 }
 
+function createImportBatchCode() {
+  return Date.now().toString(36).slice(-5);
+}
+
 function buildTeamTemplateFromTracks({ eventId, tracks }) {
+  const batchCode = createImportBatchCode();
+  const batchCodeUpper = batchCode.toUpperCase();
   const normalTracks = tracks.filter((track) => !isFinalTrack(track));
   const targetTracks = normalTracks.length ? normalTracks : tracks;
   const teamRows = [teamTemplateHeader];
@@ -337,7 +343,7 @@ function buildTeamTemplateFromTracks({ eventId, tracks }) {
     ["Cot", "Ghi chu"],
     ["trackName", "Duoc tao tu event dang chon, khong nen doi neu khong can."],
     ["teamName", "Moi team co leader o sheet Teams va thanh vien o sheet Members."],
-    ["studentCode/email/username", "Duoc sinh kem eventId va trackId de han che trung du lieu demo."],
+    ["studentCode/email/username", `Da kem ma import ${batchCodeUpper} de tranh trung voi event cu.`],
     ["Final Track", "File mau khong tao team vao Final Track de giu dung flow vao vong trong."],
   ];
 
@@ -349,11 +355,15 @@ function buildTeamTemplateFromTracks({ eventId, tracks }) {
     const remainingTeams = Math.max(maxTeams - currentTeams, 0);
     const memberCount = Math.max(2, Math.min(getTrackMaxMembers(track) - 1, 4));
     const slug = slugify(trackName);
+    const accountSlug = slug.replace(/-/g, "_");
 
     for (let index = 1; index <= remainingTeams; index += 1) {
       const sequence = currentTeams + index;
       const teamCode = `E${eventId}T${trackId}N${padNumber(sequence)}`;
-      const teamName = `${trackName} Team ${padNumber(sequence)}`;
+      const sequenceText = padNumber(sequence);
+      const teamName = `${trackName} Team ${sequenceText} - ${batchCodeUpper}`;
+      const leaderKey = `leader_${eventId}_${accountSlug}_${sequenceText}_${batchCode}`;
+      const leaderEmail = `leader.e${eventId}.${slug}.t${sequenceText}.${batchCode}@seal.local`;
       const university =
         index % 3 === 0
           ? "HUTECH University"
@@ -365,11 +375,11 @@ function buildTeamTemplateFromTracks({ eventId, tracks }) {
         trackName,
         teamName,
         university,
-        `https://github.com/seal-demo/${slug}-team-${padNumber(sequence)}`,
-        `leader.${slug}.${padNumber(sequence)}`,
-        `leader.${slug}.${padNumber(sequence)}@seal.local`,
-        `Leader ${trackName} ${padNumber(sequence)}`,
-        `${teamCode}M1`,
+        `https://github.com/seal-demo/${slug}-team-${sequenceText}-${batchCode}`,
+        leaderKey,
+        leaderEmail,
+        `Leader ${trackName} ${sequenceText}`,
+        `${teamCode}M1${batchCodeUpper}`,
         `09${padNumber(trackId, 2)}${padNumber(sequence, 2)}0001`,
         university,
         university === "FPT University",
@@ -377,12 +387,13 @@ function buildTeamTemplateFromTracks({ eventId, tracks }) {
       ]);
 
       for (let memberIndex = 2; memberIndex <= memberCount + 1; memberIndex += 1) {
+        const memberKey = `member_${eventId}_${accountSlug}_${sequenceText}_m${memberIndex}_${batchCode}`;
         memberRows.push([
           teamName,
           `Thanh vien ${memberIndex} - ${teamName}`,
-          `${teamCode}M${memberIndex}`,
-          `member${memberIndex}.${slug}.${padNumber(sequence)}@seal.local`,
-          `member${memberIndex}.${slug}.${padNumber(sequence)}`,
+          `${teamCode}M${memberIndex}${batchCodeUpper}`,
+          `member.e${eventId}.${slug}.t${sequenceText}.m${memberIndex}.${batchCode}@seal.local`,
+          memberKey,
           university,
           `09${padNumber(trackId, 2)}${padNumber(sequence, 2)}000${memberIndex}`,
           university === "FPT University",

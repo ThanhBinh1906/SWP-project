@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import * as XLSX from "xlsx";
 import { Loader2 } from "lucide-react";
 import prizeService from "../../../services/prizeService";
 import {
@@ -14,6 +15,71 @@ import { getApiMessage } from "../coordinatorHelpers";
 const EMPTY_FORM = { name: "", description: "", rankPosition: "", amount: "" };
 const inputClass =
   "w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-950 placeholder:text-slate-500 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100";
+
+const PRIZE_TEMPLATE_ROWS = [
+  ["rankPosition", "name", "description", "amount"],
+  [1, "Giải Nhất", "Đội đạt hạng 1 chung cuộc", 10000000],
+  [2, "Giải Nhì", "Đội đạt hạng 2 chung cuộc", 5000000],
+  [3, "Giải Ba", "Đội đạt hạng 3 chung cuộc", 3000000],
+];
+
+function normalizeKey(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function getRowValue(row, key) {
+  const matchedKey = Object.keys(row).find(
+    (candidate) => normalizeKey(candidate) === normalizeKey(key),
+  );
+  return matchedKey ? row[matchedKey] : "";
+}
+
+function parsePrizeRows(workbook) {
+  const sheet = workbook.Sheets.Prizes || workbook.Sheets[workbook.SheetNames[0]];
+  if (!sheet) throw new Error("File Excel cần có sheet Prizes.");
+
+  const rows = XLSX.utils.sheet_to_json(sheet, {
+    defval: "",
+    raw: false,
+  });
+
+  if (!rows.length) throw new Error("Sheet Prizes chưa có dữ liệu.");
+
+  const seenRanks = new Set();
+  const parsedRows = rows.map((row, index) => {
+    const line = index + 2;
+    const rankPosition = Number(getRowValue(row, "rankPosition"));
+    const name = String(getRowValue(row, "name") || "").trim();
+    const description = String(getRowValue(row, "description") || "").trim();
+    const amount = Number(getRowValue(row, "amount"));
+
+    if (![1, 2, 3].includes(rankPosition)) {
+      throw new Error(`Dòng ${line}: rankPosition phải là 1, 2 hoặc 3.`);
+    }
+    if (seenRanks.has(rankPosition)) {
+      throw new Error(`Dòng ${line}: rankPosition ${rankPosition} bị trùng.`);
+    }
+    if (!name) throw new Error(`Dòng ${line}: name không được để trống.`);
+    if (!Number.isFinite(amount) || amount < 0) {
+      throw new Error(`Dòng ${line}: amount không hợp lệ.`);
+    }
+
+    seenRanks.add(rankPosition);
+    return {
+      rankPosition,
+      name,
+      description: description || null,
+      amount,
+    };
+  });
+
+  const missingRanks = [1, 2, 3].filter((rank) => !seenRanks.has(rank));
+  if (missingRanks.length) {
+    throw new Error(`File còn thiếu giải hạng ${missingRanks.join(", ")}.`);
+  }
+
+  return parsedRows;
+}
 
 function parseDownloadName(headers, eventId) {
   const disposition = headers?.["content-disposition"] || "";
@@ -32,6 +98,7 @@ function normalizeList(data) {
 }
 
 export function PrizeManagement({ eventId }) {
+  const importInputRef = useRef(null);
   const [prizes, setPrizes] = useState([]);
   const [winners, setWinners] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -43,6 +110,7 @@ export function PrizeManagement({ eventId }) {
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const load = useCallback(async () => {
     if (!eventId) {
@@ -176,6 +244,54 @@ export function PrizeManagement({ eventId }) {
     }
   };
 
+  const downloadPrizeTemplate = () => {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.aoa_to_sheet(PRIZE_TEMPLATE_ROWS),
+      "Prizes",
+    );
+    XLSX.writeFile(workbook, "SEAL_Prize_Import_Template.xlsx");
+  };
+
+  const importPrizes = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !eventId) return;
+
+    setImporting(true);
+    setError("");
+    try {
+      const workbook = XLSX.read(await file.arrayBuffer(), {
+        type: "array",
+        cellDates: false,
+      });
+      const rows = parsePrizeRows(workbook);
+      const existingByRank = new Map(
+        prizes.map((prize) => [Number(prize.rankPosition), prize]),
+      );
+
+      for (const row of rows) {
+        const existing = existingByRank.get(row.rankPosition);
+        if (existing?.id) {
+          await prizeService.update(existing.id, row);
+        } else {
+          await prizeService.createForEvent(eventId, row);
+        }
+      }
+
+      await load();
+    } catch (requestError) {
+      setError(
+        requestError?.response
+          ? getApiMessage(requestError, "Không thể import cấu hình giải thưởng.")
+          : requestError?.message || "Không thể import cấu hình giải thưởng.",
+      );
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const prizeColumns = [
     { key: "rank", label: "Hạng" },
     { key: "name", label: "Giải thưởng" },
@@ -197,6 +313,20 @@ export function PrizeManagement({ eventId }) {
       actions={
         <>
           <CoordinatorActionButton
+            icon={icons.FileSpreadsheet}
+            disabled={!eventId || importing}
+            onClick={downloadPrizeTemplate}
+          >
+            Tải mẫu giải thưởng
+          </CoordinatorActionButton>
+          <CoordinatorActionButton
+            icon={icons.Upload}
+            disabled={!eventId || importing}
+            onClick={() => importInputRef.current?.click()}
+          >
+            {importing ? "Đang import..." : "Import Excel"}
+          </CoordinatorActionButton>
+          <CoordinatorActionButton
             icon={icons.Download}
             disabled={!eventId || exporting}
             onClick={exportWinners}
@@ -214,6 +344,13 @@ export function PrizeManagement({ eventId }) {
         </>
       }
     >
+      <input
+        ref={importInputRef}
+        type="file"
+        accept=".xlsx,.xls"
+        className="hidden"
+        onChange={importPrizes}
+      />
       {error && (
         <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           {error}

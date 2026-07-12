@@ -818,6 +818,7 @@ export function CompetitionSetup() {
     setRoundSaving(true);
     try {
       await roundService.update(selectedRound.roundId, {
+        orderIndex: getRoundOrder(selectedRound, 0),
         name: roundForm.name.trim(),
         startTime: new Date(roundForm.startTime).toISOString(),
         endTime: new Date(roundForm.endTime).toISOString(),
