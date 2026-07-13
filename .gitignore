@@ -318,6 +318,7 @@ FakesAssemblies/
 node_modules/
 docs/
 outputs/
+work/
 
 # Visual Studio 6 build log
 *.plg

@@ -91,6 +91,45 @@ function collectTieBreakSessions(data) {
     .filter((session) => session.id);
 }
 
+function getTieBreakSessionId(ranking) {
+  return (
+    ranking?.tieBreakSessionId ||
+    ranking?.tieBreakSession?.id ||
+    ranking?.tieBreak?.id ||
+    ranking?.sessionId ||
+    null
+  );
+}
+
+function groupTieBreakSessions(rankings) {
+  const sessions = new Map();
+
+  rankings.forEach((ranking) => {
+    const sessionId = getTieBreakSessionId(ranking);
+    if (!sessionId) return;
+
+    const key = String(sessionId);
+    const current = sessions.get(key) || {
+      id: key,
+      rankPosition: ranking.rankPosition,
+      teams: [],
+    };
+
+    current.rankPosition =
+      current.rankPosition && ranking.rankPosition
+        ? Math.min(Number(current.rankPosition), Number(ranking.rankPosition))
+        : current.rankPosition || ranking.rankPosition;
+    current.teams.push(ranking);
+    sessions.set(key, current);
+  });
+
+  return Array.from(sessions.values()).sort((a, b) => {
+    const rankA = Number(a.rankPosition || 0);
+    const rankB = Number(b.rankPosition || 0);
+    return rankA - rankB;
+  });
+}
+
 function hasTieBreakSignal(message, data) {
   const text = String(message || "").toLowerCase();
   return (
@@ -245,6 +284,10 @@ export function ResultsManagement() {
   const sortedRankings = useMemo(
     () => sortRankings(leaderboard.rankings),
     [leaderboard.rankings],
+  );
+  const pendingTieBreakSessions = useMemo(
+    () => groupTieBreakSessions(sortedRankings),
+    [sortedRankings],
   );
   const advancingCount = sortedRankings.filter((ranking) => ranking.isAdvancing).length;
 
@@ -658,6 +701,50 @@ export function ResultsManagement() {
               {sortedRankings.length} đội
             </span>
           </div>
+          {pendingTieBreakSessions.length > 0 && !loadingLeaderboard && !leaderboardError && (
+            <div className="mb-4 space-y-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="font-bold">Có tie-break cần chốt</p>
+                  <p className="text-xs leading-5 text-amber-800">
+                    Judge cần chấm đủ điểm bổ sung trước khi Coordinator chốt kết quả.
+                  </p>
+                </div>
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-amber-800">
+                  {pendingTieBreakSessions.length} phiên
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                {pendingTieBreakSessions.map((session) => (
+                  <div
+                    key={session.id}
+                    className="flex flex-col gap-3 rounded-lg border border-amber-200 bg-white/80 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-semibold text-slate-950">
+                        Hạng #{session.rankPosition || "?"}
+                      </p>
+                      <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-700">
+                        {session.teams
+                          .map((team) => team.teamName || team.teamId)
+                          .join(", ")}
+                      </p>
+                    </div>
+                    <CoordinatorActionButton
+                      variant="primary"
+                      disabled={calculatingTieBreakId === session.id}
+                      onClick={() => handleCalculateTieBreakResult(session.id)}
+                    >
+                      {calculatingTieBreakId === session.id
+                        ? "Đang chốt..."
+                        : "Chốt tie-break"}
+                    </CoordinatorActionButton>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         {loadingLeaderboard ? (
           <LoadingState label="Đang tải bảng xếp hạng..." />
         ) : leaderboardError ? (
@@ -677,6 +764,11 @@ export function ResultsManagement() {
           <CoordinatorTable
             columns={columns}
             rows={sortedRankings}
+            rowClassName={(row) =>
+              getTieBreakSessionId(row)
+                ? "bg-amber-50/60 hover:bg-amber-50"
+                : ""
+            }
             renderCell={(row, key) => {
               if (key === "rank") {
                 return (

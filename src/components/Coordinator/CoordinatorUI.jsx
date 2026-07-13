@@ -259,6 +259,7 @@ export function CoordinatorTable({
   rows,
   renderCell,
   emptyMessage = "No records found",
+  rowClassName,
 }) {
   if (!rows?.length) {
     return (
@@ -287,7 +288,9 @@ export function CoordinatorTable({
           {rows.map((row) => (
             <tr
               key={row.id}
-              className="transition-colors duration-150 hover:bg-slate-50"
+              className={`transition-colors duration-150 hover:bg-slate-50 ${
+                rowClassName ? rowClassName(row) : ""
+              }`}
             >
               {columns.map((column) => (
                 <td
