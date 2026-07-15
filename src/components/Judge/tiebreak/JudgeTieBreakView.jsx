@@ -266,6 +266,8 @@ export function JudgeTieBreakView() {
     setError("");
     setSuccess("");
     try {
+      const newScores = [];
+
       for (const criterion of criteria) {
         const existingRecord = (scoresBySubmission[submissionId] || []).find(
           (record) => record.criterionId === criterion.id,
@@ -279,7 +281,7 @@ export function JudgeTieBreakView() {
             { score, comment },
           );
         } else {
-          await tieBreakService.submitScore(submissionId, {
+          newScores.push({
             criterionId: criterion.id,
             score,
             comment,
@@ -287,9 +289,14 @@ export function JudgeTieBreakView() {
         }
       }
 
+      if (newScores.length) {
+        await tieBreakService.submitScoresBulk(submissionId, newScores);
+      }
+
       setSuccess("Đã lưu điểm tie-break.");
       await loadSessionDetail();
     } catch (requestError) {
+      setSuccess("");
       setError(getApiMessage(requestError, "Lưu điểm tie-break thất bại."));
     } finally {
       setSubmittingId("");

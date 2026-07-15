@@ -47,6 +47,33 @@ export function getApiMessage(err, fallback) {
 
 export const TEAM_MIN_MEMBERS = 3;
 
+function normalizeStatus(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function pickByStatus(items, statuses) {
+  const normalizedStatuses = statuses.map(normalizeStatus);
+  return (
+    normalizedStatuses
+      .map((status) =>
+        items.find((item) => normalizeStatus(item?.status) === status),
+      )
+      .find(Boolean) || items[0] || null
+  );
+}
+
+export function pickDefaultEvent(events = []) {
+  return pickByStatus(events, ["Active", "Registration", "Upcoming", "Completed"]);
+}
+
+export function pickDefaultSetupRound(rounds = []) {
+  return pickByStatus(rounds, ["Active", "Scoring", "Upcoming", "Closed", "Completed"]);
+}
+
+export function pickDefaultResultRound(rounds = []) {
+  return pickByStatus(rounds, ["Scoring", "Active", "Closed", "Completed", "Upcoming"]);
+}
+
 export function FormError({ msg }) {
   if (!msg) return null;
   return (

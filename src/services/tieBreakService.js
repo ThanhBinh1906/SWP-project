@@ -11,11 +11,17 @@ const tieBreakService = {
   getSubmissionScores: (tieBreakSubmissionId) =>
     api.get(`/api/tie-breaks/submissions/${tieBreakSubmissionId}/scores`),
 
-  submitScore: (tieBreakSubmissionId, data) =>
-    api.post(`/api/tie-breaks/submissions/${tieBreakSubmissionId}/scores`, data),
+  submitScoresBulk: (tieBreakSubmissionId, data) =>
+    api.post(
+      `/api/tie-breaks/submissions/${tieBreakSubmissionId}/scores/bulk`,
+      data,
+    ),
 
   updateScore: (tieBreakScoreRecordId, data) =>
-    api.put(`/api/tie-breaks/scores/${tieBreakScoreRecordId}`, data),
+    api.put(`/api/tie-breaks/scores/${tieBreakScoreRecordId}`, {
+      updatedScore: data.score,
+      updatedComment: data.comment,
+    }),
 
   calculateResult: (sessionId) =>
     api.post(`/api/tie-breaks/${sessionId}/calculate-result`),

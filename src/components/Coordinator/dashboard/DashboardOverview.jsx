@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import dashboardService from "../../../services/dashboardService";
-import teamService from "../../../services/teamService";
 import {
   CoordinatorActionButton,
   CoordinatorBadge,
@@ -11,68 +10,332 @@ import {
 } from "../CoordinatorUI";
 
 const EMPTY_DASHBOARD = {
-  totalActiveTeams: 0,
-  totalPendingTeams: 0,
-  incompleteSubmissions: 0,
-  activeRoundStatuses: [],
+  summary: {
+    totalEvents: 0,
+    totalTeams: 0,
+    totalSubmissions: 0,
+    incompleteSubmissions: 0,
+    totalMentors: 0,
+    totalJudges: 0,
+    eventsByStatus: {},
+    roundsByStatus: {},
+    teamsByStatus: {},
+  },
+  highlight: {
+    eventWithMostTeams: null,
+  },
+  events: [],
+  charts: {
+    teamCountByEvent: [],
+    teamCountByTrack: [],
+    submissionCountByEvent: [],
+  },
 };
 
-function normalizeDashboardData(data) {
-  return {
-    ...EMPTY_DASHBOARD,
-    ...(data || {}),
-    activeRoundStatuses: Array.isArray(data?.activeRoundStatuses)
-      ? data.activeRoundStatuses
-      : [],
-  };
+function safeObject(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 
-function getFilteredTeamCount(response, fallback) {
-  const totalRecords = Number(response?.data?.data?.totalRecords);
-  return Number.isFinite(totalRecords) ? totalRecords : fallback;
+function safeArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function normalizeDashboardData(data) {
+  const summary = safeObject(data?.summary);
+  const charts = safeObject(data?.charts);
+
+  return {
+    summary: {
+      ...EMPTY_DASHBOARD.summary,
+      ...summary,
+      eventsByStatus: safeObject(summary.eventsByStatus),
+      roundsByStatus: safeObject(summary.roundsByStatus),
+      teamsByStatus: safeObject(summary.teamsByStatus),
+    },
+    highlight: {
+      ...EMPTY_DASHBOARD.highlight,
+      ...safeObject(data?.highlight),
+    },
+    events: safeArray(data?.events),
+    charts: {
+      teamCountByEvent: safeArray(charts.teamCountByEvent),
+      teamCountByTrack: safeArray(charts.teamCountByTrack),
+      submissionCountByEvent: safeArray(charts.submissionCountByEvent),
+    },
+  };
 }
 
 function getStatusTone(status) {
   const normalized = String(status || "").toLowerCase();
   if (normalized === "active") return "orange";
+  if (normalized === "registration") return "info";
   if (normalized === "upcoming") return "info";
+  if (normalized === "scoring") return "warning";
   if (normalized === "closed" || normalized === "completed") return "success";
-  if (normalized === "cancelled" || normalized === "inactive") return "danger";
+  if (normalized === "rejected" || normalized === "cancelled" || normalized === "inactive") {
+    return "danger";
+  }
   return "neutral";
 }
 
-function groupRoundsByEvent(rounds) {
-  return rounds.reduce((events, round, index) => {
-    const eventName = round.eventName || "Sự kiện chưa đặt tên";
-    const trackName = round.trackName || "Track chưa đặt tên";
-    const event = events.get(eventName) || {
-      name: eventName,
-      tracks: new Map(),
-      totalRounds: 0,
-    };
-    const track = event.tracks.get(trackName) || {
-      name: trackName,
-      rounds: [],
-    };
-
-    track.rounds.push({
-      id: `${eventName}-${trackName}-${round.roundName || index}`,
-      roundName: round.roundName || "Vòng chưa đặt tên",
-      status: round.status || "Unknown",
-    });
-    event.totalRounds += 1;
-    event.tracks.set(trackName, track);
-    events.set(eventName, event);
-    return events;
-  }, new Map());
+function formatDate(value) {
+  if (!value) return "Chưa xác định";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("vi-VN");
 }
 
-function getStatusCounts(rounds) {
-  return rounds.reduce((counts, round) => {
-    const status = round.status || "Unknown";
-    counts[status] = (counts[status] || 0) + 1;
-    return counts;
-  }, {});
+function formatNumber(value) {
+  const numeric = Number(value || 0);
+  return Number.isFinite(numeric) ? numeric.toLocaleString("vi-VN") : "0";
+}
+
+function getMaxValue(items, key) {
+  return Math.max(1, ...items.map((item) => Number(item?.[key] || 0)));
+}
+
+function StatusSummary({ title, items }) {
+  const entries = Object.entries(items || {});
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+      <p className="text-xs font-semibold uppercase tracking-widest text-slate-700">
+        {title}
+      </p>
+      {entries.length === 0 ? (
+        <p className="mt-3 text-sm text-slate-700">Chưa có dữ liệu.</p>
+      ) : (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {entries.map(([status, count]) => (
+            <CoordinatorBadge key={status} tone={getStatusTone(status)}>
+              {status}: {formatNumber(count)}
+            </CoordinatorBadge>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BarList({ title, subtitle, items, valueKey, labelKey, emptyText }) {
+  const maxValue = getMaxValue(items, valueKey);
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-5">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold uppercase tracking-widest text-slate-700">
+          {title}
+        </h3>
+        {subtitle && <p className="mt-1 text-sm text-slate-700">{subtitle}</p>}
+      </div>
+
+      {items.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-5 text-center text-sm text-slate-700">
+          {emptyText || "Chưa có dữ liệu để hiển thị."}
+        </p>
+      ) : (
+        <div className="max-h-80 space-y-3 overflow-y-auto pr-1">
+          {items.map((item, index) => {
+            const value = Number(item?.[valueKey] || 0);
+            const width = Math.max(4, Math.round((value / maxValue) * 100));
+            const label = item?.[labelKey] || `Mục ${index + 1}`;
+
+            return (
+              <div key={`${label}-${index}`}>
+                <div className="mb-1 flex items-center justify-between gap-3 text-sm">
+                  <span className="line-clamp-1 font-semibold text-slate-900">
+                    {label}
+                  </span>
+                  <span className="font-mono font-semibold text-slate-950">
+                    {formatNumber(value)}
+                  </span>
+                </div>
+                <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
+                  <div
+                    className="h-full rounded-full bg-[#F26F21]"
+                    style={{ width: `${width}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EventTable({ events, statusFilter, search, onStatusFilter, onSearch }) {
+  const [showAll, setShowAll] = useState(false);
+  const statusOptions = useMemo(() => {
+    const values = new Set(events.map((event) => event.status).filter(Boolean));
+    return Array.from(values);
+  }, [events]);
+
+  const filteredEvents = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+    return events.filter((event) => {
+      const matchStatus = !statusFilter || event.status === statusFilter;
+      const matchSearch =
+        !keyword || String(event.eventName || "").toLowerCase().includes(keyword);
+      return matchStatus && matchSearch;
+    });
+  }, [events, search, statusFilter]);
+
+  const visibleEvents = showAll ? filteredEvents : filteredEvents.slice(0, 8);
+
+  useEffect(() => {
+    setShowAll(false);
+  }, [search, statusFilter]);
+
+  return (
+    <CoordinatorPanel
+      title="Sự kiện trong hệ thống"
+      subtitle="Theo dõi nhanh tình trạng đội, bài nộp và vòng thi của từng sự kiện"
+      icon={icons.CalendarDays}
+    >
+      <div className="mb-4 grid gap-3 lg:grid-cols-[1fr_220px]">
+        <label className="block">
+          <span className="mb-1 block text-xs font-semibold uppercase tracking-widest text-slate-700">
+            Tìm sự kiện
+          </span>
+          <input
+            value={search}
+            onChange={(event) => onSearch(event.target.value)}
+            placeholder="Nhập tên sự kiện..."
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+          />
+        </label>
+
+        <label className="block">
+          <span className="mb-1 block text-xs font-semibold uppercase tracking-widest text-slate-700">
+            Trạng thái
+          </span>
+          <select
+            value={statusFilter}
+            onChange={(event) => onStatusFilter(event.target.value)}
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+          >
+            <option value="">Tất cả trạng thái</option>
+            {statusOptions.map((status) => (
+              <option key={status} value={status}>
+                {status}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {filteredEvents.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
+          <p className="font-semibold text-slate-950">Không có sự kiện phù hợp</p>
+          <p className="mt-1 text-sm text-slate-700">
+            Hãy đổi bộ lọc hoặc làm mới dashboard để kiểm tra dữ liệu mới nhất.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <table className="min-w-[980px] w-full text-left">
+              <thead>
+                <tr className="border-b border-slate-200 text-xs uppercase tracking-widest text-slate-500">
+                  <th className="px-3 py-3 font-semibold">Sự kiện</th>
+                  <th className="px-3 py-3 font-semibold">Cấu trúc</th>
+                  <th className="px-3 py-3 font-semibold">Đội thi</th>
+                  <th className="px-3 py-3 font-semibold">Bài nộp</th>
+                  <th className="px-3 py-3 font-semibold">Vòng thi</th>
+                  <th className="px-3 py-3 font-semibold">Kết quả</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleEvents.map((event) => (
+                  <tr
+                    key={event.eventId}
+                    className="border-b border-slate-100 align-top transition hover:bg-slate-50"
+                  >
+                    <td className="px-3 py-4">
+                      <div className="max-w-[280px]">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-semibold text-slate-950">
+                            {event.eventName || "Sự kiện chưa đặt tên"}
+                          </p>
+                          <CoordinatorBadge tone={getStatusTone(event.status)}>
+                            {event.status || "Unknown"}
+                          </CoordinatorBadge>
+                        </div>
+                        <p className="mt-1 text-xs text-slate-700">
+                          {formatDate(event.startDate)} - {formatDate(event.endDate)}
+                        </p>
+                      </div>
+                    </td>
+                    <td className="px-3 py-4 text-sm text-slate-800">
+                      <p>{formatNumber(event.totalTracks)} track</p>
+                      <p className="mt-1">{formatNumber(event.totalRounds)} round</p>
+                    </td>
+                    <td className="px-3 py-4 text-sm text-slate-800">
+                      <p className="font-semibold text-slate-950">
+                        {formatNumber(event.totalTeams)} đội
+                      </p>
+                      <p className="mt-1 text-xs text-slate-700">
+                        Duyệt {formatNumber(event.approvedTeams)} · Chờ{" "}
+                        {formatNumber(event.pendingTeams)}
+                      </p>
+                      {(Number(event.rejectedTeams || 0) > 0 ||
+                        Number(event.disqualifiedTeams || 0) > 0) && (
+                        <p className="mt-1 text-xs text-red-700">
+                          Từ chối {formatNumber(event.rejectedTeams)} · Loại{" "}
+                          {formatNumber(event.disqualifiedTeams)}
+                        </p>
+                      )}
+                    </td>
+                    <td className="px-3 py-4 text-sm text-slate-800">
+                      <p className="font-semibold text-slate-950">
+                        {formatNumber(event.totalSubmissions)}
+                      </p>
+                      <p
+                        className={`mt-1 text-xs ${
+                          Number(event.incompleteSubmissions || 0) > 0
+                            ? "text-red-700"
+                            : "text-slate-700"
+                        }`}
+                      >
+                        Thiếu điểm: {formatNumber(event.incompleteSubmissions)}
+                      </p>
+                    </td>
+                    <td className="px-3 py-4 text-sm text-slate-800">
+                      <p>Active: {formatNumber(event.activeRounds)}</p>
+                      <p className="mt-1">Scoring: {formatNumber(event.scoringRounds)}</p>
+                      <p className="mt-1">Closed: {formatNumber(event.closedRounds)}</p>
+                    </td>
+                    <td className="px-3 py-4">
+                      <CoordinatorBadge
+                        tone={event.resultsAvailable ? "success" : "neutral"}
+                      >
+                        {event.resultsAvailable ? "Đã có kết quả" : "Chưa công bố"}
+                      </CoordinatorBadge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {filteredEvents.length > 8 && (
+            <div className="mt-4 flex justify-center">
+              <CoordinatorActionButton
+                variant="secondary"
+                onClick={() => setShowAll((current) => !current)}
+              >
+                {showAll
+                  ? "Thu gọn danh sách"
+                  : `Xem tất cả ${filteredEvents.length} sự kiện`}
+              </CoordinatorActionButton>
+            </div>
+          )}
+        </>
+      )}
+    </CoordinatorPanel>
+  );
 }
 
 function DashboardSkeleton() {
@@ -95,26 +358,13 @@ function DashboardSkeleton() {
   );
 }
 
-function EmptyRoundState() {
-  return (
-    <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
-      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm">
-        <icons.CalendarDays className="h-5 w-5" />
-      </div>
-      <p className="font-bold text-slate-900">Chưa có vòng thi đang hiển thị</p>
-      <p className="mx-auto mt-1 max-w-md text-sm text-slate-700">
-        Khi có vòng thi được thiết lập, bảng điều phối sẽ tự nhóm theo sự kiện
-        và track tại đây.
-      </p>
-    </div>
-  );
-}
-
 export function DashboardOverview() {
   const { activeEventId } = useSelector((s) => s.event);
   const [dashboard, setDashboard] = useState(EMPTY_DASHBOARD);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [eventSearch, setEventSearch] = useState("");
+  const [eventStatusFilter, setEventStatusFilter] = useState("");
 
   const [variances, setVariances] = useState([]);
   const [loadingVariance, setLoadingVariance] = useState(false);
@@ -127,66 +377,19 @@ export function DashboardOverview() {
     try {
       const res = await dashboardService.getRblCriteriaVariance(activeEventId);
       setVariances(res.data?.data || []);
-    } catch (err) {
+    } catch {
       setVarianceError("Không thể tải dữ liệu phương sai tiêu chí.");
     } finally {
       setLoadingVariance(false);
     }
   };
 
-  useEffect(() => {
-    if (activeEventId) {
-      fetchVariance();
-    }
-  }, [activeEventId]);
-
-  const rounds = dashboard.activeRoundStatuses;
-  const groupedEvents = useMemo(() => groupRoundsByEvent(rounds), [rounds]);
-  const statusCounts = useMemo(() => getStatusCounts(rounds), [rounds]);
-  const activeRoundCount = statusCounts.Active || statusCounts.active || 0;
-  const eventCount = groupedEvents.size;
-  const trackCount = useMemo(() => {
-    let total = 0;
-    groupedEvents.forEach((event) => {
-      total += event.tracks.size;
-    });
-    return total;
-  }, [groupedEvents]);
-
   const fetchDashboard = async () => {
     setLoading(true);
     setError("");
     try {
-      const [dashboardResult, approvedResult, pendingResult] =
-        await Promise.allSettled([
-          dashboardService.getCoordinatorDashboard(),
-          teamService.getAdminTeams({
-            pageNumber: 1,
-            pageSize: 1,
-            status: "Approved",
-          }),
-          teamService.getAdminTeams({
-            pageNumber: 1,
-            pageSize: 1,
-            status: "Pending",
-          }),
-        ]);
-      if (dashboardResult.status === "rejected") throw dashboardResult.reason;
-
-      const normalized = normalizeDashboardData(
-        dashboardResult.value.data?.data,
-      );
-      setDashboard({
-        ...normalized,
-        totalActiveTeams: getFilteredTeamCount(
-          approvedResult.status === "fulfilled" ? approvedResult.value : null,
-          normalized.totalActiveTeams,
-        ),
-        totalPendingTeams: getFilteredTeamCount(
-          pendingResult.status === "fulfilled" ? pendingResult.value : null,
-          normalized.totalPendingTeams,
-        ),
-      });
+      const res = await dashboardService.getCoordinatorDashboard();
+      setDashboard(normalizeDashboardData(res.data?.data));
     } catch (err) {
       setError(
         err?.response?.data?.message ||
@@ -201,44 +404,52 @@ export function DashboardOverview() {
     fetchDashboard();
   }, []);
 
+  useEffect(() => {
+    if (activeEventId) fetchVariance();
+  }, [activeEventId]);
+
+  const { summary, highlight, events, charts } = dashboard;
+  const activeEvents = Number(summary.eventsByStatus?.Active || 0);
+  const scoringRounds = Number(summary.roundsByStatus?.Scoring || 0);
+  const pendingTeams = Number(summary.teamsByStatus?.Pending || 0);
+  const approvedTeams = Number(summary.teamsByStatus?.Approved || 0);
+  const eventWithMostTeams = highlight.eventWithMostTeams;
+
   const stats = [
     {
-      id: "active-teams",
-      label: "Team đã duyệt",
-      value: dashboard.totalActiveTeams,
-      tone: "green",
-      helper: "Có thể tham gia round đang mở",
-      icon: icons.UserCheck,
+      id: "events",
+      label: "Tổng sự kiện",
+      value: summary.totalEvents,
+      tone: activeEvents > 0 ? "orange" : "blue",
+      helper: `${formatNumber(activeEvents)} sự kiện đang Active`,
+      icon: icons.CalendarDays,
     },
     {
-      id: "pending-teams",
-      label: "Team chờ duyệt",
-      value: dashboard.totalPendingTeams,
-      tone: dashboard.totalPendingTeams > 0 ? "amber" : "blue",
-      helper:
-        dashboard.totalPendingTeams > 0
-          ? "Cần coordinator xử lý"
-          : "Không có hồ sơ chờ",
+      id: "teams",
+      label: "Tổng đội thi",
+      value: summary.totalTeams,
+      tone: pendingTeams > 0 ? "amber" : "green",
+      helper: `Duyệt ${formatNumber(approvedTeams)} · Chờ ${formatNumber(pendingTeams)}`,
       icon: icons.Users,
     },
     {
-      id: "incomplete-submissions",
-      label: "Bài nộp chưa đủ",
-      value: dashboard.incompleteSubmissions,
-      tone: dashboard.incompleteSubmissions > 0 ? "red" : "green",
+      id: "submissions",
+      label: "Tổng bài nộp",
+      value: summary.totalSubmissions,
+      tone: summary.incompleteSubmissions > 0 ? "red" : "green",
       helper:
-        dashboard.incompleteSubmissions > 0
-          ? "Cần theo dõi trước hạn nộp"
-          : "Tất cả bài nộp đã ổn",
+        summary.incompleteSubmissions > 0
+          ? `Thiếu điểm: ${formatNumber(summary.incompleteSubmissions)}`
+          : "Dữ liệu chấm điểm đã ổn",
       icon: icons.Upload,
     },
     {
-      id: "active-rounds",
-      label: "Round đang Active",
-      value: activeRoundCount,
-      tone: activeRoundCount > 0 ? "orange" : "blue",
-      helper: `${eventCount} event, ${trackCount} track đang được theo dõi`,
-      icon: icons.Timer,
+      id: "staff",
+      label: "Nhân sự đã phân công",
+      value: summary.totalMentors + summary.totalJudges,
+      tone: "blue",
+      helper: `Mentor ${formatNumber(summary.totalMentors)} · Judge ${formatNumber(summary.totalJudges)}`,
+      icon: icons.Handshake,
     },
   ];
 
@@ -248,7 +459,7 @@ export function DashboardOverview() {
     return (
       <CoordinatorPanel
         title="Không tải được dashboard"
-        subtitle="Dữ liệu điều phối hiện chưa sẵn sàng"
+        subtitle="Dữ liệu vận hành hiện chưa sẵn sàng"
         icon={icons.Activity}
         actions={
           <CoordinatorActionButton
@@ -269,74 +480,54 @@ export function DashboardOverview() {
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm shadow-slate-200/40">
-        <div className="grid gap-0 xl:grid-cols-[1.15fr_0.85fr]">
+      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <div className="grid gap-0 xl:grid-cols-[1.1fr_0.9fr]">
           <div className="border-b border-slate-100 p-5 sm:p-6 xl:border-b-0 xl:border-r">
             <div className="flex flex-wrap items-center gap-2">
-              <CoordinatorBadge tone={activeRoundCount > 0 ? "orange" : "info"}>
-                {activeRoundCount > 0
-                  ? `${activeRoundCount} round đang Active`
-                  : "Chưa có round Active"}
+              <CoordinatorBadge tone={activeEvents > 0 ? "orange" : "info"}>
+                {activeEvents > 0
+                  ? `${formatNumber(activeEvents)} event đang Active`
+                  : "Chưa có event Active"}
               </CoordinatorBadge>
-              <CoordinatorBadge tone="neutral">
-                {rounds.length} round trong dashboard
+              <CoordinatorBadge tone={scoringRounds > 0 ? "warning" : "neutral"}>
+                {formatNumber(scoringRounds)} round đang Scoring
               </CoordinatorBadge>
             </div>
+
             <h2
               className="mt-4 max-w-3xl text-2xl font-black tracking-tight text-slate-950 sm:text-3xl"
               style={{ fontFamily: "'Montserrat', 'Inter', sans-serif" }}
             >
               Bảng điều phối vận hành hackathon
             </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              Theo dõi team, bài nộp và trạng thái round theo từng event/track
-              bằng dữ liệu vận hành hiện tại của hệ thống.
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">
+              Theo dõi toàn bộ sự kiện, số đội, bài nộp, trạng thái vòng thi và
+              khối lượng chấm điểm từ dữ liệu vận hành hiện tại.
             </p>
           </div>
 
-          <div
-            className="p-5 sm:p-6"
-            style={{ background: "#F8FAFC", color: "#111827" }}
-          >
-            <p
-              className="text-xs font-bold uppercase tracking-[0.24em]"
-              style={{ color: "#475569" }}
-            >
-              Trạng thái round
+          <div className="bg-slate-50 p-5 sm:p-6">
+            <p className="text-xs font-semibold uppercase tracking-widest text-slate-700">
+              Điểm cần chú ý
             </p>
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              {Object.keys(statusCounts).length === 0 ? (
-                <div
-                  className="col-span-2 rounded-md border p-4 text-sm"
-                  style={{
-                    background: "#FFFFFF",
-                    borderColor: "#E2E8F0",
-                    color: "#475569",
-                  }}
-                >
-                  Chưa có status nào được trả về.
-                </div>
-              ) : (
-                Object.entries(statusCounts).map(([status, count]) => (
-                  <div
-                    key={status}
-                    className="rounded-md border p-4"
-                    style={{
-                      background: "#FFFFFF",
-                      borderColor: "#E2E8F0",
-                    }}
-                  >
-                    <p className="text-2xl font-black text-slate-950">{count}</p>
-                    <p
-                      className="mt-1 text-xs font-semibold uppercase tracking-wider"
-                      style={{ color: "#475569" }}
-                    >
-                      {status}
-                    </p>
-                  </div>
-                ))
-              )}
-            </div>
+            {eventWithMostTeams ? (
+              <div className="mt-4 rounded-lg border border-orange-200 bg-white p-4">
+                <p className="text-sm text-slate-700">Sự kiện có nhiều đội nhất</p>
+                <h3 className="mt-1 text-lg font-semibold text-slate-950">
+                  {eventWithMostTeams.eventName}
+                </h3>
+                <p className="mt-3 font-mono text-3xl font-bold text-slate-950">
+                  {formatNumber(eventWithMostTeams.totalTeams)}
+                </p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+                  đội thi
+                </p>
+              </div>
+            ) : (
+              <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">
+                Chưa có dữ liệu nổi bật.
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -347,109 +538,61 @@ export function DashboardOverview() {
         ))}
       </div>
 
-      <CoordinatorPanel
-        title="Round theo event và track"
-        subtitle="Theo dõi các vòng thi đang diễn ra trong từng sự kiện và track"
-        icon={icons.GitBranch}
-        actions={
-          <CoordinatorActionButton
-            variant="secondary"
-            icon={icons.Activity}
-            onClick={fetchDashboard}
-          >
-            Làm mới
-          </CoordinatorActionButton>
-        }
-      >
-        {rounds.length === 0 ? (
-          <EmptyRoundState />
-        ) : (
-          <div className="max-h-[640px] space-y-4 overflow-y-auto pr-1">
-            {Array.from(groupedEvents.values()).map((event) => (
-              <div
-                key={event.name}
-                className="rounded-lg border border-slate-200 bg-slate-50/70 p-4"
-              >
-                <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                      Event
-                    </p>
-                    <h3 className="text-lg font-black text-slate-950">
-                      {event.name}
-                    </h3>
-                  </div>
-                  <CoordinatorBadge tone="neutral">
-                    {event.totalRounds} round • {event.tracks.size} track
-                  </CoordinatorBadge>
-                </div>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <StatusSummary title="Trạng thái sự kiện" items={summary.eventsByStatus} />
+        <StatusSummary title="Trạng thái round" items={summary.roundsByStatus} />
+        <StatusSummary title="Trạng thái đội" items={summary.teamsByStatus} />
+      </div>
 
-                <div className="grid gap-3 xl:grid-cols-2">
-                  {Array.from(event.tracks.values()).map((track) => (
-                    <div
-                      key={`${event.name}-${track.name}`}
-                      className="rounded-md border border-slate-200 bg-white p-4"
-                    >
-                      <div className="mb-3 flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold uppercase tracking-wider text-orange-600">
-                            Track
-                          </p>
-                          <h4 className="truncate font-bold text-slate-900">
-                            {track.name}
-                          </h4>
-                        </div>
-                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">
-                          {track.rounds.length} vòng
-                        </span>
-                      </div>
+      <div className="grid gap-4 xl:grid-cols-3">
+        <BarList
+          title="Đội theo sự kiện"
+          subtitle="Sự kiện nào đang thu hút nhiều đội nhất"
+          items={charts.teamCountByEvent}
+          valueKey="totalTeams"
+          labelKey="eventName"
+        />
+        <BarList
+          title="Đội theo track"
+          subtitle="Theo dõi sức chứa và độ đông của từng track"
+          items={charts.teamCountByTrack}
+          valueKey="totalTeams"
+          labelKey="trackName"
+        />
+        <BarList
+          title="Bài nộp theo sự kiện"
+          subtitle="Khối lượng submission đang cần theo dõi"
+          items={charts.submissionCountByEvent}
+          valueKey="totalSubmissions"
+          labelKey="eventName"
+        />
+      </div>
 
-                      <div className="space-y-2">
-                        {track.rounds.map((round) => (
-                          <div
-                            key={round.id}
-                            className="flex items-center justify-between gap-3 rounded-md border border-slate-100 px-3 py-2.5"
-                          >
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-bold text-slate-800">
-                                {round.roundName}
-                              </p>
-                              <p className="mt-0.5 text-xs text-slate-600">
-                                {event.name} / {track.name}
-                              </p>
-                            </div>
-                            <CoordinatorBadge tone={getStatusTone(round.status)}>
-                              {round.status}
-                            </CoordinatorBadge>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </CoordinatorPanel>
+      <EventTable
+        events={events}
+        search={eventSearch}
+        statusFilter={eventStatusFilter}
+        onSearch={setEventSearch}
+        onStatusFilter={setEventStatusFilter}
+      />
 
       <CoordinatorPanel
-        title="Phân tích RBL: Phương sai điểm số giữa các giám khảo"
-        subtitle="Hiển thị độ lệch trung bình giữa các giám khảo khi chấm điểm cho cùng một bài nộp theo từng tiêu chí"
+        title="Phân tích RBL"
+        subtitle="Độ lệch trung bình giữa các giám khảo khi chấm cùng bài nộp theo từng tiêu chí"
         icon={icons.Scale}
         actions={
           <CoordinatorActionButton
             variant="secondary"
             icon={icons.Activity}
             onClick={fetchVariance}
-            disabled={loadingVariance}
+            disabled={loadingVariance || !activeEventId}
           >
             Làm mới phân tích
           </CoordinatorActionButton>
         }
       >
         {loadingVariance ? (
-          <div className="py-6 text-center text-sm text-slate-700 animate-pulse">
+          <div className="animate-pulse py-6 text-center text-sm text-slate-700">
             Đang tính toán phương sai...
           </div>
         ) : varianceError ? (
@@ -458,48 +601,48 @@ export function DashboardOverview() {
           </div>
         ) : variances.length === 0 ? (
           <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
-            <p className="font-bold text-slate-900">Chưa có dữ liệu phân tích</p>
+            <p className="font-semibold text-slate-950">Chưa có dữ liệu phân tích</p>
             <p className="mx-auto mt-1 max-w-md text-sm text-slate-700">
-              Cần ít nhất 2 giám khảo chấm cùng một bài nộp theo cùng một tiêu chí để tính toán phương sai điểm chấm chéo.
+              Cần ít nhất 2 giám khảo chấm cùng một bài nộp theo cùng một tiêu chí.
             </p>
           </div>
         ) : (
           <div className="space-y-3">
             <div className="max-h-[420px] overflow-y-auto rounded-lg border border-slate-200 bg-white">
-              {variances.map((v) => {
-                // Phương sai tối đa hiển thị tương đối là 2.0 (ở thang điểm 10)
-                const percent = Math.min((v.variance / 2) * 100, 100);
-                
-                // Quyết định mức độ đồng thuận & màu sắc biểu diễn
-                let barColor = "#10B981"; // Emerald/Green (<= 0.5)
+              {variances.map((item) => {
+                const variance = Number(item.variance || 0);
+                const percent = Math.min((variance / 2) * 100, 100);
+                let barColor = "#10B981";
                 let statusLabel = "Đồng thuận cao";
                 let badgeTone = "success";
-                
-                if (v.variance > 1.0) {
-                  barColor = "#EF4444"; // Red (> 1.0)
-                  statusLabel = "Bất đồng cao (Cần họp hiệu chuẩn)";
+
+                if (variance > 1) {
+                  barColor = "#EF4444";
+                  statusLabel = "Cần hiệu chuẩn";
                   badgeTone = "danger";
-                } else if (v.variance > 0.5) {
-                  barColor = "#F59E0B"; // Amber (0.5 - 1.0)
+                } else if (variance > 0.5) {
+                  barColor = "#F59E0B";
                   statusLabel = "Đồng thuận trung bình";
                   badgeTone = "warning";
-                } else if (v.submissionsCount === 0) {
-                  barColor = "#94A3B8"; // Slate
-                  statusLabel = "Chưa đủ dữ liệu chấm chéo";
+                } else if (Number(item.submissionsCount || 0) === 0) {
+                  barColor = "#94A3B8";
+                  statusLabel = "Chưa đủ dữ liệu";
                   badgeTone = "neutral";
                 }
 
                 return (
                   <div
-                    key={v.criterionId}
+                    key={item.criterionId}
                     className="grid gap-3 border-b border-slate-100 px-4 py-3 transition last:border-b-0 hover:bg-slate-50 md:grid-cols-[minmax(0,1.5fr)_minmax(220px,0.8fr)] md:items-center"
                   >
                     <div className="flex min-w-0 items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
-                          {v.trackName} / {v.roundName}
+                        <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+                          {item.trackName} / {item.roundName}
                         </span>
-                        <h4 className="font-bold text-slate-800 line-clamp-1">{v.criterionName}</h4>
+                        <h4 className="line-clamp-1 font-semibold text-slate-950">
+                          {item.criterionName}
+                        </h4>
                       </div>
                       <CoordinatorBadge tone={badgeTone}>{statusLabel}</CoordinatorBadge>
                     </div>
@@ -507,18 +650,20 @@ export function DashboardOverview() {
                     <div>
                       <div className="mb-1 flex items-center justify-between gap-3 text-xs">
                         <span className="text-slate-700">
-                          Phương sai: <strong className="text-slate-900">{v.variance.toFixed(3)}</strong>
+                          Phương sai:{" "}
+                          <strong className="text-slate-950">
+                            {variance.toFixed(3)}
+                          </strong>
                         </span>
                         <span className="text-slate-700">
-                          {v.submissionsCount} bài nộp được đối chiếu
+                          {formatNumber(item.submissionsCount)} bài nộp
                         </span>
                       </div>
-                      
                       <div className="h-2 overflow-hidden rounded-full bg-slate-100">
                         <div
                           className="h-full rounded-full transition-all duration-500"
                           style={{
-                            width: `${v.submissionsCount === 0 ? 0 : percent}%`,
+                            width: `${Number(item.submissionsCount || 0) === 0 ? 0 : percent}%`,
                             backgroundColor: barColor,
                           }}
                         />
@@ -529,19 +674,9 @@ export function DashboardOverview() {
               })}
             </div>
 
-            <div className="hidden">
-              <h5 className="font-bold mb-1 flex items-center gap-1.5">
-                <icons.ShieldCheck className="h-4.5 w-4.5 text-blue-600 shrink-0" />
-                Hướng dẫn phân tích độ tin cậy liên đánh giá viên (RBL)
-              </h5>
-              <ul className="list-disc pl-4 space-y-1 text-blue-800">
-                <li><strong>Phương sai điểm số (Variance)</strong> cho biết mức độ phân tán của điểm số giữa các giám khảo trên cùng 1 bài nộp.</li>
-                <li>Phương sai càng gần <strong>0</strong> chứng tỏ các giám khảo chấm rất đồng nhất (đồng thuận cao).</li>
-                <li>Nếu phương sai <strong>&gt; 1.0</strong>, ban tổ chức cần họp hiệu chuẩn các giám khảo để làm rõ các tiêu chí chấm điểm và đạt độ tin cậy đánh giá cao hơn.</li>
-              </ul>
-            </div>
             <p className="text-xs leading-5 text-slate-700">
-              Phương sai càng gần 0 thì điểm chấm càng đồng nhất; trên 1.0 nên hiệu chuẩn lại giám khảo.
+              Phương sai càng gần 0 thì điểm chấm càng đồng nhất; trên 1.0 nên
+              hiệu chuẩn lại cách chấm giữa các giám khảo.
             </p>
           </div>
         )}

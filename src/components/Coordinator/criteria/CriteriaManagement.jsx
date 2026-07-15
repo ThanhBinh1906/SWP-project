@@ -23,6 +23,8 @@ import {
   FormField,
   FilterSelect,
   ModalHintBanner,
+  pickDefaultEvent,
+  pickDefaultSetupRound,
 } from "../coordinatorHelpers";
 
 const EMPTY_CRITERION = {
@@ -111,7 +113,8 @@ export function CriteriaManagement() {
       .then((res) => {
         const list = res.data?.data || [];
         setEvents(list);
-        if (list.length > 0) setSelectedEventId(String(list[0].id));
+        const preferredEvent = pickDefaultEvent(list);
+        if (preferredEvent) setSelectedEventId(String(preferredEvent.id));
       })
       .catch(() => {});
     criterionService
@@ -151,7 +154,8 @@ export function CriteriaManagement() {
       .then((res) => {
         const list = res.data?.data || [];
         setRounds(list);
-        setSelectedRoundId(list.length > 0 ? String(list[0].id) : "");
+        const preferredRound = pickDefaultSetupRound(list);
+        setSelectedRoundId(preferredRound ? String(preferredRound.id) : "");
       })
       .catch(() => setRounds([]));
   }, [selectedTrackId]);

@@ -12,6 +12,7 @@ export function JudgeActionButton({ variant = "secondary", disabled = false, chi
 
   return (
     <button
+      type="button"
       className={`inline-flex items-center justify-center gap-2 rounded-xl border px-3.5 py-2 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50 ${variants[variant] || variants.secondary} ${className}`}
       disabled={disabled}
       {...props}

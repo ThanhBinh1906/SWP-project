@@ -20,6 +20,7 @@ import {
   X,
 } from "lucide-react";
 import eventService from "../../services/eventService";
+import prizeService from "../../services/prizeService";
 import roundService from "../../services/roundService";
 import trackService from "../../services/trackService";
 import {
@@ -115,6 +116,28 @@ function sortTracksWithFinalLast(tracks = []) {
     if (aFinal === bFinal) return 0;
     return aFinal ? 1 : -1;
   });
+}
+
+function pickDefaultExpandedEvents(events = []) {
+  const activeEvents = events.filter((event) => event?.status === "Active");
+  if (activeEvents.length) return activeEvents.map((event) => event.id);
+
+  const registrationEvent = events.find((event) => event?.status === "Registration");
+  if (registrationEvent) return [registrationEvent.id];
+
+  return events[0] ? [events[0].id] : [];
+}
+
+function normalizePrizeList(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.prizes)) return data.prizes;
+  return [];
+}
+
+function hasRequiredPrizes(prizes = []) {
+  const ranks = new Set(prizes.map((prize) => Number(prize.rankPosition)));
+  return [1, 2, 3].every((rank) => ranks.has(rank));
 }
 
 function getTrackCurrentTeamCount(track) {
@@ -293,6 +316,7 @@ export function CompetitionSetup() {
   const [expandedTracks, setExpandedTracks] = useState(new Set());
   const collapsedEventIds = useRef(new Set());
   const collapsedTrackIds = useRef(new Set());
+  const initializedEventExpansion = useRef(false);
 
   // === TRACKS (per event, lazy) ===
   const [tracksByEvent, setTracksByEvent] = useState({});
@@ -415,12 +439,12 @@ export function CompetitionSetup() {
     const currentEventIds = new Set(eventIds.map(String));
 
     setExpandedEvents((prev) => {
+      if (!initializedEventExpansion.current) {
+        initializedEventExpansion.current = true;
+        return new Set(pickDefaultExpandedEvents(events));
+      }
+
       const next = new Set(prev);
-      eventIds.forEach((eventId) => {
-        if (!collapsedEventIds.current.has(String(eventId))) {
-          next.add(eventId);
-        }
-      });
       Array.from(next).forEach((eventId) => {
         if (!currentEventIds.has(String(eventId))) next.delete(eventId);
       });
@@ -557,6 +581,17 @@ export function CompetitionSetup() {
     }
     setEventSaving(true);
     try {
+      if (eventForm.status === "Active" && selectedEvent?.status !== "Active") {
+        const prizeResponse = await prizeService.getByEvent(selectedEvent.id);
+        const prizes = normalizePrizeList(prizeResponse.data?.data);
+        if (!hasRequiredPrizes(prizes)) {
+          setEventFormError(
+            "Cần cấu hình đủ 3 giải Nhất, Nhì, Ba trước khi kích hoạt sự kiện.",
+          );
+          return;
+        }
+      }
+
       let bannerUrl = eventForm.bannerUrl?.trim() || null;
       if (eventForm.bannerFile) {
         const upload = await uploadEventBannerImage(eventForm.bannerFile);

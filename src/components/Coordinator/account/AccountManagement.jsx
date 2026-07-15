@@ -20,6 +20,18 @@ const EVENT_ROLE_OPTIONS = ["Mentor", "Judge"];
 const MAX_ADMIN_TEAM_PAGE_SIZE = 50;
 // TODO: confirm judgeType options với BE
 const JUDGE_TYPE_OPTIONS = ["Chuyên môn", "Doanh nghiệp", "Học thuật"];
+const JUDGE_TYPE_LABELS = {
+  "chuyen mon": "Chuyên môn",
+  "chuy?n mon": "Chuyên môn",
+  "chuy?n môn": "Chuyên môn",
+  "chuyên môn": "Chuyên môn",
+  "doanh nghiep": "Doanh nghiệp",
+  "doanh nghi?p": "Doanh nghiệp",
+  "doanh nghiệp": "Doanh nghiệp",
+  "hoc thuat": "Học thuật",
+  "h?c thu?t": "Học thuật",
+  "học thuật": "Học thuật",
+};
 
 const EMPTY_STAFF_FORM = {
   username: "",
@@ -27,6 +39,12 @@ const EMPTY_STAFF_FORM = {
   eventRole: "Mentor",
   judgeType: "",
 };
+
+function normalizeJudgeTypeLabel(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  return JUDGE_TYPE_LABELS[raw.toLowerCase()] || raw;
+}
 
 function getListFromApiData(data) {
   if (Array.isArray(data)) return data;
@@ -169,7 +187,7 @@ function StaffTab() {
         eventRole: form.eventRole,
         judgeType:
           form.eventRole === "Judge"
-            ? form.judgeType.trim() || undefined
+            ? normalizeJudgeTypeLabel(form.judgeType) || undefined
             : undefined,
       });
       await fetchStaff();
@@ -583,7 +601,7 @@ function StaffTab() {
             if (key === "judgeType")
               return (
                 <span className="text-sm text-slate-600">
-                  {row.judgeType || "—"}
+                  {normalizeJudgeTypeLabel(row.judgeType) || "—"}
                 </span>
               );
             if (key === "team") {
@@ -682,7 +700,9 @@ function StaffTab() {
                 {roundJudges.map((judge) => (
                   <div key={judge.judgeId} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-3">
                     <div><p className="font-bold text-slate-900">{judge.username}</p><p className="text-xs text-slate-700">{judge.email}</p></div>
-                    <CoordinatorBadge tone="purple">{judge.judgeType || "Judge"}</CoordinatorBadge>
+                    <CoordinatorBadge tone="purple">
+                      {normalizeJudgeTypeLabel(judge.judgeType) || "Judge"}
+                    </CoordinatorBadge>
                   </div>
                 ))}
               </div>

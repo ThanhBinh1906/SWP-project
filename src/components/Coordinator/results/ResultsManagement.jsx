@@ -20,6 +20,8 @@ import {
   LoadingState,
   formatDateTime,
   getApiMessage,
+  pickDefaultEvent,
+  pickDefaultResultRound,
   validateRoundSelection,
 } from "../coordinatorHelpers";
 
@@ -74,6 +76,26 @@ function downloadBlob(response, fallbackName) {
   URL.revokeObjectURL(url);
 }
 
+const PENDING_TIE_BREAK_STATUSES = new Set(["pending", "pendingscoring"]);
+
+function getTieBreakStatus(item) {
+  return (
+    item?.tieBreakStatus ||
+    item?.tieBreakSessionStatus ||
+    item?.tieBreakSession?.status ||
+    item?.tieBreak?.status ||
+    item?.sessionStatus ||
+    item?.session?.status ||
+    item?.status ||
+    ""
+  );
+}
+
+function isPendingTieBreak(item) {
+  const status = String(getTieBreakStatus(item)).trim().toLowerCase();
+  return !status || PENDING_TIE_BREAK_STATUSES.has(status);
+}
+
 function collectTieBreakSessions(data) {
   const candidates = [
     data?.tieBreakSession,
@@ -88,10 +110,12 @@ function collectTieBreakSessions(data) {
       ...session,
       id: session.id || session.sessionId || session.tieBreakSessionId,
     }))
-    .filter((session) => session.id);
+    .filter((session) => session.id && isPendingTieBreak(session));
 }
 
 function getTieBreakSessionId(ranking) {
+  if (!isPendingTieBreak(ranking)) return null;
+
   return (
     ranking?.tieBreakSessionId ||
     ranking?.tieBreakSession?.id ||
@@ -112,6 +136,7 @@ function groupTieBreakSessions(rankings) {
     const current = sessions.get(key) || {
       id: key,
       rankPosition: ranking.rankPosition,
+      status: getTieBreakStatus(ranking) || "PendingScoring",
       teams: [],
     };
 
@@ -223,7 +248,8 @@ export function ResultsManagement() {
       .then((res) => {
         const list = res.data?.data || [];
         setEvents(list);
-        if (list.length > 0) setSelectedEventId(String(list[0].id));
+        const preferredEvent = pickDefaultEvent(list);
+        if (preferredEvent) setSelectedEventId(String(preferredEvent.id));
       })
       .catch(() => setEvents([]));
   }, []);
@@ -263,7 +289,8 @@ export function ResultsManagement() {
       .then((res) => {
         const list = res.data?.data || [];
         setRounds(list);
-        setSelectedRoundId(list.length > 0 ? String(list[0].id) : "");
+        const preferredRound = pickDefaultResultRound(list);
+        setSelectedRoundId(preferredRound ? String(preferredRound.id) : "");
       })
       .catch(() => setRounds([]));
   }, [selectedTrackId]);

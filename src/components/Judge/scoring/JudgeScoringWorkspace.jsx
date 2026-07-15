@@ -121,6 +121,15 @@ function getSubmissionLabel(submission) {
   );
 }
 
+function getDemoImportScore(submissionIndex, criterionIndex, maxScore) {
+  const normalizedMax = Number(maxScore || 10);
+  if (!Number.isFinite(normalizedMax) || normalizedMax <= 0) return "";
+
+  const scoreOutOf10 = Math.max(1, 10 - submissionIndex * 0.5 - criterionIndex * 0.05);
+  const scaledScore = (scoreOutOf10 / 10) * normalizedMax;
+  return Number(scaledScore.toFixed(2));
+}
+
 function downloadScoreImportTemplate({
   selectedRoundId,
   selectedRoundLabel,
@@ -143,8 +152,8 @@ function downloadScoreImportTemplate({
     "comment",
   ];
 
-  const rows = submissions.flatMap((submission) =>
-    criteria.map((criterion) => [
+  const rows = submissions.flatMap((submission, submissionIndex) =>
+    criteria.map((criterion, criterionIndex) => [
       selectedRoundId,
       selectedRoundLabel,
       submission.id,
@@ -154,7 +163,8 @@ function downloadScoreImportTemplate({
       criterion.name || "",
       Number(criterion.maxScore || 0),
       normalizeWeight(criterion.weight),
-      scores[submission.id]?.[criterion.id] ?? "",
+      scores[submission.id]?.[criterion.id] ??
+        getDemoImportScore(submissionIndex, criterionIndex, criterion.maxScore),
       comments[submission.id]?.[criterion.id] ?? "",
     ]),
   );
