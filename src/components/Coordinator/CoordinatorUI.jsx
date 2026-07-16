@@ -182,44 +182,64 @@ export function CoordinatorStatCard({
   helper,
 }) {
   const toneMap = {
-    orange: ["rgba(242,111,33,0.1)", "rgba(242,111,33,0.2)", "#F26F21"],
-    blue: ["rgba(37,99,235,0.08)", "rgba(37,99,235,0.18)", "#2563EB"],
-    green: ["rgba(5,150,105,0.08)", "rgba(5,150,105,0.18)", "#059669"],
-    amber: ["rgba(217,119,6,0.08)", "rgba(217,119,6,0.18)", "#D97706"],
-    red: ["rgba(220,38,38,0.08)", "rgba(220,38,38,0.18)", "#DC2626"],
+    orange: ["rgba(242,111,33,0.1)", "rgba(242,111,33,0.22)", "#F26F21"],
+    blue:   ["rgba(37,99,235,0.08)", "rgba(37,99,235,0.2)",   "#2563EB"],
+    green:  ["rgba(5,150,105,0.08)", "rgba(5,150,105,0.2)",   "#059669"],
+    amber:  ["rgba(217,119,6,0.08)", "rgba(217,119,6,0.2)",   "#D97706"],
+    red:    ["rgba(220,38,38,0.08)", "rgba(220,38,38,0.2)",   "#DC2626"],
   };
   const [bg, border, color] = toneMap[tone] || toneMap.orange;
 
   return (
     <div
-      className="rounded-xl border bg-white p-5 transition-colors duration-200 hover:border-slate-300/80"
+      className="relative overflow-hidden rounded-xl border bg-white p-5 transition-all duration-200 hover:shadow-md"
       style={{
         borderColor: "#E5E7EB",
-        boxShadow: "0 1px 2px rgba(15,23,42,0.03)",
+        boxShadow: "0 1px 3px rgba(15,23,42,0.06)",
       }}
     >
+      {/* Colored accent line on top */}
+      <div
+        className="absolute inset-x-0 top-0 h-0.5 rounded-t-xl"
+        style={{ background: color, opacity: 0.7 }}
+      />
+
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-slate-700">{label}</p>
-          <p className="mt-2 font-mono text-3xl font-semibold tracking-tight text-slate-950">{value}</p>
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+            {label}
+          </p>
+          <p
+            className="mt-2 font-mono text-3xl font-black tracking-tight text-slate-900"
+          >
+            {value}
+          </p>
         </div>
+
         {Icon && (
           <div
-            className="flex h-11 w-11 items-center justify-center rounded-md"
-            style={{ background: bg, border: `1px solid ${border}` }}
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
+            style={{
+              background: bg,
+              border: `1px solid ${border}`,
+              boxShadow: `0 0 0 4px ${bg}`,
+            }}
           >
-            <Icon className="h-5 w-5" style={{ color }} />
+            <Icon className="h-6 w-6" style={{ color }} />
           </div>
         )}
       </div>
+
       {(delta || helper) && (
-        <div className="mt-4 flex items-center justify-between gap-2 text-xs">
+        <div className="mt-4 flex items-center gap-2 text-xs">
           {delta && (
             <span className="font-mono font-semibold" style={{ color }}>
               {delta}
             </span>
           )}
-          {helper && <span className="text-slate-700">{helper}</span>}
+          {helper && (
+            <span className="truncate text-slate-500">{helper}</span>
+          )}
         </div>
       )}
     </div>

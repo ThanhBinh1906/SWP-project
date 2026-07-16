@@ -1,5 +1,23 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSelector } from "react-redux";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  LabelList,
+  Legend,
+  Pie,
+  PieChart,
+  RadialBar,
+  RadialBarChart,
+  ResponsiveContainer,
+  Sector,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { ChevronDown, ChevronUp, X } from "lucide-react";
 import dashboardService from "../../../services/dashboardService";
 import {
   CoordinatorActionButton,
@@ -9,6 +27,9 @@ import {
   icons,
 } from "../CoordinatorUI";
 
+/* ─────────────────────────────────────────────
+   Constants
+───────────────────────────────────────────── */
 const EMPTY_DASHBOARD = {
   summary: {
     totalEvents: 0,
@@ -21,9 +42,7 @@ const EMPTY_DASHBOARD = {
     roundsByStatus: {},
     teamsByStatus: {},
   },
-  highlight: {
-    eventWithMostTeams: null,
-  },
+  highlight: { eventWithMostTeams: null },
   events: [],
   charts: {
     teamCountByEvent: [],
@@ -32,8 +51,24 @@ const EMPTY_DASHBOARD = {
   },
 };
 
+const CHART_COLORS = [
+  "#F26F21",
+  "#2563EB",
+  "#059669",
+  "#D97706",
+  "#DC2626",
+  "#7C3AED",
+  "#0891B2",
+  "#64748B",
+];
+
+/* ─────────────────────────────────────────────
+   Helpers
+───────────────────────────────────────────── */
 function safeObject(value) {
-  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value
+    : {};
 }
 
 function safeArray(value) {
@@ -43,7 +78,6 @@ function safeArray(value) {
 function normalizeDashboardData(data) {
   const summary = safeObject(data?.summary);
   const charts = safeObject(data?.charts);
-
   return {
     summary: {
       ...EMPTY_DASHBOARD.summary,
@@ -66,15 +100,13 @@ function normalizeDashboardData(data) {
 }
 
 function getStatusTone(status) {
-  const normalized = String(status || "").toLowerCase();
-  if (normalized === "active") return "orange";
-  if (normalized === "registration") return "info";
-  if (normalized === "upcoming") return "info";
-  if (normalized === "scoring") return "warning";
-  if (normalized === "closed" || normalized === "completed") return "success";
-  if (normalized === "rejected" || normalized === "cancelled" || normalized === "inactive") {
+  const s = String(status || "").toLowerCase();
+  if (s === "active") return "orange";
+  if (s === "registration" || s === "upcoming") return "info";
+  if (s === "scoring") return "warning";
+  if (s === "closed" || s === "completed") return "success";
+  if (s === "rejected" || s === "cancelled" || s === "inactive")
     return "danger";
-  }
   return "neutral";
 }
 
@@ -90,94 +122,586 @@ function formatNumber(value) {
   return Number.isFinite(numeric) ? numeric.toLocaleString("vi-VN") : "0";
 }
 
-function getMaxValue(items, key) {
-  return Math.max(1, ...items.map((item) => Number(item?.[key] || 0)));
+function truncateLabel(value, maxLength = 22) {
+  const text = String(value || "");
+  return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
 }
 
-function StatusSummary({ title, items }) {
-  const entries = Object.entries(items || {});
+function getStatusChartData(items) {
+  return Object.entries(items || {})
+    .map(([name, value]) => ({ name, value: Number(value || 0) }))
+    .filter((item) => item.value > 0);
+}
 
+function getSortedChartItems(items, valueKey, limit = 8) {
+  return [...items]
+    .sort((a, b) => Number(b?.[valueKey] || 0) - Number(a?.[valueKey] || 0))
+    .slice(0, limit);
+}
+
+/* ─────────────────────────────────────────────
+   Animated count-up hook
+───────────────────────────────────────────── */
+function useCountUp(target, duration = 900) {
+  const [display, setDisplay] = useState(0);
+  const rafRef = useRef(null);
+
+  useEffect(() => {
+    const end = Number(target) || 0;
+    if (end === 0) { setDisplay(0); return; }
+    const start = 0;
+    const startTime = performance.now();
+    const step = (now) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplay(Math.round(start + (end - start) * eased));
+      if (progress < 1) rafRef.current = requestAnimationFrame(step);
+    };
+    rafRef.current = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [target, duration]);
+
+  return display;
+}
+
+/* ─────────────────────────────────────────────
+   Animated StatCard wrapper
+───────────────────────────────────────────── */
+function AnimatedStatCard({ value, ...rest }) {
+  const animatedValue = useCountUp(value);
+  return <CoordinatorStatCard {...rest} value={formatNumber(animatedValue)} />;
+}
+
+/* ─────────────────────────────────────────────
+   Shared Tooltip
+───────────────────────────────────────────── */
+function ChartTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  const item = payload[0];
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-      <p className="text-xs font-semibold uppercase tracking-widest text-slate-700">
-        {title}
+    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-md">
+      <p className="max-w-56 text-sm font-semibold text-slate-900">
+        {label || item.payload?.name}
       </p>
-      {entries.length === 0 ? (
-        <p className="mt-3 text-sm text-slate-700">Chưa có dữ liệu.</p>
-      ) : (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {entries.map(([status, count]) => (
-            <CoordinatorBadge key={status} tone={getStatusTone(status)}>
-              {status}: {formatNumber(count)}
-            </CoordinatorBadge>
-          ))}
-        </div>
-      )}
+      <p className="mt-1 text-xs text-slate-600">
+        {item.name}:{" "}
+        <span className="font-mono font-bold text-slate-900">
+          {formatNumber(item.value)}
+        </span>
+      </p>
     </div>
   );
 }
 
-function BarList({ title, subtitle, items, valueKey, labelKey, emptyText }) {
-  const maxValue = getMaxValue(items, valueKey);
+/* ─────────────────────────────────────────────
+   Chart Card wrapper
+───────────────────────────────────────────── */
+function ChartCard({ title, subtitle, children, action }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+            {title}
+          </h3>
+          {subtitle && (
+            <p className="mt-0.5 text-sm text-slate-700">{subtitle}</p>
+          )}
+        </div>
+        {action}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function EmptyChart({ text }) {
+  return (
+    <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-500">
+      {text || "Chưa có dữ liệu để hiển thị."}
+    </p>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   Donut Chart with center label & active shape
+───────────────────────────────────────────── */
+function renderActiveShape(props) {
+  const {
+    cx, cy, innerRadius, outerRadius, startAngle, endAngle,
+    fill, payload, value,
+  } = props;
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5">
-      <div className="mb-4">
-        <h3 className="text-sm font-semibold uppercase tracking-widest text-slate-700">
-          {title}
-        </h3>
-        {subtitle && <p className="mt-1 text-sm text-slate-700">{subtitle}</p>}
-      </div>
+    <g>
+      <text
+        x={cx}
+        y={cy - 8}
+        textAnchor="middle"
+        fill="#111827"
+        className="text-base"
+        style={{ fontSize: 18, fontWeight: 700, fontFamily: "monospace" }}
+      >
+        {value}
+      </text>
+      <text
+        x={cx}
+        y={cy + 14}
+        textAnchor="middle"
+        fill="#6B7280"
+        style={{ fontSize: 11 }}
+      >
+        {truncateLabel(payload.name, 12)}
+      </text>
+      <Sector
+        cx={cx} cy={cy}
+        innerRadius={innerRadius}
+        outerRadius={outerRadius + 6}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        fill={fill}
+      />
+      <Sector
+        cx={cx} cy={cy}
+        innerRadius={outerRadius + 10}
+        outerRadius={outerRadius + 13}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        fill={fill}
+      />
+    </g>
+  );
+}
 
-      {items.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-5 text-center text-sm text-slate-700">
-          {emptyText || "Chưa có dữ liệu để hiển thị."}
-        </p>
+function StatusDonutChart({ title, subtitle, items }) {
+  const data = getStatusChartData(items);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const total = data.reduce((s, d) => s + d.value, 0);
+
+  return (
+    <ChartCard title={title} subtitle={subtitle}>
+      {data.length === 0 ? (
+        <EmptyChart text="Chưa có dữ liệu trạng thái." />
       ) : (
-        <div className="max-h-80 space-y-3 overflow-y-auto pr-1">
-          {items.map((item, index) => {
-            const value = Number(item?.[valueKey] || 0);
-            const width = Math.max(4, Math.round((value / maxValue) * 100));
-            const label = item?.[labelKey] || `Mục ${index + 1}`;
-
-            return (
-              <div key={`${label}-${index}`}>
-                <div className="mb-1 flex items-center justify-between gap-3 text-sm">
-                  <span className="line-clamp-1 font-semibold text-slate-900">
-                    {label}
-                  </span>
-                  <span className="font-mono font-semibold text-slate-950">
-                    {formatNumber(value)}
-                  </span>
-                </div>
-                <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
-                  <div
-                    className="h-full rounded-full bg-[#F26F21]"
-                    style={{ width: `${width}%` }}
-                  />
-                </div>
+        <div className="grid gap-4 sm:grid-cols-[160px_1fr] sm:items-center">
+          {/* Donut */}
+          <div className="h-44 relative">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  activeIndex={activeIndex}
+                  activeShape={renderActiveShape}
+                  data={data}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={46}
+                  outerRadius={68}
+                  paddingAngle={3}
+                  stroke="none"
+                  onMouseEnter={(_, index) => setActiveIndex(index)}
+                >
+                  {data.map((_, index) => (
+                    <Cell
+                      key={`slice-${index}`}
+                      fill={CHART_COLORS[index % CHART_COLORS.length]}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip content={<ChartTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+            {/* Center total (idle state) */}
+            {activeIndex === null && (
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                <span className="font-mono text-xl font-bold text-slate-900">
+                  {total}
+                </span>
+                <span className="text-xs text-slate-500">Tổng</span>
               </div>
-            );
-          })}
+            )}
+          </div>
+
+          {/* Legend */}
+          <div className="space-y-1.5">
+            {data.map((item, index) => {
+              const pct = total > 0 ? Math.round((item.value / total) * 100) : 0;
+              return (
+                <div
+                  key={item.name}
+                  className={`flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-1.5 text-sm transition ${
+                    activeIndex === index
+                      ? "bg-slate-100 font-semibold"
+                      : "hover:bg-slate-50"
+                  }`}
+                  onMouseEnter={() => setActiveIndex(index)}
+                >
+                  <span className="flex min-w-0 items-center gap-2 text-slate-700">
+                    <span
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{
+                        backgroundColor:
+                          CHART_COLORS[index % CHART_COLORS.length],
+                      }}
+                    />
+                    <span className="truncate">{item.name}</span>
+                  </span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs text-slate-400">{pct}%</span>
+                    <span className="font-mono font-semibold text-slate-900">
+                      {formatNumber(item.value)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
+    </ChartCard>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   Horizontal Bar Chart with LabelList
+───────────────────────────────────────────── */
+function DashboardBarChart({ items, valueKey, labelKey, emptyText }) {
+  const data = getSortedChartItems(items, valueKey);
+  const [activeBar, setActiveBar] = useState(null);
+
+  if (data.length === 0) return <EmptyChart text={emptyText} />;
+
+  return (
+    <div className="h-72">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart
+          data={data}
+          layout="vertical"
+          margin={{ top: 4, right: 48, left: 8, bottom: 4 }}
+        >
+          <CartesianGrid stroke="#F1F5F9" horizontal={false} />
+          <XAxis
+            type="number"
+            allowDecimals={false}
+            tick={{ fill: "#94A3B8", fontSize: 11 }}
+            tickLine={false}
+            axisLine={false}
+          />
+          <YAxis
+            type="category"
+            dataKey={labelKey}
+            width={128}
+            tickFormatter={(v) => truncateLabel(v)}
+            tick={{ fill: "#374151", fontSize: 12, fontWeight: 600 }}
+            tickLine={false}
+            axisLine={false}
+          />
+          <Tooltip content={<ChartTooltip />} cursor={{ fill: "#F8FAFC" }} />
+          <Bar
+            dataKey={valueKey}
+            name="Số lượng"
+            radius={[0, 6, 6, 0]}
+            onMouseEnter={(_, index) => setActiveBar(index)}
+            onMouseLeave={() => setActiveBar(null)}
+          >
+            <LabelList
+              dataKey={valueKey}
+              position="right"
+              style={{ fill: "#475569", fontSize: 11, fontWeight: 600 }}
+              formatter={(v) => formatNumber(v)}
+            />
+            {data.map((_, index) => (
+              <Cell
+                key={`bar-${index}`}
+                fill={CHART_COLORS[index % CHART_COLORS.length]}
+                opacity={activeBar === null || activeBar === index ? 1 : 0.45}
+              />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
     </div>
   );
 }
 
+function BarList({ title, subtitle, items, valueKey, labelKey, emptyText, action }) {
+  return (
+    <ChartCard title={title} subtitle={subtitle} action={action}>
+      <DashboardBarChart
+        items={items}
+        valueKey={valueKey}
+        labelKey={labelKey}
+        emptyText={emptyText}
+      />
+    </ChartCard>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   Event filter for track chart
+───────────────────────────────────────────── */
+function ChartEventSelect({ value, events, onChange }) {
+  if (events.length === 0) return null;
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+    >
+      <option value="">Tất cả event</option>
+      {events.map((ev) => (
+        <option key={ev.eventId} value={String(ev.eventId)}>
+          {ev.eventName || `Event #${ev.eventId}`}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   RBL Variance — collapsible + round filter
+───────────────────────────────────────────── */
+function RblVariancePanel({
+  activeEventId,
+  variances,
+  loading,
+  error,
+  onRefresh,
+}) {
+  const [open, setOpen] = useState(true);
+  const [roundFilter, setRoundFilter] = useState("");
+
+  const roundOptions = useMemo(() => {
+    const seen = new Set();
+    const opts = [];
+    for (const item of variances) {
+      if (item.roundName && !seen.has(item.roundName)) {
+        seen.add(item.roundName);
+        opts.push(item.roundName);
+      }
+    }
+    return opts.sort();
+  }, [variances]);
+
+  const filtered = useMemo(() => {
+    if (!roundFilter) return variances;
+    return variances.filter((v) => v.roundName === roundFilter);
+  }, [variances, roundFilter]);
+
+  return (
+    <CoordinatorPanel
+      title="Phân tích RBL"
+      subtitle="Độ lệch trung bình giữa các giám khảo khi chấm cùng bài nộp theo từng tiêu chí"
+      icon={icons.Scale}
+      actions={
+        <div className="flex flex-wrap items-center gap-2">
+          <CoordinatorActionButton
+            variant="secondary"
+            icon={icons.Activity}
+            onClick={onRefresh}
+            disabled={loading || !activeEventId}
+          >
+            Làm mới
+          </CoordinatorActionButton>
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+            title={open ? "Thu gọn" : "Mở rộng"}
+          >
+            {open ? (
+              <>
+                <ChevronUp className="h-4 w-4" />
+                Thu gọn
+              </>
+            ) : (
+              <>
+                <ChevronDown className="h-4 w-4" />
+                Mở rộng
+              </>
+            )}
+          </button>
+        </div>
+      }
+    >
+      {/* Collapsed state */}
+      {!open && (
+        <p className="text-sm text-slate-500 italic">
+          Phần phân tích đã được thu gọn. Nhấn &ldquo;Mở rộng&rdquo; để xem.
+        </p>
+      )}
+
+      {open && (
+        <>
+          {loading && (
+            <div className="animate-pulse py-6 text-center text-sm text-slate-500">
+              Đang tính toán phương sai...
+            </div>
+          )}
+
+          {!loading && error && (
+            <div className="rounded-md border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+              {error}
+            </div>
+          )}
+
+          {!loading && !error && variances.length === 0 && (
+            <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
+              <p className="font-semibold text-slate-800">Chưa có dữ liệu phân tích</p>
+              <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
+                Cần ít nhất 2 giám khảo chấm cùng một bài nộp theo cùng một
+                tiêu chí.
+              </p>
+            </div>
+          )}
+
+          {!loading && !error && variances.length > 0 && (
+            <div className="space-y-4">
+              {/* Round filter */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+                  Lọc theo vòng:
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setRoundFilter("")}
+                  className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                    roundFilter === ""
+                      ? "border-orange-400 bg-orange-50 text-orange-700"
+                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  Tất cả
+                </button>
+                {roundOptions.map((rn) => (
+                  <button
+                    key={rn}
+                    type="button"
+                    onClick={() =>
+                      setRoundFilter((prev) => (prev === rn ? "" : rn))
+                    }
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                      roundFilter === rn
+                        ? "border-orange-400 bg-orange-50 text-orange-700"
+                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    {rn}
+                    {roundFilter === rn && (
+                      <X className="h-3 w-3" />
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {filtered.length === 0 ? (
+                <EmptyChart text="Không có tiêu chí nào trong vòng này." />
+              ) : (
+                <div className="max-h-[440px] overflow-y-auto rounded-xl border border-slate-200 bg-white">
+                  {filtered.map((item) => {
+                    const variance = Number(item.variance || 0);
+                    const pct = Math.min((variance / 2) * 100, 100);
+                    let barColor = "#10B981";
+                    let statusLabel = "Đồng thuận cao";
+                    let badgeTone = "success";
+
+                    if (Number(item.submissionsCount || 0) === 0) {
+                      barColor = "#94A3B8";
+                      statusLabel = "Chưa đủ dữ liệu";
+                      badgeTone = "neutral";
+                    } else if (variance > 1) {
+                      barColor = "#EF4444";
+                      statusLabel = "Cần hiệu chuẩn";
+                      badgeTone = "danger";
+                    } else if (variance > 0.5) {
+                      barColor = "#F59E0B";
+                      statusLabel = "Đồng thuận trung bình";
+                      badgeTone = "warning";
+                    }
+
+                    return (
+                      <div
+                        key={item.criterionId}
+                        className="grid gap-3 border-b border-slate-100 px-4 py-3 last:border-b-0 hover:bg-slate-50 md:grid-cols-[minmax(0,1.5fr)_minmax(220px,0.8fr)] md:items-center transition"
+                      >
+                        {/* Left: name + badge */}
+                        <div className="flex min-w-0 items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                              {item.trackName} / {item.roundName}
+                            </span>
+                            <h4 className="line-clamp-1 font-semibold text-slate-900">
+                              {item.criterionName}
+                            </h4>
+                          </div>
+                          <CoordinatorBadge tone={badgeTone}>
+                            {statusLabel}
+                          </CoordinatorBadge>
+                        </div>
+
+                        {/* Right: variance bar */}
+                        <div>
+                          <div className="mb-1.5 flex items-center justify-between gap-2 text-xs">
+                            <span className="text-slate-500">
+                              Phương sai:{" "}
+                              <strong className="font-mono text-slate-800">
+                                {variance.toFixed(3)}
+                              </strong>
+                            </span>
+                            <span className="text-slate-400">
+                              {formatNumber(item.submissionsCount)} bài
+                            </span>
+                          </div>
+                          <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                            <div
+                              className="h-full rounded-full transition-all duration-700"
+                              style={{
+                                width: `${
+                                  Number(item.submissionsCount || 0) === 0
+                                    ? 0
+                                    : pct
+                                }%`,
+                                backgroundColor: barColor,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <p className="text-xs leading-5 text-slate-400">
+                Phương sai càng gần 0 thì điểm chấm càng đồng nhất; trên 1.0
+                nên hiệu chuẩn lại cách chấm giữa các giám khảo.
+              </p>
+            </div>
+          )}
+        </>
+      )}
+    </CoordinatorPanel>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   Event Table
+───────────────────────────────────────────── */
 function EventTable({ events, statusFilter, search, onStatusFilter, onSearch }) {
   const [showAll, setShowAll] = useState(false);
+
   const statusOptions = useMemo(() => {
-    const values = new Set(events.map((event) => event.status).filter(Boolean));
+    const values = new Set(events.map((ev) => ev.status).filter(Boolean));
     return Array.from(values);
   }, [events]);
 
   const filteredEvents = useMemo(() => {
     const keyword = search.trim().toLowerCase();
-    return events.filter((event) => {
-      const matchStatus = !statusFilter || event.status === statusFilter;
+    return events.filter((ev) => {
+      const matchStatus = !statusFilter || ev.status === statusFilter;
       const matchSearch =
-        !keyword || String(event.eventName || "").toLowerCase().includes(keyword);
+        !keyword || String(ev.eventName || "").toLowerCase().includes(keyword);
       return matchStatus && matchSearch;
     });
   }, [events, search, statusFilter]);
@@ -196,25 +720,24 @@ function EventTable({ events, statusFilter, search, onStatusFilter, onSearch }) 
     >
       <div className="mb-4 grid gap-3 lg:grid-cols-[1fr_220px]">
         <label className="block">
-          <span className="mb-1 block text-xs font-semibold uppercase tracking-widest text-slate-700">
+          <span className="mb-1 block text-xs font-semibold uppercase tracking-widest text-slate-500">
             Tìm sự kiện
           </span>
           <input
             value={search}
-            onChange={(event) => onSearch(event.target.value)}
+            onChange={(e) => onSearch(e.target.value)}
             placeholder="Nhập tên sự kiện..."
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
           />
         </label>
-
         <label className="block">
-          <span className="mb-1 block text-xs font-semibold uppercase tracking-widest text-slate-700">
+          <span className="mb-1 block text-xs font-semibold uppercase tracking-widest text-slate-500">
             Trạng thái
           </span>
           <select
             value={statusFilter}
-            onChange={(event) => onStatusFilter(event.target.value)}
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+            onChange={(e) => onStatusFilter(e.target.value)}
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
           >
             <option value="">Tất cả trạng thái</option>
             {statusOptions.map((status) => (
@@ -228,9 +751,9 @@ function EventTable({ events, statusFilter, search, onStatusFilter, onSearch }) 
 
       {filteredEvents.length === 0 ? (
         <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
-          <p className="font-semibold text-slate-950">Không có sự kiện phù hợp</p>
-          <p className="mt-1 text-sm text-slate-700">
-            Hãy đổi bộ lọc hoặc làm mới dashboard để kiểm tra dữ liệu mới nhất.
+          <p className="font-semibold text-slate-800">Không có sự kiện phù hợp</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Hãy đổi bộ lọc hoặc làm mới dashboard.
           </p>
         </div>
       ) : (
@@ -238,7 +761,7 @@ function EventTable({ events, statusFilter, search, onStatusFilter, onSearch }) 
           <div className="overflow-x-auto">
             <table className="min-w-[980px] w-full text-left">
               <thead>
-                <tr className="border-b border-slate-200 text-xs uppercase tracking-widest text-slate-500">
+                <tr className="border-b border-slate-100 text-xs uppercase tracking-widest text-slate-400">
                   <th className="px-3 py-3 font-semibold">Sự kiện</th>
                   <th className="px-3 py-3 font-semibold">Cấu trúc</th>
                   <th className="px-3 py-3 font-semibold">Đội thi</th>
@@ -248,70 +771,70 @@ function EventTable({ events, statusFilter, search, onStatusFilter, onSearch }) 
                 </tr>
               </thead>
               <tbody>
-                {visibleEvents.map((event) => (
+                {visibleEvents.map((ev) => (
                   <tr
-                    key={event.eventId}
+                    key={ev.eventId}
                     className="border-b border-slate-100 align-top transition hover:bg-slate-50"
                   >
                     <td className="px-3 py-4">
                       <div className="max-w-[280px]">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-semibold text-slate-950">
-                            {event.eventName || "Sự kiện chưa đặt tên"}
+                          <p className="font-semibold text-slate-900">
+                            {ev.eventName || "Sự kiện chưa đặt tên"}
                           </p>
-                          <CoordinatorBadge tone={getStatusTone(event.status)}>
-                            {event.status || "Unknown"}
+                          <CoordinatorBadge tone={getStatusTone(ev.status)}>
+                            {ev.status || "Unknown"}
                           </CoordinatorBadge>
                         </div>
-                        <p className="mt-1 text-xs text-slate-700">
-                          {formatDate(event.startDate)} - {formatDate(event.endDate)}
+                        <p className="mt-1 text-xs text-slate-400">
+                          {formatDate(ev.startDate)} – {formatDate(ev.endDate)}
                         </p>
                       </div>
                     </td>
-                    <td className="px-3 py-4 text-sm text-slate-800">
-                      <p>{formatNumber(event.totalTracks)} track</p>
-                      <p className="mt-1">{formatNumber(event.totalRounds)} round</p>
+                    <td className="px-3 py-4 text-sm text-slate-700">
+                      <p>{formatNumber(ev.totalTracks)} track</p>
+                      <p className="mt-1">{formatNumber(ev.totalRounds)} round</p>
                     </td>
-                    <td className="px-3 py-4 text-sm text-slate-800">
-                      <p className="font-semibold text-slate-950">
-                        {formatNumber(event.totalTeams)} đội
+                    <td className="px-3 py-4 text-sm text-slate-700">
+                      <p className="font-semibold text-slate-900">
+                        {formatNumber(ev.totalTeams)} đội
                       </p>
-                      <p className="mt-1 text-xs text-slate-700">
-                        Duyệt {formatNumber(event.approvedTeams)} · Chờ{" "}
-                        {formatNumber(event.pendingTeams)}
+                      <p className="mt-1 text-xs text-slate-400">
+                        Duyệt {formatNumber(ev.approvedTeams)} · Chờ{" "}
+                        {formatNumber(ev.pendingTeams)}
                       </p>
-                      {(Number(event.rejectedTeams || 0) > 0 ||
-                        Number(event.disqualifiedTeams || 0) > 0) && (
-                        <p className="mt-1 text-xs text-red-700">
-                          Từ chối {formatNumber(event.rejectedTeams)} · Loại{" "}
-                          {formatNumber(event.disqualifiedTeams)}
+                      {(Number(ev.rejectedTeams || 0) > 0 ||
+                        Number(ev.disqualifiedTeams || 0) > 0) && (
+                        <p className="mt-1 text-xs text-red-600">
+                          Từ chối {formatNumber(ev.rejectedTeams)} · Loại{" "}
+                          {formatNumber(ev.disqualifiedTeams)}
                         </p>
                       )}
                     </td>
-                    <td className="px-3 py-4 text-sm text-slate-800">
-                      <p className="font-semibold text-slate-950">
-                        {formatNumber(event.totalSubmissions)}
+                    <td className="px-3 py-4 text-sm text-slate-700">
+                      <p className="font-semibold text-slate-900">
+                        {formatNumber(ev.totalSubmissions)}
                       </p>
                       <p
                         className={`mt-1 text-xs ${
-                          Number(event.incompleteSubmissions || 0) > 0
-                            ? "text-red-700"
-                            : "text-slate-700"
+                          Number(ev.incompleteSubmissions || 0) > 0
+                            ? "text-red-600"
+                            : "text-slate-400"
                         }`}
                       >
-                        Thiếu điểm: {formatNumber(event.incompleteSubmissions)}
+                        Thiếu điểm: {formatNumber(ev.incompleteSubmissions)}
                       </p>
                     </td>
-                    <td className="px-3 py-4 text-sm text-slate-800">
-                      <p>Active: {formatNumber(event.activeRounds)}</p>
-                      <p className="mt-1">Scoring: {formatNumber(event.scoringRounds)}</p>
-                      <p className="mt-1">Closed: {formatNumber(event.closedRounds)}</p>
+                    <td className="px-3 py-4 text-sm text-slate-700">
+                      <p>Active: {formatNumber(ev.activeRounds)}</p>
+                      <p className="mt-1">Scoring: {formatNumber(ev.scoringRounds)}</p>
+                      <p className="mt-1">Closed: {formatNumber(ev.closedRounds)}</p>
                     </td>
                     <td className="px-3 py-4">
                       <CoordinatorBadge
-                        tone={event.resultsAvailable ? "success" : "neutral"}
+                        tone={ev.resultsAvailable ? "success" : "neutral"}
                       >
-                        {event.resultsAvailable ? "Đã có kết quả" : "Chưa công bố"}
+                        {ev.resultsAvailable ? "Đã có kết quả" : "Chưa công bố"}
                       </CoordinatorBadge>
                     </td>
                   </tr>
@@ -324,7 +847,7 @@ function EventTable({ events, statusFilter, search, onStatusFilter, onSearch }) 
             <div className="mt-4 flex justify-center">
               <CoordinatorActionButton
                 variant="secondary"
-                onClick={() => setShowAll((current) => !current)}
+                onClick={() => setShowAll((c) => !c)}
               >
                 {showAll
                   ? "Thu gọn danh sách"
@@ -338,6 +861,9 @@ function EventTable({ events, statusFilter, search, onStatusFilter, onSearch }) 
   );
 }
 
+/* ─────────────────────────────────────────────
+   Skeleton loader
+───────────────────────────────────────────── */
 function DashboardSkeleton() {
   return (
     <div className="space-y-6">
@@ -345,7 +871,7 @@ function DashboardSkeleton() {
         {[1, 2, 3, 4].map((item) => (
           <div
             key={item}
-            className="h-36 animate-pulse rounded-lg border border-slate-200 bg-white p-5"
+            className="h-36 animate-pulse rounded-xl border border-slate-200 bg-white p-5"
           >
             <div className="h-4 w-28 rounded bg-slate-100" />
             <div className="mt-5 h-9 w-20 rounded bg-slate-100" />
@@ -353,23 +879,55 @@ function DashboardSkeleton() {
           </div>
         ))}
       </div>
-      <div className="h-80 animate-pulse rounded-lg border border-slate-200 bg-white" />
+      <div className="grid gap-4 lg:grid-cols-3">
+        {[1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className="h-64 animate-pulse rounded-xl border border-slate-200 bg-white"
+          />
+        ))}
+      </div>
+      <div className="h-80 animate-pulse rounded-xl border border-slate-200 bg-white" />
     </div>
   );
 }
 
+/* ─────────────────────────────────────────────
+   Main export
+───────────────────────────────────────────── */
 export function DashboardOverview() {
   const { activeEventId } = useSelector((s) => s.event);
+
   const [dashboard, setDashboard] = useState(EMPTY_DASHBOARD);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
   const [eventSearch, setEventSearch] = useState("");
   const [eventStatusFilter, setEventStatusFilter] = useState("");
+  const [chartEventId, setChartEventId] = useState("");
 
   const [variances, setVariances] = useState([]);
   const [loadingVariance, setLoadingVariance] = useState(false);
   const [varianceError, setVarianceError] = useState("");
 
+  /* Fetch main dashboard */
+  const fetchDashboard = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await dashboardService.getCoordinatorDashboard();
+      setDashboard(normalizeDashboardData(res.data?.data));
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          "Không thể tải dữ liệu dashboard coordinator."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* Fetch RBL variance */
   const fetchVariance = async () => {
     if (!activeEventId) return;
     setLoadingVariance(true);
@@ -381,22 +939,6 @@ export function DashboardOverview() {
       setVarianceError("Không thể tải dữ liệu phương sai tiêu chí.");
     } finally {
       setLoadingVariance(false);
-    }
-  };
-
-  const fetchDashboard = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await dashboardService.getCoordinatorDashboard();
-      setDashboard(normalizeDashboardData(res.data?.data));
-    } catch (err) {
-      setError(
-        err?.response?.data?.message ||
-          "Không thể tải dữ liệu dashboard coordinator.",
-      );
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -414,6 +956,13 @@ export function DashboardOverview() {
   const pendingTeams = Number(summary.teamsByStatus?.Pending || 0);
   const approvedTeams = Number(summary.teamsByStatus?.Approved || 0);
   const eventWithMostTeams = highlight.eventWithMostTeams;
+
+  const trackChartItems = useMemo(() => {
+    if (!chartEventId) return charts.teamCountByTrack;
+    return charts.teamCountByTrack.filter(
+      (t) => String(t.eventId) === String(chartEventId)
+    );
+  }, [chartEventId, charts.teamCountByTrack]);
 
   const stats = [
     {
@@ -445,7 +994,7 @@ export function DashboardOverview() {
     },
     {
       id: "staff",
-      label: "Nhân sự đã phân công",
+      label: "Nhân sự phân công",
       value: summary.totalMentors + summary.totalJudges,
       tone: "blue",
       helper: `Mentor ${formatNumber(summary.totalMentors)} · Judge ${formatNumber(summary.totalJudges)}`,
@@ -480,9 +1029,10 @@ export function DashboardOverview() {
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      {/* ── Hero banner ── */}
+      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="grid gap-0 xl:grid-cols-[1.1fr_0.9fr]">
-          <div className="border-b border-slate-100 p-5 sm:p-6 xl:border-b-0 xl:border-r">
+          <div className="border-b border-slate-100 p-5 sm:p-7 xl:border-b-0 xl:border-r">
             <div className="flex flex-wrap items-center gap-2">
               <CoordinatorBadge tone={activeEvents > 0 ? "orange" : "info"}>
                 {activeEvents > 0
@@ -493,38 +1043,37 @@ export function DashboardOverview() {
                 {formatNumber(scoringRounds)} round đang Scoring
               </CoordinatorBadge>
             </div>
-
             <h2
-              className="mt-4 max-w-3xl text-2xl font-black tracking-tight text-slate-950 sm:text-3xl"
-              style={{ fontFamily: "'Montserrat', 'Inter', sans-serif" }}
+              className="mt-4 max-w-3xl text-2xl font-black tracking-tight text-slate-900 sm:text-3xl"
+              style={{ fontFamily: "'Montserrat','Inter',sans-serif" }}
             >
               Bảng điều phối vận hành hackathon
             </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">
-              Theo dõi toàn bộ sự kiện, số đội, bài nộp, trạng thái vòng thi và
-              khối lượng chấm điểm từ dữ liệu vận hành hiện tại.
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+              Theo dõi toàn bộ sự kiện, số đội, bài nộp, trạng thái vòng thi
+              và khối lượng chấm điểm từ dữ liệu vận hành hiện tại.
             </p>
           </div>
 
-          <div className="bg-slate-50 p-5 sm:p-6">
-            <p className="text-xs font-semibold uppercase tracking-widest text-slate-700">
-              Điểm cần chú ý
+          <div className="bg-gradient-to-br from-slate-50 to-orange-50/30 p-5 sm:p-7">
+            <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+              Điểm nổi bật
             </p>
             {eventWithMostTeams ? (
-              <div className="mt-4 rounded-lg border border-orange-200 bg-white p-4">
-                <p className="text-sm text-slate-700">Sự kiện có nhiều đội nhất</p>
-                <h3 className="mt-1 text-lg font-semibold text-slate-950">
+              <div className="mt-4 rounded-xl border border-orange-200 bg-white p-5 shadow-sm">
+                <p className="text-xs text-slate-400">Sự kiện có nhiều đội nhất</p>
+                <h3 className="mt-1 text-base font-semibold text-slate-900 line-clamp-2">
                   {eventWithMostTeams.eventName}
                 </h3>
-                <p className="mt-3 font-mono text-3xl font-bold text-slate-950">
+                <p className="mt-3 font-mono text-4xl font-black text-orange-500">
                   {formatNumber(eventWithMostTeams.totalTeams)}
                 </p>
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                   đội thi
                 </p>
               </div>
             ) : (
-              <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">
+              <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-400">
                 Chưa có dữ liệu nổi bật.
               </div>
             )}
@@ -532,18 +1081,33 @@ export function DashboardOverview() {
         </div>
       </section>
 
+      {/* ── Stat cards ── */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => (
-          <CoordinatorStatCard key={stat.id} {...stat} icon={stat.icon} />
+          <AnimatedStatCard key={stat.id} {...stat} />
         ))}
       </div>
 
+      {/* ── Donut charts ── */}
       <div className="grid gap-4 lg:grid-cols-3">
-        <StatusSummary title="Trạng thái sự kiện" items={summary.eventsByStatus} />
-        <StatusSummary title="Trạng thái round" items={summary.roundsByStatus} />
-        <StatusSummary title="Trạng thái đội" items={summary.teamsByStatus} />
+        <StatusDonutChart
+          title="Trạng thái sự kiện"
+          subtitle="Tổng quan vòng đời các event"
+          items={summary.eventsByStatus}
+        />
+        <StatusDonutChart
+          title="Trạng thái round"
+          subtitle="Round đang mở, scoring hoặc đã đóng"
+          items={summary.roundsByStatus}
+        />
+        <StatusDonutChart
+          title="Trạng thái đội"
+          subtitle="Hồ sơ đội theo trạng thái duyệt"
+          items={summary.teamsByStatus}
+        />
       </div>
 
+      {/* ── Bar charts ── */}
       <div className="grid gap-4 xl:grid-cols-3">
         <BarList
           title="Đội theo sự kiện"
@@ -551,13 +1115,22 @@ export function DashboardOverview() {
           items={charts.teamCountByEvent}
           valueKey="totalTeams"
           labelKey="eventName"
+          emptyText="Chưa có dữ liệu đội theo sự kiện."
         />
         <BarList
           title="Đội theo track"
           subtitle="Theo dõi sức chứa và độ đông của từng track"
-          items={charts.teamCountByTrack}
+          items={trackChartItems}
           valueKey="totalTeams"
           labelKey="trackName"
+          emptyText="Chưa có dữ liệu đội theo track."
+          action={
+            <ChartEventSelect
+              value={chartEventId}
+              events={events}
+              onChange={setChartEventId}
+            />
+          }
         />
         <BarList
           title="Bài nộp theo sự kiện"
@@ -565,9 +1138,11 @@ export function DashboardOverview() {
           items={charts.submissionCountByEvent}
           valueKey="totalSubmissions"
           labelKey="eventName"
+          emptyText="Chưa có dữ liệu bài nộp."
         />
       </div>
 
+      {/* ── Event table ── */}
       <EventTable
         events={events}
         search={eventSearch}
@@ -576,111 +1151,14 @@ export function DashboardOverview() {
         onStatusFilter={setEventStatusFilter}
       />
 
-      <CoordinatorPanel
-        title="Phân tích RBL"
-        subtitle="Độ lệch trung bình giữa các giám khảo khi chấm cùng bài nộp theo từng tiêu chí"
-        icon={icons.Scale}
-        actions={
-          <CoordinatorActionButton
-            variant="secondary"
-            icon={icons.Activity}
-            onClick={fetchVariance}
-            disabled={loadingVariance || !activeEventId}
-          >
-            Làm mới phân tích
-          </CoordinatorActionButton>
-        }
-      >
-        {loadingVariance ? (
-          <div className="animate-pulse py-6 text-center text-sm text-slate-700">
-            Đang tính toán phương sai...
-          </div>
-        ) : varianceError ? (
-          <div className="rounded-md border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-            {varianceError}
-          </div>
-        ) : variances.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
-            <p className="font-semibold text-slate-950">Chưa có dữ liệu phân tích</p>
-            <p className="mx-auto mt-1 max-w-md text-sm text-slate-700">
-              Cần ít nhất 2 giám khảo chấm cùng một bài nộp theo cùng một tiêu chí.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="max-h-[420px] overflow-y-auto rounded-lg border border-slate-200 bg-white">
-              {variances.map((item) => {
-                const variance = Number(item.variance || 0);
-                const percent = Math.min((variance / 2) * 100, 100);
-                let barColor = "#10B981";
-                let statusLabel = "Đồng thuận cao";
-                let badgeTone = "success";
-
-                if (variance > 1) {
-                  barColor = "#EF4444";
-                  statusLabel = "Cần hiệu chuẩn";
-                  badgeTone = "danger";
-                } else if (variance > 0.5) {
-                  barColor = "#F59E0B";
-                  statusLabel = "Đồng thuận trung bình";
-                  badgeTone = "warning";
-                } else if (Number(item.submissionsCount || 0) === 0) {
-                  barColor = "#94A3B8";
-                  statusLabel = "Chưa đủ dữ liệu";
-                  badgeTone = "neutral";
-                }
-
-                return (
-                  <div
-                    key={item.criterionId}
-                    className="grid gap-3 border-b border-slate-100 px-4 py-3 transition last:border-b-0 hover:bg-slate-50 md:grid-cols-[minmax(0,1.5fr)_minmax(220px,0.8fr)] md:items-center"
-                  >
-                    <div className="flex min-w-0 items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">
-                          {item.trackName} / {item.roundName}
-                        </span>
-                        <h4 className="line-clamp-1 font-semibold text-slate-950">
-                          {item.criterionName}
-                        </h4>
-                      </div>
-                      <CoordinatorBadge tone={badgeTone}>{statusLabel}</CoordinatorBadge>
-                    </div>
-
-                    <div>
-                      <div className="mb-1 flex items-center justify-between gap-3 text-xs">
-                        <span className="text-slate-700">
-                          Phương sai:{" "}
-                          <strong className="text-slate-950">
-                            {variance.toFixed(3)}
-                          </strong>
-                        </span>
-                        <span className="text-slate-700">
-                          {formatNumber(item.submissionsCount)} bài nộp
-                        </span>
-                      </div>
-                      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                        <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{
-                            width: `${Number(item.submissionsCount || 0) === 0 ? 0 : percent}%`,
-                            backgroundColor: barColor,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <p className="text-xs leading-5 text-slate-700">
-              Phương sai càng gần 0 thì điểm chấm càng đồng nhất; trên 1.0 nên
-              hiệu chuẩn lại cách chấm giữa các giám khảo.
-            </p>
-          </div>
-        )}
-      </CoordinatorPanel>
+      {/* ── RBL Variance ── */}
+      <RblVariancePanel
+        activeEventId={activeEventId}
+        variances={variances}
+        loading={loadingVariance}
+        error={varianceError}
+        onRefresh={fetchVariance}
+      />
     </div>
   );
 }
