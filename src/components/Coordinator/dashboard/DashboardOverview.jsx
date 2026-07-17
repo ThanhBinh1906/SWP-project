@@ -4,15 +4,9 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Cell,
   LabelList,
   Legend,
-  Pie,
-  PieChart,
-  RadialBar,
-  RadialBarChart,
   ResponsiveContainer,
-  Sector,
   Tooltip,
   XAxis,
   YAxis,
@@ -61,6 +55,32 @@ const CHART_COLORS = [
   "#0891B2",
   "#64748B",
 ];
+
+const STATUS_COLORS = {
+  active: "#2563EB",
+  registration: "#D97706",
+  upcoming: "#D97706",
+  scoring: "#F59E0B",
+  closed: "#64748B",
+  completed: "#059669",
+  approved: "#059669",
+  pending: "#D97706",
+  rejected: "#DC2626",
+  disqualified: "#DC2626",
+};
+
+const STATUS_LABELS = {
+  Active: "Đang hoạt động",
+  Registration: "Đăng ký",
+  Upcoming: "Sắp diễn ra",
+  Scoring: "Đang chấm",
+  Closed: "Đã đóng",
+  Completed: "Hoàn tất",
+  Approved: "Đã duyệt",
+  Pending: "Chờ duyệt",
+  Rejected: "Từ chối",
+  Disqualified: "Bị loại",
+};
 
 /* ─────────────────────────────────────────────
    Helpers
@@ -133,6 +153,11 @@ function getStatusChartData(items) {
     .filter((item) => item.value > 0);
 }
 
+function getStatusColor(status, index = 0) {
+  return STATUS_COLORS[String(status || "").toLowerCase()] ||
+    CHART_COLORS[index % CHART_COLORS.length];
+}
+
 function getSortedChartItems(items, valueKey, limit = 8) {
   return [...items]
     .sort((a, b) => Number(b?.[valueKey] || 0) - Number(a?.[valueKey] || 0))
@@ -179,18 +204,24 @@ function AnimatedStatCard({ value, ...rest }) {
 ───────────────────────────────────────────── */
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
-  const item = payload[0];
   return (
     <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-md">
       <p className="max-w-56 text-sm font-semibold text-slate-900">
-        {label || item.payload?.name}
+        {label || payload[0]?.payload?.name}
       </p>
-      <p className="mt-1 text-xs text-slate-600">
-        {item.name}:{" "}
-        <span className="font-mono font-bold text-slate-900">
-          {formatNumber(item.value)}
-        </span>
-      </p>
+      <div className="mt-1 space-y-1">
+        {payload.map((item) => (
+          <p key={item.dataKey || item.name} className="flex items-center justify-between gap-4 text-xs text-slate-600">
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-sm" style={{ backgroundColor: item.color }} />
+              {item.name}
+            </span>
+            <span className="font-mono font-bold text-slate-900">
+              {formatNumber(item.value)}
+            </span>
+          </p>
+        ))}
+      </div>
     </div>
   );
 }
@@ -200,7 +231,7 @@ function ChartTooltip({ active, payload, label }) {
 ───────────────────────────────────────────── */
 function ChartCard({ title, subtitle, children, action }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
+    <div className="rounded-xl border border-slate-200 bg-white p-5">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-500">
@@ -225,199 +256,143 @@ function EmptyChart({ text }) {
   );
 }
 
-/* ─────────────────────────────────────────────
-   Donut Chart with center label & active shape
-───────────────────────────────────────────── */
-function renderActiveShape(props) {
-  const {
-    cx, cy, innerRadius, outerRadius, startAngle, endAngle,
-    fill, payload, value,
-  } = props;
-
-  return (
-    <g>
-      <text
-        x={cx}
-        y={cy - 8}
-        textAnchor="middle"
-        fill="#111827"
-        className="text-base"
-        style={{ fontSize: 18, fontWeight: 700, fontFamily: "monospace" }}
-      >
-        {value}
-      </text>
-      <text
-        x={cx}
-        y={cy + 14}
-        textAnchor="middle"
-        fill="#6B7280"
-        style={{ fontSize: 11 }}
-      >
-        {truncateLabel(payload.name, 12)}
-      </text>
-      <Sector
-        cx={cx} cy={cy}
-        innerRadius={innerRadius}
-        outerRadius={outerRadius + 6}
-        startAngle={startAngle}
-        endAngle={endAngle}
-        fill={fill}
-      />
-      <Sector
-        cx={cx} cy={cy}
-        innerRadius={outerRadius + 10}
-        outerRadius={outerRadius + 13}
-        startAngle={startAngle}
-        endAngle={endAngle}
-        fill={fill}
-      />
-    </g>
-  );
-}
-
-function StatusDonutChart({ title, subtitle, items }) {
+function StatusList({ title, items }) {
   const data = getStatusChartData(items);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const total = data.reduce((s, d) => s + d.value, 0);
+  const total = data.reduce((sum, item) => sum + item.value, 0);
 
   return (
-    <ChartCard title={title} subtitle={subtitle}>
+    <div>
+      <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">{title}</p>
       {data.length === 0 ? (
-        <EmptyChart text="Chưa có dữ liệu trạng thái." />
+        <p className="mt-3 text-sm text-slate-500">Chưa có dữ liệu.</p>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-[160px_1fr] sm:items-center">
-          {/* Donut */}
-          <div className="h-44 relative">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  activeIndex={activeIndex}
-                  activeShape={renderActiveShape}
-                  data={data}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={46}
-                  outerRadius={68}
-                  paddingAngle={3}
-                  stroke="none"
-                  onMouseEnter={(_, index) => setActiveIndex(index)}
-                >
-                  {data.map((_, index) => (
-                    <Cell
-                      key={`slice-${index}`}
-                      fill={CHART_COLORS[index % CHART_COLORS.length]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip content={<ChartTooltip />} />
-              </PieChart>
-            </ResponsiveContainer>
-            {/* Center total (idle state) */}
-            {activeIndex === null && (
-              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                <span className="font-mono text-xl font-bold text-slate-900">
-                  {total}
-                </span>
-                <span className="text-xs text-slate-500">Tổng</span>
-              </div>
-            )}
-          </div>
-
-          {/* Legend */}
-          <div className="space-y-1.5">
-            {data.map((item, index) => {
-              const pct = total > 0 ? Math.round((item.value / total) * 100) : 0;
-              return (
-                <div
-                  key={item.name}
-                  className={`flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-1.5 text-sm transition ${
-                    activeIndex === index
-                      ? "bg-slate-100 font-semibold"
-                      : "hover:bg-slate-50"
-                  }`}
-                  onMouseEnter={() => setActiveIndex(index)}
-                >
-                  <span className="flex min-w-0 items-center gap-2 text-slate-700">
-                    <span
-                      className="h-2.5 w-2.5 shrink-0 rounded-full"
-                      style={{
-                        backgroundColor:
-                          CHART_COLORS[index % CHART_COLORS.length],
-                      }}
-                    />
-                    <span className="truncate">{item.name}</span>
+        <div className="mt-3 space-y-3">
+          {data.map((item, index) => {
+            const percent = total > 0 ? Math.round((item.value / total) * 100) : 0;
+            return (
+              <div key={item.name}>
+                <div className="mb-1.5 flex items-center justify-between gap-3 text-sm">
+                  <span className="flex items-center gap-2 text-slate-700">
+                    <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: getStatusColor(item.name, index) }} />
+                    {STATUS_LABELS[item.name] || item.name}
                   </span>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-xs text-slate-400">{pct}%</span>
-                    <span className="font-mono font-semibold text-slate-900">
-                      {formatNumber(item.value)}
-                    </span>
-                  </div>
+                  <span className="font-mono font-bold tabular-nums text-slate-950">{item.value}</span>
                 </div>
-              );
-            })}
-          </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-full rounded-full" style={{ width: `${percent}%`, backgroundColor: getStatusColor(item.name, index) }} />
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
-    </ChartCard>
+    </div>
   );
 }
 
-/* ─────────────────────────────────────────────
-   Horizontal Bar Chart with LabelList
-───────────────────────────────────────────── */
-function DashboardBarChart({ items, valueKey, labelKey, emptyText }) {
-  const data = getSortedChartItems(items, valueKey);
-  const [activeBar, setActiveBar] = useState(null);
+function RoundStatusChart({ items }) {
+  const statuses = getStatusChartData(items);
+  const total = statuses.reduce((sum, item) => sum + item.value, 0);
+  const chartRow = {
+    name: "Round",
+    ...Object.fromEntries(statuses.map((item) => [item.name, item.value])),
+  };
 
-  if (data.length === 0) return <EmptyChart text={emptyText} />;
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Trạng thái round</p>
+        <span className="font-mono text-sm font-bold text-slate-950">{formatNumber(total)} round</span>
+      </div>
+      {statuses.length === 0 ? (
+        <p className="mt-3 text-sm text-slate-500">Chưa có dữ liệu.</p>
+      ) : (
+        <>
+          <div className="mt-3 h-10">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={[chartRow]} layout="vertical" margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                <XAxis type="number" hide domain={[0, total]} />
+                <YAxis type="category" hide dataKey="name" />
+                <Tooltip content={<ChartTooltip />} cursor={false} />
+                {statuses.map((item, index) => (
+                  <Bar
+                    key={item.name}
+                    dataKey={item.name}
+                    name={STATUS_LABELS[item.name] || item.name}
+                    stackId="round-status"
+                    fill={getStatusColor(item.name, index)}
+                    radius={index === 0 ? [6, 0, 0, 6] : index === statuses.length - 1 ? [0, 6, 6, 0] : 0}
+                  />
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+            {statuses.map((item, index) => (
+              <span key={item.name} className="flex items-center gap-1.5 text-xs text-slate-700">
+                <span className="h-2 w-2 rounded-sm" style={{ backgroundColor: getStatusColor(item.name, index) }} />
+                {STATUS_LABELS[item.name] || item.name}: <strong className="font-mono text-slate-950">{item.value}</strong>
+              </span>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function EventWorkloadChart({ items }) {
+  const data = getSortedChartItems(items, "totalTeams", 8);
+  if (data.length === 0) return <EmptyChart text="Chưa có dữ liệu theo sự kiện." />;
+
+  return (
+    <div className="h-80">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} margin={{ top: 12, right: 12, left: 0, bottom: 36 }}>
+          <CartesianGrid stroke="#E2E8F0" vertical={false} />
+          <XAxis
+            dataKey="eventName"
+            tickFormatter={(value) => truncateLabel(value, 14)}
+            tick={{ fill: "#475569", fontSize: 11 }}
+            tickLine={false}
+            axisLine={false}
+            interval={0}
+            angle={-12}
+            textAnchor="end"
+          />
+          <YAxis allowDecimals={false} tick={{ fill: "#64748B", fontSize: 11 }} tickLine={false} axisLine={false} />
+          <Tooltip content={<ChartTooltip />} cursor={{ fill: "#F8FAFC" }} />
+          <Legend iconType="square" wrapperStyle={{ fontSize: 12 }} />
+          <Bar dataKey="totalTeams" name="Đội thi" fill="#2563EB" radius={[5, 5, 0, 0]} maxBarSize={34} />
+          <Bar dataKey="totalSubmissions" name="Bài nộp" fill="#F26F21" radius={[5, 5, 0, 0]} maxBarSize={34} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function TrackDistributionChart({ items }) {
+  const data = getSortedChartItems(items, "totalTeams");
+  if (data.length === 0) return <EmptyChart text="Chưa có dữ liệu đội theo track." />;
 
   return (
     <div className="h-72">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart
-          data={data}
-          layout="vertical"
-          margin={{ top: 4, right: 48, left: 8, bottom: 4 }}
-        >
-          <CartesianGrid stroke="#F1F5F9" horizontal={false} />
-          <XAxis
-            type="number"
-            allowDecimals={false}
-            tick={{ fill: "#94A3B8", fontSize: 11 }}
-            tickLine={false}
-            axisLine={false}
-          />
+        <BarChart data={data} layout="vertical" margin={{ top: 4, right: 36, left: 8, bottom: 4 }}>
+          <CartesianGrid stroke="#E2E8F0" horizontal={false} />
+          <XAxis type="number" allowDecimals={false} tick={{ fill: "#64748B", fontSize: 11 }} tickLine={false} axisLine={false} />
           <YAxis
             type="category"
-            dataKey={labelKey}
-            width={128}
-            tickFormatter={(v) => truncateLabel(v)}
-            tick={{ fill: "#374151", fontSize: 12, fontWeight: 600 }}
+            dataKey="trackName"
+            width={132}
+            tickFormatter={(value) => truncateLabel(value, 20)}
+            tick={{ fill: "#334155", fontSize: 11, fontWeight: 600 }}
             tickLine={false}
             axisLine={false}
           />
           <Tooltip content={<ChartTooltip />} cursor={{ fill: "#F8FAFC" }} />
-          <Bar
-            dataKey={valueKey}
-            name="Số lượng"
-            radius={[0, 6, 6, 0]}
-            onMouseEnter={(_, index) => setActiveBar(index)}
-            onMouseLeave={() => setActiveBar(null)}
-          >
-            <LabelList
-              dataKey={valueKey}
-              position="right"
-              style={{ fill: "#475569", fontSize: 11, fontWeight: 600 }}
-              formatter={(v) => formatNumber(v)}
-            />
-            {data.map((_, index) => (
-              <Cell
-                key={`bar-${index}`}
-                fill={CHART_COLORS[index % CHART_COLORS.length]}
-                opacity={activeBar === null || activeBar === index ? 1 : 0.45}
-              />
-            ))}
+          <Bar dataKey="totalTeams" name="Đội thi" fill="#2563EB" radius={[0, 5, 5, 0]} maxBarSize={28}>
+            <LabelList dataKey="totalTeams" position="right" style={{ fill: "#334155", fontSize: 11, fontWeight: 700 }} />
           </Bar>
         </BarChart>
       </ResponsiveContainer>
@@ -425,15 +400,41 @@ function DashboardBarChart({ items, valueKey, labelKey, emptyText }) {
   );
 }
 
-function BarList({ title, subtitle, items, valueKey, labelKey, emptyText, action }) {
+function ScoringProgress({ total, incomplete }) {
+  const safeTotal = Math.max(0, Number(total || 0));
+  const safeIncomplete = Math.min(safeTotal, Math.max(0, Number(incomplete || 0)));
+  const completed = safeTotal - safeIncomplete;
+  const percent = safeTotal > 0 ? Math.round((completed / safeTotal) * 100) : 0;
+
   return (
-    <ChartCard title={title} subtitle={subtitle} action={action}>
-      <DashboardBarChart
-        items={items}
-        valueKey={valueKey}
-        labelKey={labelKey}
-        emptyText={emptyText}
-      />
+    <ChartCard title="Tiến độ chấm điểm" subtitle="Mức độ hoàn tất của các bài nộp">
+      {safeTotal === 0 ? (
+        <EmptyChart text="Chưa có bài nộp để theo dõi." />
+      ) : (
+        <div className="flex min-h-64 flex-col justify-center">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="font-mono text-4xl font-black tabular-nums text-slate-950">{percent}%</p>
+              <p className="mt-1 text-sm text-slate-700">bài nộp đã đủ điểm</p>
+            </div>
+            <p className="font-mono text-sm font-bold text-slate-950">{completed}/{safeTotal}</p>
+          </div>
+          <div className="mt-5 flex h-4 overflow-hidden rounded-md bg-slate-100" aria-label={`Đã đủ điểm ${completed} trên ${safeTotal} bài`}>
+            <div className="h-full bg-emerald-600" style={{ width: `${percent}%` }} />
+            <div className="h-full bg-amber-500" style={{ width: `${100 - percent}%` }} />
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="border-l-2 border-emerald-600 pl-3">
+              <p className="text-xs text-slate-600">Đã đủ điểm</p>
+              <p className="mt-1 font-mono text-xl font-bold text-slate-950">{formatNumber(completed)}</p>
+            </div>
+            <div className="border-l-2 border-amber-500 pl-3">
+              <p className="text-xs text-slate-600">Còn thiếu điểm</p>
+              <p className="mt-1 font-mono text-xl font-bold text-slate-950">{formatNumber(safeIncomplete)}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </ChartCard>
   );
 }
@@ -449,7 +450,6 @@ function ChartEventSelect({ value, events, onChange }) {
       onChange={(e) => onChange(e.target.value)}
       className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
     >
-      <option value="">Tất cả event</option>
       {events.map((ev) => (
         <option key={ev.eventId} value={String(ev.eventId)}>
           {ev.eventName || `Event #${ev.eventId}`}
@@ -957,12 +957,64 @@ export function DashboardOverview() {
   const approvedTeams = Number(summary.teamsByStatus?.Approved || 0);
   const eventWithMostTeams = highlight.eventWithMostTeams;
 
+  useEffect(() => {
+    if (events.length === 0) return;
+
+    const currentEventExists = events.some(
+      (event) => String(event.eventId) === String(chartEventId)
+    );
+    if (currentEventExists) return;
+
+    const defaultEvent =
+      events.find((event) => String(event.status).toLowerCase() === "active") ||
+      events.find((event) => String(event.eventId) === String(activeEventId)) ||
+      events[0];
+
+    setChartEventId(String(defaultEvent.eventId));
+  }, [activeEventId, chartEventId, events]);
+
   const trackChartItems = useMemo(() => {
     if (!chartEventId) return charts.teamCountByTrack;
     return charts.teamCountByTrack.filter(
       (t) => String(t.eventId) === String(chartEventId)
     );
   }, [chartEventId, charts.teamCountByTrack]);
+
+  const eventWorkloadItems = useMemo(() => {
+    const eventMap = new Map();
+
+    charts.teamCountByEvent.forEach((item) => {
+      const key = String(item.eventId ?? item.eventName);
+      eventMap.set(key, {
+        eventId: item.eventId,
+        eventName: item.eventName,
+        totalTeams: Number(item.totalTeams || 0),
+        totalSubmissions: 0,
+      });
+    });
+
+    charts.submissionCountByEvent.forEach((item) => {
+      const key = String(item.eventId ?? item.eventName);
+      const current = eventMap.get(key) || {
+        eventId: item.eventId,
+        eventName: item.eventName,
+        totalTeams: 0,
+        totalSubmissions: 0,
+      };
+      current.totalSubmissions = Number(item.totalSubmissions || 0);
+      eventMap.set(key, current);
+    });
+
+    return Array.from(eventMap.values());
+  }, [charts.submissionCountByEvent, charts.teamCountByEvent]);
+
+  const selectedEventWorkloadItems = useMemo(
+    () =>
+      eventWorkloadItems.filter(
+        (item) => String(item.eventId) === String(chartEventId)
+      ),
+    [chartEventId, eventWorkloadItems]
+  );
 
   const stats = [
     {
@@ -1088,42 +1140,11 @@ export function DashboardOverview() {
         ))}
       </div>
 
-      {/* ── Donut charts ── */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <StatusDonutChart
-          title="Trạng thái sự kiện"
-          subtitle="Tổng quan vòng đời các event"
-          items={summary.eventsByStatus}
-        />
-        <StatusDonutChart
-          title="Trạng thái round"
-          subtitle="Round đang mở, scoring hoặc đã đóng"
-          items={summary.roundsByStatus}
-        />
-        <StatusDonutChart
-          title="Trạng thái đội"
-          subtitle="Hồ sơ đội theo trạng thái duyệt"
-          items={summary.teamsByStatus}
-        />
-      </div>
-
-      {/* ── Bar charts ── */}
-      <div className="grid gap-4 xl:grid-cols-3">
-        <BarList
-          title="Đội theo sự kiện"
-          subtitle="Sự kiện nào đang thu hút nhiều đội nhất"
-          items={charts.teamCountByEvent}
-          valueKey="totalTeams"
-          labelKey="eventName"
-          emptyText="Chưa có dữ liệu đội theo sự kiện."
-        />
-        <BarList
-          title="Đội theo track"
-          subtitle="Theo dõi sức chứa và độ đông của từng track"
-          items={trackChartItems}
-          valueKey="totalTeams"
-          labelKey="trackName"
-          emptyText="Chưa có dữ liệu đội theo track."
+      {/* ── Operational charts ── */}
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.85fr)]">
+        <ChartCard
+          title="Đội và bài nộp theo sự kiện"
+          subtitle="So sánh quy mô tham gia và khối lượng bài nộp"
           action={
             <ChartEventSelect
               value={chartEventId}
@@ -1131,14 +1152,44 @@ export function DashboardOverview() {
               onChange={setChartEventId}
             />
           }
-        />
-        <BarList
-          title="Bài nộp theo sự kiện"
-          subtitle="Khối lượng submission đang cần theo dõi"
-          items={charts.submissionCountByEvent}
-          valueKey="totalSubmissions"
-          labelKey="eventName"
-          emptyText="Chưa có dữ liệu bài nộp."
+        >
+          <EventWorkloadChart items={selectedEventWorkloadItems} />
+        </ChartCard>
+
+        <ChartCard
+          title="Trạng thái vận hành"
+          subtitle="Phân bố hiện tại của sự kiện, vòng thi và đội thi"
+        >
+          <div className="space-y-5">
+            <StatusList title="Sự kiện" items={summary.eventsByStatus} />
+            <div className="border-t border-slate-100 pt-5">
+              <RoundStatusChart items={summary.roundsByStatus} />
+            </div>
+            <div className="border-t border-slate-100 pt-5">
+              <StatusList title="Đội thi" items={summary.teamsByStatus} />
+            </div>
+          </div>
+        </ChartCard>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
+        <ChartCard
+          title="Phân bố đội theo track"
+          subtitle="So sánh số đội hiện có giữa các track"
+          action={
+            <ChartEventSelect
+              value={chartEventId}
+              events={events}
+              onChange={setChartEventId}
+            />
+          }
+        >
+          <TrackDistributionChart items={trackChartItems} />
+        </ChartCard>
+
+        <ScoringProgress
+          total={summary.totalSubmissions}
+          incomplete={summary.incompleteSubmissions}
         />
       </div>
 

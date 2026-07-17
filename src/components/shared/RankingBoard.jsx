@@ -225,6 +225,7 @@ export function RankingBoard({
   emptyMessage = "Chưa có bảng xếp hạng cho lựa chọn này.",
 }) {
   const sortedRows = sortRankings(rows);
+  const hasTieBreakScore = sortedRows.some((row) => row.tieBreakScore !== null && row.tieBreakScore !== undefined);
 
   return (
     <section className="space-y-4">
@@ -278,6 +279,9 @@ export function RankingBoard({
                     <th className="px-4 py-3">Team</th>
                     <th className="px-4 py-3">Round</th>
                     <th className="px-4 py-3 text-right">Tổng điểm</th>
+                    {hasTieBreakScore && (
+                      <th className="px-4 py-3 text-right">Tie-break</th>
+                    )}
                     <th className="px-4 py-3">Kết quả</th>
                   </tr>
                 </thead>
@@ -310,8 +314,19 @@ export function RankingBoard({
                         <td className="px-4 py-3 text-right text-lg font-black text-slate-950">
                           {formatScore(row.totalScore)}
                         </td>
+                        {hasTieBreakScore && (
+                          <td className="px-4 py-3 text-right font-mono text-sm font-bold text-slate-950">
+                            {row.tieBreakScore === null || row.tieBreakScore === undefined
+                              ? "-"
+                              : formatScore(row.tieBreakScore)}
+                          </td>
+                        )}
                         <td className="px-4 py-3">
-                          {typeof row.isAdvancing === "boolean" ? (
+                          {row.resultMessage ? (
+                            <span className="rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs font-bold text-orange-700">
+                              {row.resultMessage}
+                            </span>
+                          ) : typeof row.isAdvancing === "boolean" ? (
                             <span className={`rounded-full border px-2.5 py-1 text-xs font-bold ${
                               row.isAdvancing
                                 ? "border-emerald-200 bg-emerald-50 text-emerald-700"

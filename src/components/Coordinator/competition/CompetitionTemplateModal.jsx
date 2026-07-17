@@ -10,7 +10,6 @@ import {
   Upload,
 } from "lucide-react";
 import eventService from "../../../services/eventService";
-import topicService from "../../../services/topicService";
 import {
   uploadEventBannerImage,
   uploadTopicPdf,
@@ -189,25 +188,6 @@ function normalizeTracks(tracks) {
   return [...normalTracks, finalTrack];
 }
 
-async function createTopicsForNormalRounds(createdEvent, topic) {
-  const tracks = createdEvent?.tracks || createdEvent?.Tracks || [];
-
-  for (const track of tracks) {
-    if (isFinalTrack(track)) continue;
-
-    const rounds = track.rounds || track.Rounds || [];
-    const roundId = rounds[0]?.id ?? rounds[0]?.roundId;
-    if (!roundId) continue;
-
-    await topicService.create(roundId, {
-      title: topic.name,
-      description: topic.description,
-      requirements: topic.requirements,
-      attachmentUrl: topic.attachmentUrl,
-    });
-  }
-}
-
 export function CompetitionTemplateModal({ onClose, onCompleted }) {
   const [form, setForm] = useState(initialForm);
   const [saving, setSaving] = useState(false);
@@ -336,8 +316,6 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
       const payload = await buildPayload();
       setProgressLabel("Đang tạo Event, Topic, Track và Round");
       const response = await eventService.createFull(payload);
-      setProgressLabel("Đang tạo đề cho các vòng loại");
-      await createTopicsForNormalRounds(response.data?.data, payload.topic);
       await onCompleted?.(response.data?.data);
     } catch (requestError) {
       setError(

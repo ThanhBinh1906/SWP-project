@@ -33,7 +33,9 @@ export function JudgeRounds({ onOpenScoring }) {
       setRounds(res.data?.data || []);
     } catch (err) {
       setRounds([]);
-      setError(getApiMessage(err, "Không thể tải danh sách round được phân công."));
+      setError(
+        getApiMessage(err, "Không thể tải danh sách round được phân công."),
+      );
     } finally {
       setLoading(false);
     }
@@ -47,7 +49,7 @@ export function JudgeRounds({ onOpenScoring }) {
     <div className="space-y-6">
       <JudgePanel
         title="Danh sách round được phân công"
-        subtitle="Dữ liệu được tải từ /api/rounds/assigned"
+        subtitle="Các round cần chấm sẽ liệt kê dưới đây"
         icon={judgeIcons.CalendarDays}
       >
         {loading ? (
@@ -61,7 +63,10 @@ export function JudgeRounds({ onOpenScoring }) {
               <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
               {error}
             </div>
-            <JudgeActionButton onClick={loadAssignedRounds} icon={judgeIcons.Clock}>
+            <JudgeActionButton
+              onClick={loadAssignedRounds}
+              icon={judgeIcons.Clock}
+            >
               Tải lại
             </JudgeActionButton>
           </div>
@@ -84,7 +89,9 @@ export function JudgeRounds({ onOpenScoring }) {
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-3">
-                        <h3 className="text-lg font-bold text-slate-900">{round.name}</h3>
+                        <h3 className="text-lg font-bold text-slate-900">
+                          {round.name}
+                        </h3>
                         <RoundStatusBadge status={round.status || "Unknown"} />
                       </div>
                       <p className="mt-1 text-sm text-slate-700">
@@ -132,7 +139,8 @@ export function JudgeRounds({ onOpenScoring }) {
 
                   {!canOpenScoring && (
                     <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
-                      Chỉ có thể mở chấm điểm khi round ở trạng thái Active hoặc Scoring.
+                      Chỉ có thể mở chấm điểm khi round ở trạng thái Active hoặc
+                      Scoring.
                     </div>
                   )}
                 </div>

@@ -98,7 +98,7 @@ export function JudgeRankingView() {
   return (
     <div className="space-y-5">
       <section className="rounded-xl border border-slate-200 bg-white p-5">
-        <div className="grid gap-4 lg:grid-cols-[1fr_360px] lg:items-end">
+        <div className="space-y-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-wider text-orange-700">
               Bảng xếp hạng đã chốt
@@ -118,7 +118,7 @@ export function JudgeRankingView() {
               value={selectedRoundId}
               onChange={(event) => setSelectedRoundId(event.target.value)}
               disabled={loadingRounds || rounds.length === 0}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 disabled:bg-slate-100"
+              className="min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 disabled:bg-slate-100"
             >
               {rounds.length === 0 ? (
                 <option value="">Chưa có Round được phân công</option>

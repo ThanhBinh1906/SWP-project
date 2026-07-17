@@ -312,6 +312,9 @@ export function ResultsManagement() {
     () => sortRankings(leaderboard.rankings),
     [leaderboard.rankings],
   );
+  const hasTieBreakScores = sortedRankings.some(
+    (ranking) => ranking.tieBreakScore !== null && ranking.tieBreakScore !== undefined,
+  );
   const pendingTieBreakSessions = useMemo(
     () => groupTieBreakSessions(sortedRankings),
     [sortedRankings],
@@ -490,6 +493,7 @@ export function ResultsManagement() {
     { key: "rank", label: "Hạng" },
     { key: "team", label: "Đội thi" },
     { key: "score", label: "Tổng điểm" },
+    ...(hasTieBreakScores ? [{ key: "tieBreakScore", label: "Tie-break" }] : []),
     { key: "status", label: "Kết quả" },
     { key: "calculatedAt", label: "Cập nhật" },
   ];
@@ -827,10 +831,20 @@ export function ResultsManagement() {
                   </span>
                 );
               }
+              if (key === "tieBreakScore") {
+                return (
+                  <span className="font-mono font-bold text-slate-950">
+                    {row.tieBreakScore === null || row.tieBreakScore === undefined
+                      ? "-"
+                      : formatScore(row.tieBreakScore)}
+                  </span>
+                );
+              }
               if (key === "status") {
                 return (
                   <CoordinatorBadge tone={row.isAdvancing ? "success" : "neutral"}>
-                    {row.isAdvancing ? "Vào vòng trong" : "Không vào vòng trong"}
+                    {row.resultMessage ||
+                      (row.isAdvancing ? "Vào vòng trong" : "Không vào vòng trong")}
                   </CoordinatorBadge>
                 );
               }
