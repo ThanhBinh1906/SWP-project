@@ -1,6 +1,5 @@
 import { useRef, useState } from "react";
 import {
-  AlertCircle,
   FileText,
   GitBranch,
   Image as ImageIcon,
@@ -19,6 +18,7 @@ import {
 import LoadingActionText from "../../shared/LoadingActionText";
 import RichTextEditor from "../../shared/RichTextEditor";
 import { CoordinatorActionButton, ModalShell } from "../CoordinatorUI";
+import { FormError, getInvalidFieldClass } from "../coordinatorHelpers";
 
 const inputClass =
   "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100";
@@ -304,7 +304,8 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
   const submit = async () => {
     const validationError = validate(form);
     if (validationError) {
-      setError(validationError);
+      setError("");
+      window.requestAnimationFrame(() => setError(validationError));
       return;
     }
 
@@ -328,6 +329,14 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
       setProgressLabel("");
     }
   };
+
+  const hasSubmitError = Boolean(error);
+  const eventNameInvalid = hasSubmitError && !form.name.trim();
+  const eventTimeInvalid =
+    hasSubmitError &&
+    (!form.startDate || !form.endDate || form.endDate <= form.startDate);
+  const topicNameInvalid = hasSubmitError && !form.topic.name.trim();
+  const topicFileInvalid = hasSubmitError && Boolean(validateTopicPdf(form.topic.file));
 
   return (
     <ModalShell
@@ -357,12 +366,7 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
       }
     >
       <div className="mx-auto w-full max-w-6xl space-y-5">
-        {error && (
-          <div className="flex gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-800">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            {error}
-          </div>
-        )}
+        <FormError msg={error} />
 
         <section className="rounded-2xl border border-orange-100 bg-orange-50/40 p-5 shadow-sm">
           <div className="mb-4">
@@ -375,7 +379,7 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
           <div className="grid gap-3 md:grid-cols-2">
             <Field label="Tên Event" required>
               <input
-                className={inputClass}
+                className={`${inputClass} ${getInvalidFieldClass(eventNameInvalid)}`}
                 value={form.name}
                 onChange={(event) =>
                   setForm((current) => ({ ...current, name: event.target.value }))
@@ -398,7 +402,7 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
             <Field label="Bắt đầu" required>
               <input
                 type="datetime-local"
-                className={inputClass}
+                className={`${inputClass} ${getInvalidFieldClass(eventTimeInvalid)}`}
                 value={form.startDate}
                 onChange={(event) =>
                   setForm((current) => ({
@@ -411,7 +415,7 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
             <Field label="Kết thúc" required>
               <input
                 type="datetime-local"
-                className={inputClass}
+                className={`${inputClass} ${getInvalidFieldClass(eventTimeInvalid)}`}
                 value={form.endDate}
                 onChange={(event) =>
                   setForm((current) => ({
@@ -483,7 +487,7 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
           <div className="grid min-w-0 gap-3 lg:grid-cols-2">
             <Field label="Tên đề tài" required>
               <input
-                className={inputClass}
+                className={`${inputClass} ${getInvalidFieldClass(topicNameInvalid)}`}
                 value={form.topic.name}
                 onChange={(event) => updateTopic("name", event.target.value)}
               />
@@ -505,6 +509,7 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
             <Field label="File đề PDF">
               <PdfFilePicker
                 file={form.topic.file}
+                invalid={topicFileInvalid}
                 onChange={(file) => updateTopic("file", file)}
               />
             </Field>
@@ -732,7 +737,7 @@ function IconButton({ label, onClick }) {
   );
 }
 
-function PdfFilePicker({ file, onChange }) {
+function PdfFilePicker({ file, invalid, onChange }) {
   const inputRef = useRef(null);
 
   return (
@@ -750,7 +755,7 @@ function PdfFilePicker({ file, onChange }) {
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        className="flex min-h-20 w-full min-w-0 items-center justify-center gap-2 overflow-hidden rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 text-sm font-semibold text-slate-700 hover:border-orange-400"
+        className={`flex min-h-20 w-full min-w-0 items-center justify-center gap-2 overflow-hidden rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 text-sm font-semibold text-slate-700 hover:border-orange-400 ${getInvalidFieldClass(invalid)}`}
       >
         <Upload className="h-4 w-4 shrink-0" />
         <span className="min-w-0 truncate">{file?.name || "Chọn PDF"}</span>

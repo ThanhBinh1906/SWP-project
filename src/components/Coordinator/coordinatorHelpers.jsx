@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { icons } from "./CoordinatorUI";
 
 export function formatDate(iso) {
@@ -75,9 +76,22 @@ export function pickDefaultResultRound(rounds = []) {
 }
 
 export function FormError({ msg }) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!msg) return;
+    window.requestAnimationFrame(() => {
+      const scrollParent = ref.current?.closest(".modal-scrollbar");
+      scrollParent?.scrollTo({ top: 0, behavior: "smooth" });
+      ref.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }, [msg]);
+
   if (!msg) return null;
   return (
     <div
+      ref={ref}
+      role="alert"
       className="flex items-center gap-2 p-3 rounded-xl text-sm"
       style={{
         background: "rgba(239,68,68,0.06)",
@@ -89,6 +103,12 @@ export function FormError({ msg }) {
       {msg}
     </div>
   );
+}
+
+export function getInvalidFieldClass(isInvalid) {
+  return isInvalid
+    ? "!border-red-500 !bg-red-50 ring-2 ring-red-100 focus:!border-red-500 focus:ring-red-200"
+    : "";
 }
 
 export function LoadingState({ label = "Đang tải..." }) {

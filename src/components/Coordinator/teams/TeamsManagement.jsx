@@ -7,7 +7,8 @@ import {
   ModalShell,
   icons,
 } from "../CoordinatorUI";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { FormError } from "../coordinatorHelpers";
 import teamService from "../../../services/teamService";
 import eventService from "../../../services/eventService";
 import trackService from "../../../services/trackService";
@@ -23,23 +24,6 @@ function getTeamMentorLabel(team) {
     team.mentor?.username ||
     team.mentor?.email ||
     (team.mentorId ? `Mentor #${String(team.mentorId).slice(0, 8)}...` : "N/A")
-  );
-}
-
-function FormError({ msg }) {
-  if (!msg) return null;
-  return (
-    <div
-      className="flex items-center gap-2 p-3 rounded-xl text-sm"
-      style={{
-        background: "rgba(239,68,68,0.06)",
-        border: "1px solid rgba(239,68,68,0.2)",
-        color: "#dc2626",
-      }}
-    >
-      <AlertCircle className="w-4 h-4 flex-shrink-0" />
-      {msg}
-    </div>
   );
 }
 

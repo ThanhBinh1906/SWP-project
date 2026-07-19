@@ -16,6 +16,7 @@ import {
 } from "../../../services/cloudinaryService";
 import {
   FormError,
+  getInvalidFieldClass,
   LoadingState,
   ApiErrorState,
   getApiMessage,
@@ -54,6 +55,8 @@ export function TopicsManagement() {
   const [attachmentFile, setAttachmentFile] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [formError, setFormError] = useState("");
+  const topicTitleInvalid = Boolean(formError) && !form.title.trim();
+  const topicFileInvalid = Boolean(formError) && Boolean(validateTopicPdf(attachmentFile));
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -401,7 +404,7 @@ export function TopicsManagement() {
               hint="Tên ngắn gọn, VD: Smart Campus Assistant"
             >
               <input
-                className="min-w-0 max-w-full w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+                className={`min-w-0 max-w-full w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none ${getInvalidFieldClass(topicTitleInvalid)}`}
                 placeholder="Smart Campus Assistant"
                 value={form.title}
                 onChange={(e) =>
@@ -446,6 +449,7 @@ export function TopicsManagement() {
                 file={attachmentFile}
                 progress={uploadProgress}
                 disabled={saving}
+                invalid={topicFileInvalid}
                 attachmentUrl={form.attachmentUrl}
                 onChange={(file) => {
                   const error = validateTopicPdf(file);
@@ -489,6 +493,7 @@ function TopicPdfUpload({
   file,
   progress,
   disabled,
+  invalid,
   attachmentUrl,
   onChange,
   onRemove,
@@ -502,7 +507,7 @@ function TopicPdfUpload({
           disabled
             ? "cursor-not-allowed border-slate-200 bg-slate-50 opacity-70"
             : "border-orange-200 bg-orange-50/40 hover:border-[#F26F21] hover:bg-orange-50"
-        }`}
+        } ${getInvalidFieldClass(invalid)}`}
       >
         <input
           type="file"

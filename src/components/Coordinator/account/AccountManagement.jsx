@@ -7,13 +7,14 @@ import {
   ModalShell,
   icons,
 } from "../CoordinatorUI";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import staffService from "../../../services/staffService";
 import teamService from "../../../services/teamService";
 import trackService from "../../../services/trackService";
 import eventService from "../../../services/eventService";
 import { useSelector } from "react-redux";
 import LoadingActionText from "../../shared/LoadingActionText";
+import { FormError, getInvalidFieldClass } from "../coordinatorHelpers";
 
 // ---------------------------------------------------------------------------
 const EVENT_ROLE_OPTIONS = ["Mentor", "Judge"];
@@ -89,23 +90,6 @@ function renderCompactAssignmentList(items, getPrimary, getSecondary, emptyText)
   );
 }
 
-function FormError({ msg }) {
-  if (!msg) return null;
-  return (
-    <div
-      className="flex items-center gap-2 p-3 rounded-xl text-sm"
-      style={{
-        background: "rgba(239,68,68,0.06)",
-        border: "1px solid rgba(239,68,68,0.2)",
-        color: "#dc2626",
-      }}
-    >
-      <AlertCircle className="w-4 h-4 flex-shrink-0" />
-      {msg}
-    </div>
-  );
-}
-
 function StaffTab() {
   const eventId = useSelector((s) => s.event.activeEventId);
 
@@ -118,6 +102,8 @@ function StaffTab() {
   const [form, setForm] = useState(EMPTY_STAFF_FORM);
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
+  const accountIdentityInvalid =
+    Boolean(formError) && !form.username.trim() && !form.email.trim();
   const [actionLoading, setActionLoading] = useState("");
 
   // Assign judge to round modal
@@ -740,7 +726,7 @@ function StaffTab() {
                 Username
               </label>
               <input
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+                className={`w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none ${getInvalidFieldClass(accountIdentityInvalid)}`}
                 placeholder="username của tài khoản"
                 value={form.username}
                 onChange={(e) =>
@@ -753,7 +739,7 @@ function StaffTab() {
                 Email
               </label>
               <input
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+                className={`w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none ${getInvalidFieldClass(accountIdentityInvalid)}`}
                 placeholder="email của tài khoản"
                 value={form.email}
                 onChange={(e) =>

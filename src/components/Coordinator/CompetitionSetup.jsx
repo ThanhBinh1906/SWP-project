@@ -8,7 +8,6 @@ import {
   icons,
 } from "./CoordinatorUI";
 import {
-  AlertCircle,
   ChevronDown,
   ChevronRight,
   Copy,
@@ -32,6 +31,7 @@ import { CompetitionExcelImportModal } from "./competition/CompetitionExcelImpor
 import { CompetitionTemplateModal } from "./competition/CompetitionTemplateModal";
 import { DemoDataImportModal } from "./competition/DemoDataImportModal";
 import RichTextEditor from "../shared/RichTextEditor";
+import { FormError } from "./coordinatorHelpers";
 
 // ---------------------------------------------------------------------------
 // Constants & helpers for the unified event, track, and round setup view
@@ -195,23 +195,6 @@ function compactText(value = "", maxLength = 120) {
   const text = stripHtml(value);
   if (text.length <= maxLength) return text;
   return `${text.slice(0, maxLength).trim()}...`;
-}
-
-function FormError({ msg }) {
-  if (!msg) return null;
-  return (
-    <div
-      className="flex items-center gap-2 p-3 rounded-xl text-sm"
-      style={{
-        background: "rgba(239,68,68,0.06)",
-        border: "1px solid rgba(239,68,68,0.2)",
-        color: "#dc2626",
-      }}
-    >
-      <AlertCircle className="w-4 h-4 flex-shrink-0" />
-      {msg}
-    </div>
-  );
 }
 
 function EventBannerPicker({ file, url, disabled, onFileChange, onUrlChange }) {

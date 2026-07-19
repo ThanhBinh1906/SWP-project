@@ -15,6 +15,7 @@ import roundService from "../../../services/roundService";
 import criterionService from "../../../services/criterionService";
 import {
   FormError,
+  getInvalidFieldClass,
   LoadingState,
   ApiErrorState,
   getApiMessage,
@@ -105,6 +106,18 @@ export function CriteriaManagement() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [actionError, setActionError] = useState("");
   const [formError, setFormError] = useState("");
+  const criterionNameInvalid =
+    modal === "criterion" && Boolean(formError) && !form.name.trim();
+  const criterionWeightInvalid =
+    modal === "criterion" &&
+    Boolean(formError) &&
+    !Number.isFinite(percentToDecimal(form.weight));
+  const templateNameInvalid =
+    modal === "createTemplate" && Boolean(formError) && !templateName.trim();
+  const templateFileInvalid =
+    modal === "createTemplate" &&
+    Boolean(formError) &&
+    (!templateItems.length || Boolean(templateFileError));
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -824,7 +837,7 @@ export function CriteriaManagement() {
               hint="VD: Innovation, Technical, Presentation"
             >
               <input
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+                className={`w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none ${getInvalidFieldClass(criterionNameInvalid)}`}
                 placeholder="Innovation"
                 value={form.name}
                 onChange={(e) =>
@@ -869,7 +882,7 @@ export function CriteriaManagement() {
               >
                 <input
                   type="text"
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+                  className={`w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none ${getInvalidFieldClass(criterionWeightInvalid)}`}
                   placeholder="20%"
                   value={form.weight}
                   onChange={(e) =>
@@ -1004,7 +1017,7 @@ export function CriteriaManagement() {
             {/* Template info */}
             <div className="space-y-2">
               <input
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+                className={`w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none ${getInvalidFieldClass(templateNameInvalid)}`}
                 placeholder="Tên template *"
                 value={templateName}
                 onChange={(e) => setTemplateName(e.target.value)}
@@ -1093,7 +1106,7 @@ export function CriteriaManagement() {
               />
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-all"
+                className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${getInvalidFieldClass(templateFileInvalid)}`}
                 style={{
                   background: templateItems.length
                     ? "rgba(34,197,94,0.06)"

@@ -10,7 +10,7 @@ import {
   ModalShell,
   icons,
 } from "../CoordinatorUI";
-import { getApiMessage } from "../coordinatorHelpers";
+import { FormError, getApiMessage, getInvalidFieldClass } from "../coordinatorHelpers";
 
 const EMPTY_FORM = { name: "", description: "", rankPosition: "", amount: "" };
 const inputClass =
@@ -111,6 +111,14 @@ export function PrizeManagement({ eventId }) {
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
+  const prizeNameInvalid = Boolean(formError) && !form.name.trim();
+  const prizeRankInvalid =
+    Boolean(formError) &&
+    (!Number.isInteger(Number(form.rankPosition)) || Number(form.rankPosition) < 1);
+  const prizeAmountInvalid =
+    Boolean(formError) &&
+    form.amount !== "" &&
+    (Number.isNaN(Number(form.amount)) || Number(form.amount) < 0);
 
   const load = useCallback(async () => {
     if (!eventId) {
@@ -452,15 +460,11 @@ export function PrizeManagement({ eventId }) {
           }
         >
           <div className="space-y-3">
-            {formError && (
-              <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                {formError}
-              </div>
-            )}
+            <FormError msg={formError} />
             <label className="block text-xs font-bold uppercase text-slate-600">
               Tên giải
               <input
-                className={`${inputClass} mt-1`}
+                className={`${inputClass} mt-1 ${getInvalidFieldClass(prizeNameInvalid)}`}
                 value={form.name}
                 onChange={(event) =>
                   setForm((previous) => ({ ...previous, name: event.target.value }))
@@ -486,7 +490,7 @@ export function PrizeManagement({ eventId }) {
                 <input
                   type="number"
                   min="1"
-                  className={`${inputClass} mt-1`}
+                  className={`${inputClass} mt-1 ${getInvalidFieldClass(prizeRankInvalid)}`}
                   value={form.rankPosition}
                   onChange={(event) =>
                     setForm((previous) => ({
@@ -501,7 +505,7 @@ export function PrizeManagement({ eventId }) {
                 <input
                   type="number"
                   min="0"
-                  className={`${inputClass} mt-1`}
+                  className={`${inputClass} mt-1 ${getInvalidFieldClass(prizeAmountInvalid)}`}
                   value={form.amount}
                   onChange={(event) =>
                     setForm((previous) => ({ ...previous, amount: event.target.value }))
