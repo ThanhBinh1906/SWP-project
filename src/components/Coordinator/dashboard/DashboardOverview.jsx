@@ -6,6 +6,8 @@ import {
   CartesianGrid,
   LabelList,
   Legend,
+  Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -366,6 +368,61 @@ function EventWorkloadChart({ items }) {
           <Bar dataKey="totalTeams" name="Đội thi" fill="#2563EB" radius={[5, 5, 0, 0]} maxBarSize={34} />
           <Bar dataKey="totalSubmissions" name="Bài nộp" fill="#F26F21" radius={[5, 5, 0, 0]} maxBarSize={34} />
         </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function EventTeamTrendChart({ items }) {
+  const data = [...items]
+    .filter((item) => Number(item.totalTeams || 0) > 0)
+    .map((item) => ({
+      ...item,
+      totalTeams: Number(item.totalTeams || 0),
+    }));
+
+  if (data.length === 0) {
+    return <EmptyChart text="Chưa có dữ liệu đội theo sự kiện." />;
+  }
+
+  return (
+    <div className="h-80">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={data} margin={{ top: 24, right: 28, left: 0, bottom: 42 }}>
+          <CartesianGrid stroke="#E2E8F0" vertical={false} />
+          <XAxis
+            dataKey="eventName"
+            tickFormatter={(value) => truncateLabel(value, 18)}
+            tick={{ fill: "#475569", fontSize: 11 }}
+            tickLine={false}
+            axisLine={false}
+            interval={0}
+            angle={-10}
+            textAnchor="end"
+          />
+          <YAxis
+            allowDecimals={false}
+            tick={{ fill: "#64748B", fontSize: 11 }}
+            tickLine={false}
+            axisLine={false}
+          />
+          <Tooltip content={<ChartTooltip />} cursor={{ stroke: "#CBD5E1", strokeDasharray: "4 4" }} />
+          <Line
+            type="monotone"
+            dataKey="totalTeams"
+            name="Đội thi"
+            stroke="#F26F21"
+            strokeWidth={3}
+            dot={{ r: 5, fill: "#fff", stroke: "#F26F21", strokeWidth: 2 }}
+            activeDot={{ r: 7, fill: "#F26F21", stroke: "#fff", strokeWidth: 2 }}
+          >
+            <LabelList
+              dataKey="totalTeams"
+              position="top"
+              style={{ fill: "#111827", fontSize: 12, fontWeight: 700 }}
+            />
+          </Line>
+        </LineChart>
       </ResponsiveContainer>
     </div>
   );
@@ -1141,6 +1198,13 @@ export function DashboardOverview() {
       </div>
 
       {/* ── Operational charts ── */}
+      <ChartCard
+        title="Số đội tham gia qua các sự kiện"
+        subtitle="So sánh nhanh quy mô đội thi giữa các cuộc thi"
+      >
+        <EventTeamTrendChart items={eventWorkloadItems} />
+      </ChartCard>
+
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.85fr)]">
         <ChartCard
           title="Đội và bài nộp theo sự kiện"
