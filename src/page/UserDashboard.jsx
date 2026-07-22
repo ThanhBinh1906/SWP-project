@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchActiveEvent } from "../store/eventSlice";
 import { fetchMyTeam } from "../store/teamSlice";
@@ -13,6 +13,11 @@ import TeamEliminationOverlay from "../components/UserDashboard/TeamEliminationO
 import notificationService from "../services/notificationService";
 
 const NOTIFICATION_PAGE_SIZE = 10;
+const TEAM_STORAGE_KEYS = ["team", "myTeam", "teamState", "persist:team"];
+
+function clearCachedTeamState() {
+  TEAM_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
+}
 
 function getNotificationItems(data) {
   if (Array.isArray(data)) return data;
@@ -44,6 +49,7 @@ export default function UserDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationsLoading, setNotificationsLoading] = useState(true);
   const [eliminationNotice, setEliminationNotice] = useState(null);
+  const lastTeamFetchEventRef = useRef();
   const dispatch = useDispatch();
 
   const { activeEventId, loading: eventLoading } = useSelector((s) => s.event);
@@ -52,11 +58,23 @@ export default function UserDashboard() {
   );
 
   const applyNotifications = useCallback((notifications) => {
+    if (!myTeam) {
+      setEliminationNotice(null);
+      return;
+    }
+
     const eliminated = notifications.find(
       (item) => String(item?.type || "").toUpperCase() === "ROUND_ELIMINATED",
     );
     setEliminationNotice(eliminated || null);
-  }, []);
+  }, [myTeam]);
+
+  useEffect(() => {
+    if (!myTeam) {
+      setEliminationNotice(null);
+      clearCachedTeamState();
+    }
+  }, [myTeam]);
 
   useEffect(() => {
     let active = true;
@@ -89,10 +107,13 @@ export default function UserDashboard() {
 
   // Step 2: fetch my-team independently so completed events can still show ranking/team info.
   useEffect(() => {
-    if (!teamFetched) {
+    const eventKey = activeEventId ?? "no-active-event";
+
+    if (!teamFetched || lastTeamFetchEventRef.current !== eventKey) {
+      lastTeamFetchEventRef.current = eventKey;
       dispatch(fetchMyTeam());
     }
-  }, [dispatch, teamFetched]);
+  }, [activeEventId, dispatch, teamFetched]);
 
   const loading =
     notificationsLoading ||
