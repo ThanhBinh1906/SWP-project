@@ -122,7 +122,9 @@ function pickDefaultExpandedEvents(events = []) {
   const activeEvents = events.filter((event) => event?.status === "Active");
   if (activeEvents.length) return activeEvents.map((event) => event.id);
 
-  const registrationEvent = events.find((event) => event?.status === "Registration");
+  const registrationEvent = events.find(
+    (event) => event?.status === "Registration",
+  );
   if (registrationEvent) return [registrationEvent.id];
 
   return events[0] ? [events[0].id] : [];
@@ -265,7 +267,8 @@ function EventBannerPicker({ file, url, disabled, onFileChange, onUrlChange }) {
       </div>
 
       <p className="text-xs leading-relaxed text-slate-700">
-        Hỗ trợ JPG, PNG, WEBP hoặc GIF, tối đa 5MB. Ảnh sẽ được tải lên Cloudinary khi lưu thay đổi.
+        Hỗ trợ JPG, PNG, WEBP hoặc GIF, tối đa 5MB. Ảnh sẽ được tải lên
+        Cloudinary khi lưu thay đổi.
       </p>
       {file && (
         <p className="truncate rounded-xl bg-orange-50 px-3 py-2 text-xs font-semibold text-orange-700">
@@ -440,7 +443,9 @@ export function CompetitionSetup() {
   }, [events, eventsLoading, fetchTracksForEvent, tracksByEvent]);
 
   useEffect(() => {
-    const tracks = Object.values(tracksByEvent).flatMap((state) => state?.data || []);
+    const tracks = Object.values(tracksByEvent).flatMap(
+      (state) => state?.data || [],
+    );
     if (tracks.length === 0) return;
 
     const currentTrackIds = new Set(tracks.map((track) => String(track.id)));
@@ -876,7 +881,10 @@ export function CompetitionSetup() {
     }
     setRoundSaving(true);
     try {
-      const response = await roundService.updateStatus(selectedRound.roundId, roundStatusValue);
+      const response = await roundService.updateStatus(
+        selectedRound.roundId,
+        roundStatusValue,
+      );
       await fetchRoundsForTrack(selectedRound.trackId);
       setRoundStatusNotice(
         response.data?.message ||
@@ -897,7 +905,8 @@ export function CompetitionSetup() {
   // =========================================================================
   // RENDER
   // =========================================================================
-  const selectedRoundTrackRounds = roundsByTrack[selectedRound?.trackId]?.data || [];
+  const selectedRoundTrackRounds =
+    roundsByTrack[selectedRound?.trackId]?.data || [];
   const selectedRoundBlockingPrevious = getBlockingPreviousRound(
     selectedRoundTrackRounds,
     selectedRound,
@@ -1026,7 +1035,8 @@ export function CompetitionSetup() {
                     <p className="text-xs text-slate-700 mt-0.5 truncate">
                       {formatDate(event.startDate)} →{" "}
                       {formatDate(event.endDate)}
-                      {event.description && ` • ${compactText(event.description)}`}
+                      {event.description &&
+                        ` • ${compactText(event.description)}`}
                     </p>
                   </div>
 
@@ -1058,9 +1068,7 @@ export function CompetitionSetup() {
                       disabled={isTrackCreateLocked(event)}
                       onClick={() => openCreateTrack(event)}
                       className={
-                        isTrackCreateLocked(event)
-                          ? "pointer-events-auto"
-                          : ""
+                        isTrackCreateLocked(event) ? "pointer-events-auto" : ""
                       }
                     >
                       Add Track
@@ -1102,226 +1110,255 @@ export function CompetitionSetup() {
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        {sortTracksWithFinalLast(tracksState.data).map((track) => {
-                          const isTrackExpanded = expandedTracks.has(track.id);
-                          const roundsState = roundsByTrack[track.id];
-                          const finalTrack = isFinalTrack(track);
+                        {sortTracksWithFinalLast(tracksState.data).map(
+                          (track) => {
+                            const isTrackExpanded = expandedTracks.has(
+                              track.id,
+                            );
+                            const roundsState = roundsByTrack[track.id];
+                            const finalTrack = isFinalTrack(track);
 
-                          return (
-                            <div key={track.id} className={finalTrack ? "pt-2" : ""}>
-                              {finalTrack && (
-                                <div className="mb-3 mt-1 flex items-center gap-3">
-                                  <div className="h-px flex-1 bg-slate-200" />
-                                  <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-orange-700">
-                                    <Crown className="h-3.5 w-3.5" />
-                                    Final Track
+                            return (
+                              <div
+                                key={track.id}
+                                className={finalTrack ? "pt-2" : ""}
+                              >
+                                {finalTrack && (
+                                  <div className="mb-3 mt-1 flex items-center gap-3">
+                                    <div className="h-px flex-1 bg-slate-200" />
+                                    <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-orange-700">
+                                      <Crown className="h-3.5 w-3.5" />
+                                      Final Track
+                                    </div>
+                                    <div className="h-px flex-1 bg-slate-200" />
                                   </div>
-                                  <div className="h-px flex-1 bg-slate-200" />
-                                </div>
-                              )}
-                              <div
-                                className="rounded-xl border transition-all duration-200"
-                                style={{
-                                  background: finalTrack ? "#f0f0f0f0" : "#FFFFFF",
-                                  borderColor: finalTrack
-                                    ? "rgba(242,111,33,0.28)"
-                                    : isTrackExpanded
-                                      ? "rgba(242,111,33,0.2)"
-                                      : "#E5E7EB",
-                                }}
-                              >
-                              {/* ── Track header row ── */}
-                              <div
-                                className="flex items-center gap-3 p-3 cursor-pointer select-none"
-                                onClick={() => toggleTrack(track.id)}
-                              >
-                                <button
-                                  type="button"
-                                  className="flex-shrink-0 rounded p-0.5 hover:bg-slate-100 transition-colors"
-                                >
-                                  {isTrackExpanded ? (
-                                    <ChevronDown className="w-3.5 h-3.5 text-[#F26F21]" />
-                                  ) : (
-                                    <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-                                  )}
-                                </button>
-
-                                {finalTrack ? (
-                                  <Crown
-                                    className="w-4 h-4 flex-shrink-0"
-                                    style={{ color: "#F26F21" }}
-                                  />
-                                ) : (
-                                  <icons.GitBranch
-                                    className="w-4 h-4 flex-shrink-0"
-                                    style={{ color: "#F26F21" }}
-                                  />
                                 )}
-
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <p className="font-bold text-slate-800 text-sm truncate">
-                                      {track.name}
-                                    </p>
-                                    <CoordinatorBadge tone="info">
-                                      #{track.id}
-                                    </CoordinatorBadge>
-                                  </div>
-                                  <p className="text-xs text-slate-700 mt-0.5">
-                                    {track.description || "—"} • Max teams:{" "}
-                                    {track.maxTeams}
-                                  </p>
-                                </div>
-
-                                <div className="hidden flex-shrink-0 text-right text-sm font-semibold text-slate-700 sm:block">
-                                  {getTrackCurrentTeamCount(track)}/{track.maxTeams}
-                                </div>
-
                                 <div
-                                  className="flex items-center gap-2 flex-shrink-0"
-                                  onClick={(e) => e.stopPropagation()}
+                                  className="rounded-xl border transition-all duration-200"
+                                  style={{
+                                    background: finalTrack
+                                      ? "#f0f0f0f0"
+                                      : "#FFFFFF",
+                                    borderColor: finalTrack
+                                      ? "rgba(242,111,33,0.28)"
+                                      : isTrackExpanded
+                                        ? "rgba(242,111,33,0.2)"
+                                        : "#E5E7EB",
+                                  }}
                                 >
-                                  <CoordinatorActionButton
-                                    icon={icons.Edit3}
-                                    onClick={() => openEditTrack(track)}
+                                  {/* ── Track header row ── */}
+                                  <div
+                                    className="flex items-center gap-3 p-3 cursor-pointer select-none"
+                                    onClick={() => toggleTrack(track.id)}
                                   >
-                                    Edit
-                                  </CoordinatorActionButton>
-                                </div>
-                              </div>
+                                    <button
+                                      type="button"
+                                      className="flex-shrink-0 rounded p-0.5 hover:bg-slate-100 transition-colors"
+                                    >
+                                      {isTrackExpanded ? (
+                                        <ChevronDown className="w-3.5 h-3.5 text-[#F26F21]" />
+                                      ) : (
+                                        <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
+                                      )}
+                                    </button>
 
-                              {/* ── Expanded: Rounds inside track ── */}
-                              {isTrackExpanded && (
-                                <div
-                                  className="border-t px-3 pb-3 pt-2 animate-fade-in"
-                                  style={{ borderColor: "#F0F0F0" }}
-                                >
-                                  {!roundsState || roundsState.loading ? (
-                                    <div className="flex items-center justify-center py-6 gap-2 text-sm text-slate-600">
-                                      <Loader2
-                                        className="w-4 h-4 animate-spin"
+                                    {finalTrack ? (
+                                      <Crown
+                                        className="w-4 h-4 flex-shrink-0"
                                         style={{ color: "#F26F21" }}
                                       />
-                                      Đang tải rounds...
-                                    </div>
-                                  ) : roundsState.error ? (
-                                    <div className="flex flex-col items-center py-4 gap-3">
-                                      <p className="text-sm text-red-500">
-                                        {roundsState.error}
+                                    ) : (
+                                      <icons.GitBranch
+                                        className="w-4 h-4 flex-shrink-0"
+                                        style={{ color: "#F26F21" }}
+                                      />
+                                    )}
+
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <p className="font-bold text-slate-800 text-sm truncate">
+                                          {track.name}
+                                        </p>
+                                        <CoordinatorBadge tone="info">
+                                          #{track.id}
+                                        </CoordinatorBadge>
+                                      </div>
+                                      <p className="text-xs text-slate-700 mt-0.5">
+                                        {track.description || "—"} • Max teams:{" "}
+                                        {track.maxTeams}
                                       </p>
+                                    </div>
+
+                                    <div className="hidden flex-shrink-0 text-right text-sm font-semibold text-slate-700 sm:block">
+                                      {getTrackCurrentTeamCount(track)}/
+                                      {track.maxTeams}
+                                    </div>
+
+                                    <div
+                                      className="flex items-center gap-2 flex-shrink-0"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
                                       <CoordinatorActionButton
-                                        onClick={() =>
-                                          fetchRoundsForTrack(track.id)
-                                        }
+                                        icon={icons.Edit3}
+                                        onClick={() => openEditTrack(track)}
                                       >
-                                        Thử lại
+                                        Edit
                                       </CoordinatorActionButton>
                                     </div>
-                                  ) : roundsState.data.length === 0 ? (
-                                    <div className="rounded-lg border border-dashed border-slate-200 py-6 text-center text-sm text-slate-600">
-                                      Chưa có round nào trong track này.
-                                    </div>
-                                  ) : (
-                                    <div className="space-y-2">
-                                      {roundsState.data.map((round, idx) => {
-                                        const displayStatus = getEffectiveRoundStatus(
-                                          roundsState.data,
-                                          round,
-                                        );
+                                  </div>
 
-                                        return (
-                                        <div
-                                          key={round.roundId}
-                                          className="grid gap-3 rounded-xl border border-slate-100 p-3 lg:grid-cols-[auto_1fr_160px_auto]"
-                                          style={{
-                                            background:
-                                              displayStatus === "Active"
-                                                ? "rgba(242,111,33,0.02)"
-                                                : "#fff",
-                                          }}
-                                        >
-                                          {/* Index + status */}
-                                          <div className="flex items-center gap-2">
-                                            <div
-                                              className="flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold text-white flex-shrink-0"
-                                              style={{
-                                                background:
-                                                  displayStatus === "Active"
-                                                    ? "#F26F21"
-                                                    : "#94A3B8",
-                                              }}
-                                            >
-                                              {idx + 1}
-                                            </div>
-                                            <CoordinatorBadge
-                                              tone={roundStatusTone(
-                                                displayStatus,
-                                              )}
-                                            >
-                                              {displayStatus}
-                                            </CoordinatorBadge>
-                                          </div>
-
-                                          {/* Info */}
-                                          <div>
-                                            <h4 className="font-bold text-slate-900 text-sm">
-                                              {round.name}
-                                            </h4>
-                                            <p className="text-xs text-slate-700 mt-0.5">
-                                              {formatDateTime(round.startTime)}{" "}
-                                              → {formatDateTime(round.endTime)}
-                                            </p>
-                                            <p className="text-xs text-slate-700 mt-0.5">
-                                              Suất đi tiếp:{" "}
-                                              <span className="font-bold text-slate-700">
-                                                {round.advancingSlots}
-                                              </span>
-                                            </p>
-                                          </div>
-
-                                          {/* Progress */}
-                                          <CoordinatorProgressBar
-                                            label="Progress"
-                                            value={
-                                              round.progressPercentage ?? 0
-                                            }
-                                            color={
-                                              displayStatus === "Active"
-                                                ? "#F26F21"
-                                                : "#64748B"
-                                            }
+                                  {/* ── Expanded: Rounds inside track ── */}
+                                  {isTrackExpanded && (
+                                    <div
+                                      className="border-t px-3 pb-3 pt-2 animate-fade-in"
+                                      style={{ borderColor: "#F0F0F0" }}
+                                    >
+                                      {!roundsState || roundsState.loading ? (
+                                        <div className="flex items-center justify-center py-6 gap-2 text-sm text-slate-600">
+                                          <Loader2
+                                            className="w-4 h-4 animate-spin"
+                                            style={{ color: "#F26F21" }}
                                           />
-
-                                          {/* Actions */}
-                                          <div className="flex flex-col gap-1.5 justify-center">
-                                            <CoordinatorActionButton
-                                              icon={icons.Edit3}
-                                              onClick={() =>
-                                                openEditRound(round, track.id)
-                                              }
-                                            >
-                                              Edit
-                                            </CoordinatorActionButton>
-                                            <CoordinatorActionButton
-                                              icon={icons.SlidersHorizontal}
-                                              onClick={() =>
-                                                openRoundStatus(round, track.id, event)
-                                              }
-                                            >
-                                              Status
-                                            </CoordinatorActionButton>
-                                          </div>
+                                          Đang tải rounds...
                                         </div>
-                                        );
-                                      })}
+                                      ) : roundsState.error ? (
+                                        <div className="flex flex-col items-center py-4 gap-3">
+                                          <p className="text-sm text-red-500">
+                                            {roundsState.error}
+                                          </p>
+                                          <CoordinatorActionButton
+                                            onClick={() =>
+                                              fetchRoundsForTrack(track.id)
+                                            }
+                                          >
+                                            Thử lại
+                                          </CoordinatorActionButton>
+                                        </div>
+                                      ) : roundsState.data.length === 0 ? (
+                                        <div className="rounded-lg border border-dashed border-slate-200 py-6 text-center text-sm text-slate-600">
+                                          Chưa có round nào trong track này.
+                                        </div>
+                                      ) : (
+                                        <div className="space-y-2">
+                                          {roundsState.data.map(
+                                            (round, idx) => {
+                                              const displayStatus =
+                                                getEffectiveRoundStatus(
+                                                  roundsState.data,
+                                                  round,
+                                                );
+
+                                              return (
+                                                <div
+                                                  key={round.roundId}
+                                                  className="grid gap-3 rounded-xl border border-slate-100 p-3 lg:grid-cols-[auto_1fr_160px_auto]"
+                                                  style={{
+                                                    background:
+                                                      displayStatus === "Active"
+                                                        ? "rgba(242,111,33,0.02)"
+                                                        : "#fff",
+                                                  }}
+                                                >
+                                                  {/* Index + status */}
+                                                  <div className="flex items-center gap-2">
+                                                    <div
+                                                      className="flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold text-white flex-shrink-0"
+                                                      style={{
+                                                        background:
+                                                          displayStatus ===
+                                                          "Active"
+                                                            ? "#F26F21"
+                                                            : "#94A3B8",
+                                                      }}
+                                                    >
+                                                      {idx + 1}
+                                                    </div>
+                                                    <CoordinatorBadge
+                                                      tone={roundStatusTone(
+                                                        displayStatus,
+                                                      )}
+                                                    >
+                                                      {displayStatus}
+                                                    </CoordinatorBadge>
+                                                  </div>
+
+                                                  {/* Info */}
+                                                  <div>
+                                                    <h4 className="font-bold text-slate-900 text-sm">
+                                                      {round.name}
+                                                    </h4>
+                                                    <p className="text-xs text-slate-700 mt-0.5">
+                                                      {formatDateTime(
+                                                        round.startTime,
+                                                      )}{" "}
+                                                      →{" "}
+                                                      {formatDateTime(
+                                                        round.endTime,
+                                                      )}
+                                                    </p>
+                                                    <p className="text-xs text-slate-700 mt-0.5">
+                                                      Suất đi tiếp:{" "}
+                                                      <span className="font-bold text-slate-700">
+                                                        {round.advancingSlots}
+                                                      </span>
+                                                    </p>
+                                                  </div>
+
+                                                  {/* Progress */}
+                                                  <CoordinatorProgressBar
+                                                    label="Progress"
+                                                    value={
+                                                      round.progressPercentage ??
+                                                      0
+                                                    }
+                                                    color={
+                                                      displayStatus === "Active"
+                                                        ? "#F26F21"
+                                                        : "#64748B"
+                                                    }
+                                                  />
+
+                                                  {/* Actions */}
+                                                  <div className="flex flex-col gap-1.5 justify-center">
+                                                    <CoordinatorActionButton
+                                                      icon={icons.Edit3}
+                                                      onClick={() =>
+                                                        openEditRound(
+                                                          round,
+                                                          track.id,
+                                                        )
+                                                      }
+                                                    >
+                                                      Edit
+                                                    </CoordinatorActionButton>
+                                                    <CoordinatorActionButton
+                                                      icon={
+                                                        icons.SlidersHorizontal
+                                                      }
+                                                      onClick={() =>
+                                                        openRoundStatus(
+                                                          round,
+                                                          track.id,
+                                                          event,
+                                                        )
+                                                      }
+                                                    >
+                                                      Status
+                                                    </CoordinatorActionButton>
+                                                  </div>
+                                                </div>
+                                              );
+                                            },
+                                          )}
+                                        </div>
+                                      )}
                                     </div>
                                   )}
                                 </div>
-                              )}
                               </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          },
+                        )}
                       </div>
                     )}
                   </div>
@@ -1415,7 +1452,9 @@ export function CompetitionSetup() {
                   className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
                   placeholder="VD: FPT University HCM"
                   value={eventForm.location}
-                  onChange={(e) => handleEventFormChange("location", e.target.value)}
+                  onChange={(e) =>
+                    handleEventFormChange("location", e.target.value)
+                  }
                 />
               </div>
               <div>
@@ -1426,7 +1465,9 @@ export function CompetitionSetup() {
                   file={eventForm.bannerFile}
                   url={eventForm.bannerUrl}
                   disabled={eventSaving}
-                  onFileChange={(file) => handleEventFormChange("bannerFile", file)}
+                  onFileChange={(file) =>
+                    handleEventFormChange("bannerFile", file)
+                  }
                   onUrlChange={(url) => handleEventFormChange("bannerUrl", url)}
                 />
               </div>
@@ -1436,7 +1477,9 @@ export function CompetitionSetup() {
                 type="checkbox"
                 className="h-4 w-4 accent-orange-600"
                 checked={eventForm.isOnline}
-                onChange={(e) => handleEventFormChange("isOnline", e.target.checked)}
+                onChange={(e) =>
+                  handleEventFormChange("isOnline", e.target.checked)
+                }
               />
               Tổ chức online
             </label>
@@ -1480,11 +1523,34 @@ export function CompetitionSetup() {
               </div>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">Trạng thái</label>
-              <select className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none" value={eventForm.status} onChange={(e) => handleEventFormChange("status", e.target.value)}>
-                {EVENT_STATUS_OPTIONS.map((status) => <option key={status} value={status} disabled={isEventStatusRollback(selectedEvent?.status, status)}>{status}</option>)}
+              <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
+                Trạng thái
+              </label>
+              <select
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+                value={eventForm.status}
+                onChange={(e) =>
+                  handleEventFormChange("status", e.target.value)
+                }
+              >
+                {EVENT_STATUS_OPTIONS.map((status) => (
+                  <option
+                    key={status}
+                    value={status}
+                    disabled={isEventStatusRollback(
+                      selectedEvent?.status,
+                      status,
+                    )}
+                  >
+                    {status}
+                  </option>
+                ))}
               </select>
-              <p className="mt-1.5 text-xs leading-relaxed text-slate-700">Sau khi chuyển lên <strong>Active</strong> hoặc <strong>Completed</strong>, Coordinator không thể quay lại trạng thái trước đó.</p>
+              <p className="mt-1.5 text-xs leading-relaxed text-slate-700">
+                Sau khi chuyển lên <strong>Active</strong> hoặc{" "}
+                <strong>Completed</strong>, Coordinator không thể quay lại trạng
+                thái trước đó.
+              </p>
             </div>
           </div>
         </ModalShell>
@@ -1822,7 +1888,9 @@ export function CompetitionSetup() {
           <div className="space-y-3">
             <p className="text-sm text-slate-700">
               Trạng thái hiện tại:{" "}
-              <CoordinatorBadge tone={roundStatusTone(selectedRoundEffectiveStatus)}>
+              <CoordinatorBadge
+                tone={roundStatusTone(selectedRoundEffectiveStatus)}
+              >
                 {selectedRoundEffectiveStatus}
               </CoordinatorBadge>
             </p>
@@ -1832,7 +1900,11 @@ export function CompetitionSetup() {
                 {selectedRound?.eventName || "Unknown"}
               </span>{" "}
               <CoordinatorBadge
-                tone={isEventActive(selectedRound?.eventStatus) ? "success" : "warning"}
+                tone={
+                  isEventActive(selectedRound?.eventStatus)
+                    ? "success"
+                    : "warning"
+                }
               >
                 {selectedRound?.eventStatus || "Unknown"}
               </CoordinatorBadge>
@@ -1846,8 +1918,8 @@ export function CompetitionSetup() {
             )}
             {selectedRoundBlockingPrevious && (
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
-                Round này chỉ được Active sau khi round trước trong cùng track là{" "}
-                <strong>Closed</strong>. Round đang chặn:{" "}
+                Round này chỉ được Active sau khi round trước trong cùng track
+                là <strong>Closed</strong>. Round đang chặn:{" "}
                 <strong>{selectedRoundBlockingPrevious.name}</strong> (
                 {selectedRoundBlockingPrevious.status}).
               </div>

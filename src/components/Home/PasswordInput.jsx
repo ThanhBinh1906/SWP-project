@@ -12,7 +12,7 @@ export default function PasswordInput({
   label,
   value,
   onChange,
-  placeholder = '••••••••',
+  placeholder = '........',
   autoComplete = 'current-password',
   required = true,
 }) {
