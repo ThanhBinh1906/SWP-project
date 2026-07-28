@@ -42,6 +42,11 @@ const EMPTY_MEMBER = {
   isFPTStudent: false,
 };
 
+function getTrackMaxMembers(track) {
+  const value = Number(track?.maxMembers ?? track?.MaxMembers);
+  return Number.isFinite(value) && value > 0 ? value : MAX_TEAM_MEMBERS;
+}
+
 const MEMBER_IMPORT_HEADERS = [
   "fullName",
   "studentCode",
@@ -309,6 +314,13 @@ function TeamCreateForm({
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState("");
 
+  const availableTracks = Array.isArray(tracks) ? tracks : [];
+  const selectedTrack = availableTracks.find(
+    (track) => String(track.id) === String(teamForm.trackId),
+  );
+  const maxTeamMembers = getTrackMaxMembers(selectedTrack);
+  const maxAdditionalMembers = Math.max(maxTeamMembers - 1, 0);
+
   const handleTeamChange = (field, value) => {
     setTeamForm((p) => ({ ...p, [field]: value }));
     if (teamErrors[field]) setTeamErrors((p) => ({ ...p, [field]: "" }));
@@ -336,7 +348,7 @@ function TeamCreateForm({
   };
 
   const addMember = () => {
-    if (members.length >= MAX_MEMBERS) return;
+    if (members.length >= maxAdditionalMembers) return;
     setMembers((p) => [...p, { ...EMPTY_MEMBER }]);
   };
 
@@ -378,8 +390,8 @@ function TeamCreateForm({
         isFPTStudent: parseBooleanCell(row[headerMap.isfptstudent]),
       };
 
-      if (nextMembers.length >= MAX_MEMBERS) {
-        errors.push(`Dòng ${line}: đội chỉ được thêm tối đa ${MAX_MEMBERS} thành viên ngoài leader.`);
+      if (nextMembers.length >= maxAdditionalMembers) {
+        errors.push(`Dòng ${line}: đội chỉ được thêm tối đa ${maxAdditionalMembers} thành viên ngoài leader.`);
         return;
       }
 
@@ -462,6 +474,10 @@ function TeamCreateForm({
     }
     if (members.length < MIN_MEMBERS) {
       te.members = `Cần ít nhất ${MIN_MEMBERS} thành viên khác để team có tối thiểu ${MIN_MEMBERS + 1} người gồm Leader.`;
+      valid = false;
+    }
+    if (members.length > maxAdditionalMembers) {
+      te.members = `Chỉ được thêm tối đa ${maxAdditionalMembers} thành viên ngoài Leader theo cấu hình Track.`;
       valid = false;
     }
     setTeamErrors(te);
@@ -789,7 +805,7 @@ function TeamCreateForm({
           <SectionTitle
             number="3"
             title="Thành viên khác"
-            subtitle={`(${members.length}/${MAX_MEMBERS}) — chưa tính leader`}
+            subtitle={`(${members.length}/${maxAdditionalMembers}) — chưa tính leader`}
           />
           <div className="flex flex-wrap gap-2">
             <button
@@ -823,7 +839,7 @@ function TeamCreateForm({
               className="hidden"
               onChange={handleImportMembers}
             />
-          {members.length < MAX_MEMBERS && (
+          {members.length < maxAdditionalMembers && (
             <button
               type="button"
               onClick={addMember}
@@ -865,9 +881,9 @@ function TeamCreateForm({
           </div>
         )}
 
-        {members.length >= MAX_MEMBERS && (
+        {members.length >= maxAdditionalMembers && (
           <p className="text-xs text-center text-slate-600">
-            Đã đạt tối đa {MAX_TEAM_MEMBERS} thành viên trong đội, bao gồm Leader.
+            Đã đạt tối đa {maxTeamMembers} thành viên trong đội, bao gồm Leader.
           </p>
         )}
 
@@ -1473,6 +1489,7 @@ function TeamInfoView({
   onRefresh,
   readOnly = false,
   lockMessage = "",
+  tracks = [],
 }) {
   const [team, setTeam] = useState(initialTeam);
   const [memberModal, setMemberModal] = useState(null); // null | "add" | member object (edit)
@@ -1541,8 +1558,13 @@ function TeamInfoView({
     text: "#b45309",
   };
 
+  const currentTrack = tracks.find(
+    (track) => String(track.id) === String(team.trackId),
+  );
+  const maxTeamMembers = getTrackMaxMembers(currentTrack ?? team);
+  const maxAdditionalMembers = Math.max(maxTeamMembers - 1, 0);
   const nonLeaderCount = team.members?.filter((m) => !m.isLeader).length || 0;
-  const canAddMember = !readOnly && nonLeaderCount < MAX_MEMBERS;
+  const canAddMember = !readOnly && nonLeaderCount < maxAdditionalMembers;
 
   useEffect(() => {
     if (readOnly) {
@@ -1967,6 +1989,7 @@ export function TeamView({ readOnly = false, lockMessage = "" }) {
       onRefresh={handleRefresh}
       readOnly={readOnly}
       lockMessage={lockMessage}
+      tracks={tracks}
     />
   );
 }
