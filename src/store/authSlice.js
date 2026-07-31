@@ -1,6 +1,11 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { clearStoredAuth, isTokenExpired } from "../utils/tokenHelpers";
 
-const token = localStorage.getItem("token");
+let token = localStorage.getItem("token");
+if (token && isTokenExpired(token)) {
+  clearStoredAuth();
+  token = null;
+}
 const user = JSON.parse(localStorage.getItem("user") || "null");
 
 const authSlice = createSlice({
