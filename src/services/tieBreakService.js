@@ -1,9 +1,6 @@
 import api from "./axiosInstance";
 
 const tieBreakService = {
-  createForRank: (roundId, rankPosition) =>
-    api.post(`/api/tie-breaks/rounds/${roundId}/rank/${rankPosition}`),
-
   getMySessions: () => api.get("/api/tie-breaks/my-sessions"),
 
   getSession: (sessionId) => api.get(`/api/tie-breaks/${sessionId}`),

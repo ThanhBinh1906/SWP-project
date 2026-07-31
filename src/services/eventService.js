@@ -2,8 +2,6 @@ import api from "./axiosInstance";
 
 const eventService = {
   getAll: () => api.get("/api/events"),
-  getById: (id) => api.get(`/api/events/${id}`),
-  create: (data) => api.post("/api/events", data),
   createFull: (data) => api.post("/api/events/full-template", data),
   clone: (id, data) => api.post(`/api/events/${id}/clone`, data),
   update: (id, data) => api.put(`/api/events/${id}`, data),

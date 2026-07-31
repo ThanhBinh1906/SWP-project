@@ -14,8 +14,6 @@ const teamService = {
   approveTeam: (id) => api.put(`/api/teams/${id}/approve`),
   disqualifyTeam: (id, reason) =>
     api.put(`/api/teams/${id}/disqualify`, { reason }),
-  assignMentor: (id, mentorId) =>
-    api.put(`/api/teams/${id}/mentor`, { mentorId }),
 
   addMember: (teamId, data) => api.post(`/api/teams/${teamId}/members`, data),
   updateMember: (teamId, memberId, data) =>
