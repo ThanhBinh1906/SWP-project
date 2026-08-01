@@ -330,6 +330,12 @@ function validateWorkbookData(data) {
 function buildImportPayload(data) {
   const event = data.event[0];
   const firstTopic = data.topics[0];
+  const topic = {
+    name: requireText(firstTopic, "title"),
+    description: requireText(firstTopic, "description") || null,
+    requirements: requireText(firstTopic, "requirements") || null,
+    attachmentUrl: requireText(firstTopic, "attachmenturl") || null,
+  };
   const tracks = data.tracks
     .map((track) => {
       const code = requireText(track, "trackcode");
@@ -363,12 +369,7 @@ function buildImportPayload(data) {
       isOnline: normalizeBool(event.isonline),
       startDate: parseDateTime(event.startdate),
       endDate: parseDateTime(event.enddate),
-      topic: {
-        name: requireText(firstTopic, "title"),
-        description: requireText(firstTopic, "description") || null,
-        requirements: requireText(firstTopic, "requirements") || null,
-        attachmentUrl: requireText(firstTopic, "attachmenturl") || null,
-      },
+      topic,
       tracks,
     },
     prizes: data.prizes.map((prize) => ({

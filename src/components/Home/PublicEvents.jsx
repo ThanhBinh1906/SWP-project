@@ -56,9 +56,18 @@ function getEventDescription(event) {
   return event.descriptionHtml || event.description || "";
 }
 
+function getQualifyingTopic(event) {
+  return event?.qualifyingTopic || event?.QualifyingTopic || null;
+}
+
 function EventCard({ event, onOpenDetail }) {
   const description = getEventDescription(event);
   const summary = getSummary(description);
+  const qualifyingTopic = getQualifyingTopic(event);
+  const topicSummary = getSummary(
+    qualifyingTopic?.description || qualifyingTopic?.requirements,
+    140,
+  );
 
   return (
     <article className="group grid w-full overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.035] shadow-[0_18px_60px_rgba(0,0,0,0.22)] transition duration-300 hover:border-orange-400/35 hover:bg-white/[0.055] lg:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
@@ -112,6 +121,22 @@ function EventCard({ event, onOpenDetail }) {
           <p className="max-w-2xl text-base leading-7 text-slate-400">
             {summary || "Thông tin sự kiện sẽ được cập nhật sớm."}
           </p>
+
+          {qualifyingTopic && (
+            <div className="border-l-2 border-orange-400/70 pl-4">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-orange-300">
+                Đề vòng loại
+              </p>
+              <p className="mt-1.5 text-lg font-bold leading-6 text-white">
+                {qualifyingTopic.title}
+              </p>
+              {topicSummary && (
+                <p className="mt-1.5 text-sm leading-6 text-slate-400">
+                  {topicSummary}
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-3 border-t border-white/[0.08] pt-5 sm:flex-row sm:items-center sm:justify-between">
@@ -139,6 +164,7 @@ function EventDetailModal({ event, onClose, onRegisterClick }) {
   if (!event) return null;
 
   const description = getEventDescription(event);
+  const qualifyingTopic = getQualifyingTopic(event);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6 backdrop-blur-sm">
@@ -199,6 +225,54 @@ function EventDetailModal({ event, onClose, onRegisterClick }) {
             <p className="text-sm leading-6 text-slate-400">
               Thông tin sự kiện sẽ được cập nhật sớm.
             </p>
+          )}
+
+          {qualifyingTopic && (
+            <section className="mt-8 border-y border-white/[0.1] py-6">
+              <div className="grid gap-4 sm:grid-cols-[140px_minmax(0,1fr)] sm:gap-7">
+                <div>
+                  <span className="block h-px w-8 bg-orange-400" />
+                  <p className="mt-3 text-[11px] font-bold uppercase leading-5 tracking-[0.18em] text-orange-300">
+                    Đề vòng loại
+                  </p>
+                </div>
+
+                <div className="min-w-0">
+                  <h4 className="text-xl font-black leading-tight text-white sm:text-2xl">
+                    {qualifyingTopic.title}
+                  </h4>
+
+                  {qualifyingTopic.description && (
+                    <p className="mt-4 whitespace-pre-line text-sm leading-7 text-slate-300">
+                      {qualifyingTopic.description}
+                    </p>
+                  )}
+
+                  {qualifyingTopic.requirements && (
+                    <div className="mt-5">
+                      <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
+                        Yêu cầu
+                      </p>
+                      <p className="mt-2 whitespace-pre-line text-sm leading-7 text-slate-300">
+                        {qualifyingTopic.requirements}
+                      </p>
+                    </div>
+                  )}
+
+                  {qualifyingTopic.attachmentUrl && (
+                    <a
+                      href={qualifyingTopic.attachmentUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-5 inline-flex items-center gap-1.5 border-b border-orange-300/40 pb-0.5 text-sm font-bold text-orange-200 transition hover:border-orange-200 hover:text-white"
+                    >
+                      Xem file đề
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  )}
+                </div>
+              </div>
+            </section>
           )}
         </div>
 
