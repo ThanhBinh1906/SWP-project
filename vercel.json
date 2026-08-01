@@ -6,7 +6,7 @@
     },
     {
       "source": "/api-backend/:path*",
-      "destination": "http://seal-backend.runasp.net*"
+      "destination": "http://runasp.net*"
     }
   ]
 }
