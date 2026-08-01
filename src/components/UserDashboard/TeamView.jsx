@@ -27,7 +27,6 @@ import {
 } from "lucide-react";
 import teamService from "../../services/teamService";
 import LoadingActionText from "../shared/LoadingActionText";
-import TeamEliminationOverlay from "./TeamEliminationOverlay";
 
 const MIN_MEMBERS = 2; // BE yêu cầu tối thiểu 3 người, gồm leader
 const MAX_TEAM_MEMBERS = 5; // tổng số thành viên gồm leader
@@ -1968,7 +1967,18 @@ export function TeamView({ readOnly = false, lockMessage = "" }) {
 
   if (!myTeam && readOnly) {
     return (
-      <TeamEliminationOverlay embedded message={lockMessage || undefined} />
+      <div className="mx-auto mt-6 max-w-2xl rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-950">
+        <div className="flex items-start gap-3">
+          <Lock className="mt-0.5 h-5 w-5 shrink-0" />
+          <div>
+            <h3 className="font-bold">Chức năng quản lý đội đang bị khóa</h3>
+            <p className="mt-1 text-sm leading-6 text-amber-900">
+              {lockMessage ||
+                "Chỉ được tạo và thay đổi đội trong giai đoạn Registration."}
+            </p>
+          </div>
+        </div>
+      </div>
     );
   }
 

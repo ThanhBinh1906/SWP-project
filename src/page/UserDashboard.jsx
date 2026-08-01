@@ -52,7 +52,12 @@ export default function UserDashboard() {
   const lastTeamFetchEventRef = useRef();
   const dispatch = useDispatch();
 
-  const { activeEventId, loading: eventLoading } = useSelector((s) => s.event);
+  const {
+    activeEvent,
+    activeEventId,
+    loading: eventLoading,
+    error: eventError,
+  } = useSelector((s) => s.event);
   const { myTeam, fetched: teamFetched, loading: teamLoading } = useSelector(
     (s) => s.team,
   );
@@ -105,6 +110,14 @@ export default function UserDashboard() {
     }
   }, [dispatch, activeEventId]);
 
+  // Refresh the event lifecycle before showing Team management. The event can
+  // move from Registration to Active while the Leader dashboard is still open.
+  useEffect(() => {
+    if (activeNav === "team") {
+      dispatch(fetchActiveEvent());
+    }
+  }, [activeNav, dispatch]);
+
   // Step 2: fetch my-team independently so completed events can still show ranking/team info.
   useEffect(() => {
     const eventKey = activeEventId ?? "no-active-event";
@@ -121,6 +134,17 @@ export default function UserDashboard() {
     (teamLoading && !teamFetched);
 
   const isEliminated = Boolean(eliminationNotice);
+  const eventStatus = String(activeEvent?.status || "").trim();
+  const isRegistrationOpen =
+    !eventError && eventStatus.toLowerCase() === "registration";
+  const teamReadOnly = isEliminated || !isRegistrationOpen;
+  const teamLockMessage = isEliminated
+    ? eliminationNotice?.message
+    : eventError
+      ? "Không thể xác nhận trạng thái sự kiện. Chức năng quản lý đội tạm thời bị khóa."
+      : eventStatus
+        ? `Sự kiện đang ở trạng thái ${eventStatus}. Chỉ được tạo hoặc thay đổi đội trong giai đoạn Registration.`
+        : "Hiện không có sự kiện ở giai đoạn Registration. Thông tin đội chỉ được xem.";
   const eliminationState = (
     <TeamEliminationOverlay
       embedded
@@ -218,8 +242,8 @@ export default function UserDashboard() {
               ))}
             {activeNav === "team" && (
               <TeamView
-                readOnly={isEliminated}
-                lockMessage={eliminationNotice?.message}
+                readOnly={teamReadOnly}
+                lockMessage={teamLockMessage}
               />
             )}
             {activeNav === "ranking" && <RankingView />}
