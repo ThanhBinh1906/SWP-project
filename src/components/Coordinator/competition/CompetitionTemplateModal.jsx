@@ -55,6 +55,7 @@ const newFinalTrack = () =>
   newTrack({
     name: "Final Track",
     description: "Track chung kết nhận các đội đi tiếp từ các track vòng loại.",
+    maxMembers: null,
     isFinal: true,
     isFinalTrack: true,
     rounds: [
@@ -104,14 +105,6 @@ function getNormalTrackCount(tracks) {
   return tracks.filter((track) => !isFinalTrack(track)).length;
 }
 
-function getLargestNormalTrackMaxMembers(tracks) {
-  const values = tracks
-    .filter((track) => !isFinalTrack(track))
-    .map((track) => Number(track.maxMembers))
-    .filter((value) => Number.isInteger(value) && value >= 2);
-  return values.length ? Math.max(...values) : null;
-}
-
 function validate(form) {
   if (!form.name.trim()) return "Vui lòng nhập tên Event.";
   if (!form.startDate || !form.endDate || form.endDate <= form.startDate) {
@@ -133,29 +126,26 @@ function validate(form) {
   if (getNormalTrackCount(form.tracks) < 1) {
     return "Cấu trúc phải có ít nhất một Track vòng loại.";
   }
-  const finalTrackMaxMembers = getLargestNormalTrackMaxMembers(form.tracks);
-
   for (let ti = 0; ti < form.tracks.length; ti += 1) {
     const track = form.tracks[ti];
     const trackLabel = isFinalTrack(track) ? "Final Track" : `Track ${ti + 1}`;
+    const finalTrack = isFinalTrack(track);
 
     if (!track.name.trim()) return `${trackLabel} chưa có tên.`;
 
     const maxTeams = Number(track.maxTeams);
     const minMembers = Number(track.minMembers);
-    const maxMembers = isFinalTrack(track)
-      ? finalTrackMaxMembers
-      : Number(track.maxMembers);
+    const maxMembers = finalTrack ? null : Number(track.maxMembers);
     if (!Number.isInteger(maxTeams) || maxTeams < 1) {
       return `Team tối đa của ${trackLabel} phải là số nguyên dương.`;
     }
     if (!Number.isInteger(minMembers) || minMembers < 2) {
       return `Thành viên tối thiểu của ${trackLabel} phải là số nguyên từ 2 trở lên.`;
     }
-    if (!Number.isInteger(maxMembers) || maxMembers < 2) {
+    if (!finalTrack && (!Number.isInteger(maxMembers) || maxMembers < 2)) {
       return `Thành viên tối đa của ${trackLabel} phải là số nguyên từ 2 trở lên.`;
     }
-    if (minMembers > maxMembers) {
+    if (!finalTrack && minMembers > maxMembers) {
       return `Thành viên tối thiểu của ${trackLabel} không được vượt quá thành viên tối đa.`;
     }
     if (!track.rounds.length) return `${trackLabel} phải có một Round.`;
@@ -292,15 +282,12 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
       attachmentUrl: topicAttachmentUrl,
     };
 
-    const finalTrackMaxMembers = getLargestNormalTrackMaxMembers(form.tracks);
     const tracks = normalizeTracks(form.tracks).map((track) => ({
       name: track.name.trim(),
       description: track.description.trim() || null,
       maxTeams: Number(track.maxTeams),
       minMembers: Number(track.minMembers),
-      maxMembers: isFinalTrack(track)
-        ? finalTrackMaxMembers
-        : Number(track.maxMembers),
+      maxMembers: isFinalTrack(track) ? null : Number(track.maxMembers),
       isFinal: isFinalTrack(track),
       rounds: track.rounds.slice(0, 1).map((round) => ({
         name: round.name.trim(),
@@ -642,37 +629,21 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
                         }
                       />
                     </Field>
-                    <Field label="Thành viên tối đa" required>
-                      <input
-                        required
-                        type="number"
-                        min="2"
-                        step="1"
-                        className={inputClass}
-                        value={
-                          finalTrack
-                            ? getLargestNormalTrackMaxMembers(form.tracks) || ""
-                            : track.maxMembers
-                        }
-                        readOnly={finalTrack}
-                        aria-readonly={finalTrack}
-                        title={
-                          finalTrack
-                            ? "Tự động lấy số thành viên tối đa lớn nhất từ các Track vòng loại"
-                            : undefined
-                        }
-                        onChange={(event) => {
-                          if (!finalTrack) {
-                            updateTrack(ti, "maxMembers", event.target.value);
+                    {!finalTrack && (
+                      <Field label="Thành viên tối đa" required>
+                        <input
+                          required
+                          type="number"
+                          min="2"
+                          step="1"
+                          className={inputClass}
+                          value={track.maxMembers}
+                          onChange={(event) =>
+                            updateTrack(ti, "maxMembers", event.target.value)
                           }
-                        }}
-                      />
-                      {finalTrack && (
-                        <p className="mt-1 text-xs text-slate-500">
-                          Tự động lấy giá trị lớn nhất từ các Track vòng loại.
-                        </p>
-                      )}
-                    </Field>
+                        />
+                      </Field>
+                    )}
                   </div>
 
                   <div className="mt-4 space-y-3">

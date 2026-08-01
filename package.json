@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "check:services": "node scripts/check-service-contracts.mjs",
+    "build": "npm run check:services && vite build",
     "preview": "vite preview"
   },
   "dependencies": {

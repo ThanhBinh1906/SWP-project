@@ -118,14 +118,6 @@ function sortTracksWithFinalLast(tracks = []) {
   });
 }
 
-function getLargestNormalTrackMaxMembers(tracks = []) {
-  const values = tracks
-    .filter((track) => !isFinalTrack(track))
-    .map((track) => Number(track?.maxMembers))
-    .filter((value) => Number.isInteger(value) && value >= 2);
-  return values.length ? Math.max(...values) : null;
-}
-
 function pickDefaultExpandedEvents(events = []) {
   const activeEvents = events.filter((event) => event?.status === "Active");
   if (activeEvents.length) return activeEvents.map((event) => event.id);
@@ -646,19 +638,13 @@ export function CompetitionSetup() {
     setTrackModal("create");
   };
   const openEditTrack = (track) => {
-    const eventTracks = tracksByEvent[track.eventId]?.data || [];
-    const derivedFinalMaxMembers = getLargestNormalTrackMaxMembers(eventTracks);
     setSelectedTrack(track);
     setTrackForm({
       name: track.name,
       description: track.description || "",
       maxTeams: String(track.maxTeams),
       minMembers: String(track.minMembers ?? 3),
-      maxMembers: String(
-        isFinalTrack(track)
-          ? derivedFinalMaxMembers ?? track.maxMembers ?? 5
-          : track.maxMembers ?? 5,
-      ),
+      maxMembers: isFinalTrack(track) ? "" : String(track.maxMembers ?? 5),
       eventId: String(track.eventId),
     });
     setTrackFormError("");
@@ -684,13 +670,14 @@ export function CompetitionSetup() {
       Number(trackForm.maxTeams) < 1
     )
       return "Số đội tối đa phải là số nguyên dương.";
+    const finalTrack = trackModal === "edit" && isFinalTrack(selectedTrack);
     const minMembers = Number(trackForm.minMembers);
     const maxMembers = Number(trackForm.maxMembers);
     if (!Number.isInteger(minMembers) || minMembers < 2)
       return "Số thành viên tối thiểu phải là số nguyên từ 2 trở lên.";
-    if (!Number.isInteger(maxMembers) || maxMembers < 2)
+    if (!finalTrack && (!Number.isInteger(maxMembers) || maxMembers < 2))
       return "Số thành viên tối đa phải là số nguyên từ 2 trở lên.";
-    if (minMembers > maxMembers)
+    if (!finalTrack && minMembers > maxMembers)
       return "Số thành viên tối thiểu không được lớn hơn số thành viên tối đa.";
     if (!trackForm.eventId) return "Vui lòng chọn sự kiện.";
     return "";
@@ -726,7 +713,9 @@ export function CompetitionSetup() {
         description: trackForm.description.trim(),
         maxTeams: Number(trackForm.maxTeams),
         minMembers: Number(trackForm.minMembers),
-        maxMembers: Number(trackForm.maxMembers),
+        maxMembers: isFinalTrack(selectedTrack)
+          ? null
+          : Number(trackForm.maxMembers),
         eventId: Number(trackForm.eventId),
         isFinal: false,
       });
@@ -765,16 +754,12 @@ export function CompetitionSetup() {
     }
     setTrackSaving(true);
     try {
-      const eventTracks = tracksByEvent[trackForm.eventId]?.data || [];
-      const maxMembers = isFinalTrack(selectedTrack)
-        ? getLargestNormalTrackMaxMembers(eventTracks)
-        : Number(trackForm.maxMembers);
       await trackService.update(selectedTrack.id, {
         name: trackForm.name.trim(),
         description: trackForm.description.trim(),
         maxTeams: Number(trackForm.maxTeams),
         minMembers: Number(trackForm.minMembers),
-        maxMembers,
+        maxMembers: Number(trackForm.maxMembers),
         eventId: Number(trackForm.eventId),
         isFinal: isFinalTrack(selectedTrack),
       });
@@ -1226,7 +1211,9 @@ export function CompetitionSetup() {
                                       <p className="text-xs text-slate-700 mt-0.5">
                                         {track.description || "—"} • Max teams:{" "}
                                         {track.maxTeams} • Thành viên:{" "}
-                                        {track.minMembers ?? 3}–{track.maxMembers ?? 5}
+                                        {finalTrack
+                                          ? "Giữ nguyên từ vòng loại"
+                                          : `${track.minMembers ?? 3}–${track.maxMembers ?? 5}`}
                                       </p>
                                     </div>
 
@@ -1735,39 +1722,24 @@ export function CompetitionSetup() {
                     }
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
-                    Thành viên tối đa{" "}
-                    {!isFinalTrack(selectedTrack) && (
-                      <span className="text-orange-500">*</span>
-                    )}
-                  </label>
-                  <input
-                    type="number"
-                    min="2"
-                    step="1"
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-                    placeholder="VD: 5"
-                    value={trackForm.maxMembers}
-                    readOnly={isFinalTrack(selectedTrack)}
-                    aria-readonly={isFinalTrack(selectedTrack)}
-                    title={
-                      isFinalTrack(selectedTrack)
-                        ? "Tự động lấy số thành viên tối đa lớn nhất từ các Track thường"
-                        : undefined
-                    }
-                    onChange={(e) => {
-                      if (!isFinalTrack(selectedTrack)) {
-                        handleTrackFormChange("maxMembers", e.target.value);
+                {!isFinalTrack(selectedTrack) && (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
+                      Thành viên tối đa <span className="text-orange-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="2"
+                      step="1"
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+                      placeholder="VD: 5"
+                      value={trackForm.maxMembers}
+                      onChange={(e) =>
+                        handleTrackFormChange("maxMembers", e.target.value)
                       }
-                    }}
-                  />
-                  {isFinalTrack(selectedTrack) && (
-                    <p className="mt-1 text-xs text-slate-500">
-                      Tự động lấy giá trị lớn nhất từ các Track thường.
-                    </p>
-                  )}
-                </div>
+                    />
+                  </div>
+                )}
                 <div className="md:col-span-2">
                   <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
                     Mô tả
