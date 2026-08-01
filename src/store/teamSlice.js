@@ -1,12 +1,12 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import api from "../services/axiosInstance";
+import teamService from "../services/teamService";
 import { loginSuccess, logoutSuccess } from "./authSlice";
 
 export const fetchMyTeam = createAsyncThunk(
   "team/fetchMyTeam",
   async (_, { rejectWithValue }) => {
     try {
-      const res = await api.get("/api/teams/my-team");
+      const res = await teamService.getMyTeam();
       return res.data?.data || null;
     } catch (error) {
       // 404 = chưa có team, không phải lỗi

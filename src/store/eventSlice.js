@@ -1,11 +1,11 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import api from "../services/axiosInstance";
+import eventService from "../services/eventService";
 
 export const fetchActiveEvent = createAsyncThunk(
   "event/fetchActiveEvent",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await api.get("/api/events/active");
+      const response = await eventService.getActive();
       return response.data?.data || response.data;
     } catch (error) {
       return rejectWithValue(
