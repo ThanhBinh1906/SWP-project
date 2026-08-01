@@ -296,8 +296,8 @@ function getTrackCurrentTeamCount(track) {
 }
 
 function getTrackMaxTeams(track) {
-  const value = Number(track?.maxTeams || 0);
-  return Number.isFinite(value) && value > 0 ? value : 0;
+  const value = Number(track?.maxTeams ?? track?.MaxTeams);
+  return Number.isInteger(value) && value > 0 ? value : null;
 }
 
 function getTrackMaxMembers(track) {
@@ -341,7 +341,24 @@ function buildTeamTemplateFromTracks({ eventId, tracks }) {
   const batchCode = createImportBatchCode();
   const batchCodeUpper = batchCode.toUpperCase();
   const normalTracks = tracks.filter((track) => !isFinalTrack(track));
-  const targetTracks = normalTracks.length ? normalTracks : tracks;
+  if (!normalTracks.length) {
+    throw new Error(
+      "Event chưa có Track vòng loại để tạo Team template. Final Track không cho phép tạo team mới.",
+    );
+  }
+
+  const invalidCapacityTracks = normalTracks.filter(
+    (track) => getTrackMaxTeams(track) === null,
+  );
+  if (invalidCapacityTracks.length) {
+    throw new Error(
+      `Chưa thể tạo Team template vì các Track sau chưa cấu hình maxTeams hợp lệ: ${invalidCapacityTracks
+        .map(getTrackName)
+        .filter(Boolean)
+        .join(", ")}.`,
+    );
+  }
+
   const teamRows = [teamTemplateHeader];
   const memberRows = [memberTemplateHeader];
   const guideRows = [
@@ -353,7 +370,7 @@ function buildTeamTemplateFromTracks({ eventId, tracks }) {
     ["Final Track", "File mau khong tao team vao Final Track de giu dung flow vao vong trong."],
   ];
 
-  targetTracks.forEach((track) => {
+  normalTracks.forEach((track) => {
     const trackId = getTrackId(track);
     const trackName = getTrackName(track);
     const maxTeams = getTrackMaxTeams(track);
@@ -414,10 +431,9 @@ function buildTeamTemplateFromTracks({ eventId, tracks }) {
   });
 
   if (teamRows.length === 1) {
-    guideRows.push([
-      "Khong co slot trong",
-      "Tat ca track thuong cua event dang chon da du so doi theo maxTeams.",
-    ]);
+    throw new Error(
+      "Không thể tạo Team template vì tất cả Track vòng loại của Event đã đủ số đội theo maxTeams.",
+    );
   }
 
   return {
@@ -572,6 +588,11 @@ export function DemoDataImportModal({ events = [], onClose, onCompleted }) {
     try {
       if (mode === "teams") {
         const { tracks } = await loadEventContext();
+        if (!tracks.length) {
+          throw new Error(
+            "Event chưa có Track nào. Hãy cấu hình Track trước khi tải Team template.",
+          );
+        }
         createWorkbook(
           buildTeamTemplateFromTracks({ eventId, tracks }),
           "SEAL_Team_Import_Template.xlsx",
