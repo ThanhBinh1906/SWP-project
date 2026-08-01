@@ -49,13 +49,11 @@ export default function Pending() {
 
           {/* Description */}
           <p className="mx-auto mb-2 max-w-sm text-sm leading-relaxed text-slate-400">
-            Your registration has been received and is currently under review by
-            our coordination team.
+            Chúng tôi đã nhận được thông tin đăng ký của bạn và hồ sơ hiện đang được đội ngũ điều phối xem xét.
           </p>
 
           <p className="mx-auto mb-8 max-w-sm text-sm leading-relaxed text-slate-500">
-            This process typically takes 1–2 business days. You'll receive an
-            email notification once your account has been approved.
+            Quá trình này thường mất từ ​​1–2 ngày làm việc. Bạn sẽ nhận được thông báo qua email sau khi tài khoản của bạn được phê duyệt.
           </p>
 
           {/* Status indicator */}
@@ -65,7 +63,7 @@ export default function Pending() {
               <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-400" />
             </div>
             <span className="text-xs font-medium text-amber-300/90">
-              Review in progress — please check back later
+              Đang trong quá trình xem xét — vui lòng kiểm tra lại sau
             </span>
           </div>
 
@@ -75,7 +73,7 @@ export default function Pending() {
             className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#F26F21] px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:bg-[#d9610e] hover:shadow-lg hover:shadow-orange-500/20 active:scale-[0.98]"
           >
             <ArrowLeft className="h-4 w-4" />
-            Return to Home
+            Về trang chủ
           </button>
         </div>
 
@@ -86,7 +84,7 @@ export default function Pending() {
             href="mailto:support@fpt.edu.vn"
             className="text-[#F26F21]/70 transition-colors hover:text-[#F26F21]"
           >
-            Contact support
+            Liên hệ Hỗ trợ
           </a>
         </p>
       </div>

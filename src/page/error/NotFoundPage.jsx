@@ -59,8 +59,7 @@ export default function NotFoundPage() {
 
           {/* Description */}
           <p className="mx-auto mb-8 max-w-sm text-sm leading-relaxed text-slate-400">
-            The page you're looking for doesn't exist or has been moved. Please
-            check the URL or navigate back to a known page.
+            Trang bạn đang tìm kiếm không tồn tại hoặc đã bị di chuyển. Vui lòng kiểm tra lại URL hoặc quay lại một trang khác.
           </p>
 
           {/* Actions */}
@@ -70,13 +69,13 @@ export default function NotFoundPage() {
               className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-6 py-3 text-sm font-semibold text-slate-300 transition-all duration-200 hover:border-white/[0.15] hover:bg-white/[0.06] hover:text-white active:scale-[0.98]"
             >
               <ArrowLeft className="h-4 w-4" />
-              Go Back
+              Quay lại
             </button>
             <button
               onClick={() => navigate("/")}
               className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#F26F21] px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:bg-[#d9610e] hover:shadow-lg hover:shadow-orange-500/20 active:scale-[0.98]"
             >
-              Return Home
+              Về trang chủ
             </button>
           </div>
         </div>

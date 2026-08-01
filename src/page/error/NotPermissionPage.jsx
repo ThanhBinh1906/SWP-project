@@ -59,20 +59,19 @@ export default function NotPermissionPage() {
 
           {/* Description */}
           <p className="mx-auto mb-3 max-w-sm text-sm leading-relaxed text-slate-400">
-            You do not have permission to access this page. This area is
-            restricted to authorized roles only.
+            Bạn không có quyền truy cập trang này. Khu vực này chỉ dành cho các vai trò được cấp quyền.
           </p>
 
           <p className="mx-auto mb-8 max-w-sm text-xs leading-relaxed text-slate-500">
-            If you believe you should have access, please contact your
-            coordinator or the system administrator.
+            Nếu bạn cho rằng bạn nên có quyền truy cập, vui lòng liên hệ với
+            người phối hợp hoặc quản trị viên hệ thống.
           </p>
 
           {/* Security badge */}
           <div className="mx-auto mb-8 flex max-w-xs items-center gap-3 rounded-xl border border-red-500/10 bg-red-500/5 px-4 py-3">
             <ShieldX className="h-4 w-4 flex-shrink-0 text-red-400/70" />
             <span className="text-xs font-medium text-red-300/70">
-              This access attempt has been logged for security
+              Nỗ lực truy cập này đã được ghi lại vì lý do bảo mật.
             </span>
           </div>
 
@@ -83,14 +82,14 @@ export default function NotPermissionPage() {
               className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#F26F21] px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:bg-[#d9610e] hover:shadow-lg hover:shadow-orange-500/20 active:scale-[0.98]"
             >
               <ArrowLeft className="h-4 w-4" />
-              Go to Dashboard
+              Về trang chủ
             </button>
             <button
               onClick={() => navigate("/")}
               className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-6 py-3 text-sm font-semibold text-slate-300 transition-all duration-200 hover:border-white/[0.15] hover:bg-white/[0.06] hover:text-white active:scale-[0.98]"
             >
               <Home className="h-4 w-4" />
-              Return Home
+              Về trang chủ
             </button>
           </div>
         </div>

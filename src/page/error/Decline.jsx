@@ -53,8 +53,7 @@ export default function Decline() {
 
           {/* Description */}
           <p className="mx-auto mb-6 max-w-sm text-sm leading-relaxed text-slate-400">
-            Unfortunately, your account registration has not been approved by
-            our coordination team at this time.
+            Rất tiếc, việc đăng ký tài khoản của bạn hiện chưa được đội ngũ điều phối của chúng tôi phê duyệt.
           </p>
 
           {/* Rejection reason (if provided) */}
@@ -72,9 +71,7 @@ export default function Decline() {
           {/* Info box */}
           <div className="mx-auto mb-8 max-w-sm rounded-xl border border-white/[0.06] bg-white/[0.02] px-5 py-4 text-left">
             <p className="text-xs leading-relaxed text-slate-500">
-              If you believe this was a mistake, or if you'd like further
-              clarification, please reach out to the support team. We're happy
-              to assist you with the registration process.
+              Nếu bạn cho rằng đây là một sự nhầm lẫn hoặc cần thêm thông tin giải đáp, vui lòng liên hệ với đội ngũ hỗ trợ. Chúng tôi rất sẵn lòng hỗ trợ bạn trong quá trình đăng ký.
             </p>
           </div>
 
@@ -85,14 +82,14 @@ export default function Decline() {
               className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#F26F21] px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:bg-[#d9610e] hover:shadow-lg hover:shadow-orange-500/20 active:scale-[0.98]"
             >
               <ArrowLeft className="h-4 w-4" />
-              Return to Home
+              Về trang chủ
             </button>
             <a
               href="mailto:support@fpt.edu.vn"
               className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-6 py-3 text-sm font-semibold text-slate-300 transition-all duration-200 hover:border-white/[0.15] hover:bg-white/[0.06] hover:text-white active:scale-[0.98]"
             >
               <Mail className="h-4 w-4" />
-              Contact Support
+              Liên hệ Hỗ trợ
             </a>
           </div>
         </div>
