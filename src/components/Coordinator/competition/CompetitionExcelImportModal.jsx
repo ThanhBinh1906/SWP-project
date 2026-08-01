@@ -289,6 +289,26 @@ function validateWorkbookData(data) {
     }
   });
 
+  if (finalTracks.length === 1) {
+    const configuredFinalCapacity = data.tracks
+      .filter((track) => !normalizeBool(track.isfinal))
+      .reduce((total, track) => {
+        const code = requireText(track, "trackcode");
+        const trackRounds = data.rounds.filter(
+          (round) => requireText(round, "trackcode") === code,
+        );
+        const lastRound = trackRounds[trackRounds.length - 1];
+        return total + (getNumber(lastRound?.advancingslots) || 0);
+      }, 0);
+    const finalMaxTeams = getNumber(finalTracks[0].maxteams);
+
+    if (finalMaxTeams !== configuredFinalCapacity) {
+      errors.push(
+        `Final Track: maxTeams phải bằng chính xác tổng suất đi tiếp của các Track vòng loại (${configuredFinalCapacity}).`,
+      );
+    }
+  }
+
   if (!data.topics.length) {
     errors.push("Sheet Topics cần có ít nhất một đề chung cho Event.");
   }

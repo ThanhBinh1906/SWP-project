@@ -106,6 +106,15 @@ function getNormalTrackCount(tracks) {
   return tracks.filter((track) => !isFinalTrack(track)).length;
 }
 
+function getFinalCapacity(tracks) {
+  return tracks
+    .filter((track) => !isFinalTrack(track))
+    .reduce((total, track) => {
+      const lastRound = track.rounds?.[track.rounds.length - 1];
+      return total + (Number(lastRound?.advancingSlots) || 0);
+    }, 0);
+}
+
 function validate(form) {
   if (!form.name.trim()) return "Vui lòng nhập tên Event.";
   if (!form.startDate || !form.endDate || form.endDate <= form.startDate) {
@@ -134,7 +143,9 @@ function validate(form) {
 
     if (!track.name.trim()) return `${trackLabel} chưa có tên.`;
 
-    const maxTeams = Number(track.maxTeams);
+    const maxTeams = finalTrack
+      ? getFinalCapacity(form.tracks)
+      : Number(track.maxTeams);
     const minMembers = finalTrack ? null : Number(track.minMembers);
     const maxMembers = finalTrack ? null : Number(track.maxMembers);
     if (!Number.isInteger(maxTeams) || maxTeams < 1) {
@@ -286,7 +297,9 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
     const tracks = normalizeTracks(form.tracks).map((track) => ({
       name: track.name.trim(),
       description: track.description.trim() || null,
-      maxTeams: Number(track.maxTeams),
+      maxTeams: isFinalTrack(track)
+        ? getFinalCapacity(form.tracks)
+        : Number(track.maxTeams),
       minMembers: isFinalTrack(track) ? null : Number(track.minMembers),
       maxMembers: isFinalTrack(track) ? null : Number(track.maxMembers),
       isFinal: isFinalTrack(track),
@@ -613,16 +626,44 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
                       </Field>
                     </div>
                     <div className={finalTrack ? "" : "xl:col-span-2"}>
-                      <Field label="Team tối đa" required>
+                      <Field
+                        label={
+                          finalTrack
+                            ? "Team Final (tự tính)"
+                            : "Team tối đa"
+                        }
+                        required
+                        hint={
+                          finalTrack
+                            ? "Bằng tổng suất đi tiếp của các Track vòng loại."
+                            : ""
+                        }
+                      >
                         <input
                           required
                           type="number"
                           min="1"
                           step="1"
-                          className={inputClass}
-                          value={track.maxTeams}
-                          onChange={(event) =>
-                            updateTrack(ti, "maxTeams", event.target.value)
+                          readOnly={finalTrack}
+                          className={`${inputClass} ${
+                            finalTrack
+                              ? "cursor-not-allowed bg-slate-100 font-bold text-orange-700"
+                              : ""
+                          }`}
+                          value={
+                            finalTrack
+                              ? getFinalCapacity(form.tracks) || ""
+                              : track.maxTeams
+                          }
+                          onChange={
+                            finalTrack
+                              ? undefined
+                              : (event) =>
+                                  updateTrack(
+                                    ti,
+                                    "maxTeams",
+                                    event.target.value,
+                                  )
                           }
                         />
                       </Field>
@@ -723,33 +764,26 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
                                 }
                               />
                             </Field>
-                            <Field
-                              label="Suất đi tiếp"
-                              required={!finalRound}
-                              hint={
-                                finalRound
-                                  ? "Vòng chung kết không cần suất đi tiếp."
-                                  : ""
-                              }
-                            >
-                              <input
-                                type="number"
-                                min="1"
-                                step="1"
-                                disabled={finalRound}
-                                placeholder={finalRound ? "Final Round" : "VD: 5"}
-                                className={`${inputClass} disabled:bg-slate-100 disabled:text-slate-500`}
-                                value={round.advancingSlots}
-                                onChange={(event) =>
-                                  updateRound(
-                                    ti,
-                                    ri,
-                                    "advancingSlots",
-                                    event.target.value,
-                                  )
-                                }
-                              />
-                            </Field>
+                            {!finalRound && (
+                              <Field label="Suất đi tiếp" required>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  step="1"
+                                  placeholder="VD: 5"
+                                  className={inputClass}
+                                  value={round.advancingSlots}
+                                  onChange={(event) =>
+                                    updateRound(
+                                      ti,
+                                      ri,
+                                      "advancingSlots",
+                                      event.target.value,
+                                    )
+                                  }
+                                />
+                              </Field>
+                            )}
                           </div>
                         </div>
                       );

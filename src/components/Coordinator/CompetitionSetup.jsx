@@ -79,6 +79,20 @@ function getRoundOrder(round, fallbackIndex) {
   return Number.isFinite(order) && order > 0 ? order : fallbackIndex + 1;
 }
 
+function getRoundId(round) {
+  return round?.roundId ?? round?.id;
+}
+
+function getLastRound(rounds = []) {
+  return rounds.reduce((lastRound, round, index) => {
+    if (!lastRound) return round;
+    const lastIndex = rounds.indexOf(lastRound);
+    return getRoundOrder(round, index) > getRoundOrder(lastRound, lastIndex)
+      ? round
+      : lastRound;
+  }, null);
+}
+
 function getBlockingPreviousRound(rounds, currentRound) {
   const currentIndex = rounds.findIndex(
     (round) => String(round.roundId) === String(currentRound?.roundId),
@@ -335,6 +349,11 @@ export function CompetitionSetup() {
   const [trackForm, setTrackForm] = useState(TRACK_EMPTY);
   const [trackFormError, setTrackFormError] = useState("");
   const [trackSaving, setTrackSaving] = useState(false);
+  const [finalCapacityRequirement, setFinalCapacityRequirement] = useState({
+    slots: null,
+    loading: false,
+    error: "",
+  });
 
   // === ROUND MODAL ===
   const [roundModal, setRoundModal] = useState(null);
@@ -636,8 +655,44 @@ export function CompetitionSetup() {
   // =========================================================================
   // TRACK HANDLERS
   // =========================================================================
+  const loadFinalCapacityRequirement = async (track) => {
+    setFinalCapacityRequirement({ slots: null, loading: true, error: "" });
+    try {
+      // Lấy snapshot mới trực tiếp từ API để không phụ thuộc trạng thái accordion
+      // đã tải round hay chưa.
+      const response = await roundService.getTracksRounds();
+      const roundGroups = response.data?.data || [];
+      const eventTracks =
+        tracksByEvent[track.eventId]?.data ||
+        Object.values(tracksByEvent).find((state) =>
+          (state?.data || []).some(
+            (item) => String(item.id) === String(track.id),
+          ),
+        )?.data ||
+        [];
+      const qualifyingTracks = eventTracks.filter((item) => !isFinalTrack(item));
+
+      const slots = qualifyingTracks.reduce((total, qualifyingTrack) => {
+        const group = roundGroups.find(
+          (item) => String(item.trackId) === String(qualifyingTrack.id),
+        );
+        const lastRound = getLastRound(group?.rounds || []);
+        return total + (Number(lastRound?.advancingSlots) || 0);
+      }, 0);
+
+      setFinalCapacityRequirement({ slots, loading: false, error: "" });
+    } catch (error) {
+      const message =
+        error?.response?.data?.message ||
+        "Không thể tải tổng suất đi tiếp của các track vòng loại.";
+      setFinalCapacityRequirement({ slots: null, loading: false, error: message });
+      setTrackFormError(message);
+    }
+  };
+
   const openCreateTrack = (event) => {
     if (isTrackCreateLocked(event)) return;
+    setFinalCapacityRequirement({ slots: null, loading: false, error: "" });
     setTrackForm({ ...TRACK_EMPTY, eventId: String(event.id) });
     setRoundForm({ ...ROUND_EMPTY });
     setTrackFormError("");
@@ -656,16 +711,68 @@ export function CompetitionSetup() {
     });
     setTrackFormError("");
     setTrackModal("edit");
+    if (isFinalTrack(track)) loadFinalCapacityRequirement(track);
   };
   const closeTrackModal = () => {
     setTrackModal(null);
     setSelectedTrack(null);
     setTrackFormError("");
+    setFinalCapacityRequirement({ slots: null, loading: false, error: "" });
   };
 
   const handleTrackFormChange = (field, value) => {
     setTrackForm((p) => ({ ...p, [field]: value }));
     setTrackFormError("");
+  };
+
+  const getFinalCapacitySummary = (
+    eventId,
+    roundCandidate = null,
+    additionalTrackSlots = 0,
+  ) => {
+    const tracks = tracksByEvent[eventId]?.data || [];
+    const finalTrack = tracks.find(isFinalTrack);
+    const qualifyingTracks = tracks.filter((track) => !isFinalTrack(track));
+    let isLoading = false;
+
+    const configuredSlots = qualifyingTracks.reduce((total, track) => {
+      const roundState = roundsByTrack[track.id];
+      if (!roundState || roundState.loading) isLoading = true;
+
+      let rounds = [...(roundState?.data || [])];
+      if (String(roundCandidate?.trackId) === String(track.id)) {
+        const candidateId = getRoundId(roundCandidate);
+        const existingIndex = candidateId
+          ? rounds.findIndex(
+              (round) => String(getRoundId(round)) === String(candidateId),
+            )
+          : -1;
+
+        if (existingIndex >= 0) rounds[existingIndex] = roundCandidate;
+        else rounds.push(roundCandidate);
+      }
+
+      const lastRound = getLastRound(rounds);
+      return total + (Number(lastRound?.advancingSlots) || 0);
+    }, Number(additionalTrackSlots) || 0);
+
+    return {
+      finalTrack,
+      configuredSlots,
+      isLoading,
+    };
+  };
+
+  const getFinalCapacityError = ({ finalTrack, configuredSlots, isLoading }) => {
+    if (!finalTrack) return "";
+    if (isLoading)
+      return "Vui lòng chờ tải xong cấu hình các vòng loại rồi thử lại.";
+
+    const capacity = Number(finalTrack.maxTeams) || 0;
+    if (configuredSlots > capacity) {
+      return `Tổng ${configuredSlots} suất đi tiếp của các track vòng loại vượt quá sức chứa ${capacity} đội của Final Track.`;
+    }
+    return "";
   };
 
   const validateTrackForm = () => {
@@ -687,6 +794,15 @@ export function CompetitionSetup() {
     if (!finalTrack && minMembers > maxMembers)
       return "Số thành viên tối thiểu không được lớn hơn số thành viên tối đa.";
     if (!trackForm.eventId) return "Vui lòng chọn sự kiện.";
+    if (finalTrack) {
+      if (finalCapacityRequirement.loading)
+        return "Vui lòng chờ tải xong cấu hình các vòng loại rồi thử lại.";
+      if (finalCapacityRequirement.error) return finalCapacityRequirement.error;
+      if (finalCapacityRequirement.slots === null)
+        return "Chưa xác định được tổng suất đi tiếp của các track vòng loại.";
+      if (Number(trackForm.maxTeams) !== finalCapacityRequirement.slots)
+        return `Số đội tối đa của Final Track phải bằng chính xác ${finalCapacityRequirement.slots}, là tổng số suất đi tiếp của các track vòng loại.`;
+    }
     return "";
   };
 
@@ -698,6 +814,14 @@ export function CompetitionSetup() {
       return "Thời gian kết thúc phải sau bắt đầu.";
     if (!roundForm.advancingSlots || Number(roundForm.advancingSlots) < 1)
       return "Số suất đi tiếp phải lớn hơn 0.";
+
+    const summary = getFinalCapacitySummary(
+      trackForm.eventId,
+      null,
+      Number(roundForm.advancingSlots),
+    );
+    const capacityError = getFinalCapacityError(summary);
+    if (capacityError) return capacityError;
     return "";
   };
 
@@ -786,19 +910,28 @@ export function CompetitionSetup() {
   // =========================================================================
   // ROUND HANDLERS
   // =========================================================================
+  const getTrackById = (trackId) =>
+    Object.values(tracksByEvent)
+      .flatMap((state) => state?.data || [])
+      .find((track) => String(track.id) === String(trackId));
+
   const openCreateRound = (trackId) => {
     setRoundForm({ ...ROUND_EMPTY, trackId: String(trackId) });
     setRoundFormError("");
     setRoundModal("create");
   };
   const openEditRound = (round, trackId) => {
+    const finalRound = isFinalTrack(getTrackById(trackId));
     setSelectedRound({ ...round, trackId });
     setRoundForm({
       trackId: String(trackId),
       name: round.name,
       startTime: round.startTime?.slice(0, 16) || "",
       endTime: round.endTime?.slice(0, 16) || "",
-      advancingSlots: String(round.advancingSlots),
+      advancingSlots:
+        finalRound || round.advancingSlots == null
+          ? ""
+          : String(round.advancingSlots),
     });
     setRoundFormError("");
     setRoundModal("edit");
@@ -834,8 +967,27 @@ export function CompetitionSetup() {
     if (!roundForm.endTime) return "Vui lòng chọn thời gian kết thúc.";
     if (roundForm.endTime <= roundForm.startTime)
       return "Thời gian kết thúc phải sau bắt đầu.";
-    if (!roundForm.advancingSlots || Number(roundForm.advancingSlots) < 1)
+    const track = getTrackById(roundForm.trackId);
+    const finalRound = isFinalTrack(track);
+    if (
+      !finalRound &&
+      (!roundForm.advancingSlots || Number(roundForm.advancingSlots) < 1)
+    )
       return "Số suất đi tiếp phải lớn hơn 0.";
+
+    if (track && !isFinalTrack(track)) {
+      const candidate = {
+        ...(roundModal === "edit" ? selectedRound : {}),
+        trackId: track.id,
+        roundId: roundModal === "edit" ? getRoundId(selectedRound) : undefined,
+        orderIndex:
+          roundModal === "edit" ? getRoundOrder(selectedRound, 0) : 1,
+        advancingSlots: Number(roundForm.advancingSlots),
+      };
+      const summary = getFinalCapacitySummary(track.eventId, candidate);
+      const capacityError = getFinalCapacityError(summary);
+      if (capacityError) return capacityError;
+    }
     return "";
   };
 
@@ -848,13 +1000,14 @@ export function CompetitionSetup() {
     }
     setRoundSaving(true);
     try {
+      const finalRound = isFinalTrack(getTrackById(roundForm.trackId));
       await roundService.create({
         trackId: Number(roundForm.trackId),
         orderIndex: 1,
         name: roundForm.name.trim(),
         startTime: new Date(roundForm.startTime).toISOString(),
         endTime: new Date(roundForm.endTime).toISOString(),
-        advancingSlots: Number(roundForm.advancingSlots),
+        advancingSlots: finalRound ? null : Number(roundForm.advancingSlots),
       });
       await fetchRoundsForTrack(roundForm.trackId);
       closeRoundModal();
@@ -874,12 +1027,13 @@ export function CompetitionSetup() {
     }
     setRoundSaving(true);
     try {
+      const finalRound = isFinalTrack(getTrackById(roundForm.trackId));
       await roundService.update(selectedRound.roundId, {
         orderIndex: getRoundOrder(selectedRound, 0),
         name: roundForm.name.trim(),
         startTime: new Date(roundForm.startTime).toISOString(),
         endTime: new Date(roundForm.endTime).toISOString(),
-        advancingSlots: Number(roundForm.advancingSlots),
+        advancingSlots: finalRound ? null : Number(roundForm.advancingSlots),
       });
       await fetchRoundsForTrack(selectedRound.trackId);
       closeRoundModal();
@@ -949,6 +1103,13 @@ export function CompetitionSetup() {
     selectedRoundTrackRounds,
     selectedRound,
   );
+  const editingFinalTrack =
+    trackModal === "edit" && isFinalTrack(selectedTrack);
+  const finalCapacityValueIsValid =
+    !editingFinalTrack ||
+    (finalCapacityRequirement.slots !== null &&
+      Number(trackForm.maxTeams) === finalCapacityRequirement.slots);
+  const editingFinalRound = isFinalTrack(getTrackById(roundForm.trackId));
 
   return (
     <div className="space-y-4">
@@ -1333,12 +1494,14 @@ export function CompetitionSetup() {
                                                         round.endTime,
                                                       )}
                                                     </p>
-                                                    <p className="text-xs text-slate-700 mt-0.5">
-                                                      Suất đi tiếp:{" "}
-                                                      <span className="font-bold text-slate-700">
-                                                        {round.advancingSlots}
-                                                      </span>
-                                                    </p>
+                                                    {!finalTrack && (
+                                                      <p className="text-xs text-slate-700 mt-0.5">
+                                                        Suất đi tiếp:{" "}
+                                                        <span className="font-bold text-slate-700">
+                                                          {round.advancingSlots}
+                                                        </span>
+                                                      </p>
+                                                    )}
                                                   </div>
 
                                                   {/* Progress */}
@@ -1647,7 +1810,13 @@ export function CompetitionSetup() {
               </CoordinatorActionButton>
               <CoordinatorActionButton
                 variant="primary"
-                disabled={trackSaving}
+                disabled={
+                  trackSaving ||
+                  (editingFinalTrack &&
+                    (finalCapacityRequirement.loading ||
+                      Boolean(finalCapacityRequirement.error) ||
+                      !finalCapacityValueIsValid))
+                }
                 onClick={
                   trackModal === "create" ? handleCreateTrack : handleEditTrack
                 }
@@ -1706,7 +1875,8 @@ export function CompetitionSetup() {
                   </label>
                   <input
                     type="number"
-                    min="1"
+                    min={finalCapacityRequirement.slots || 1}
+                    max={finalCapacityRequirement.slots || undefined}
                     className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
                     placeholder="VD: 20"
                     value={trackForm.maxTeams}
@@ -1714,6 +1884,23 @@ export function CompetitionSetup() {
                       handleTrackFormChange("maxTeams", e.target.value)
                     }
                   />
+                  {editingFinalTrack && (
+                    <p
+                      className={`mt-1 text-xs ${
+                        !finalCapacityRequirement.loading &&
+                        !finalCapacityValueIsValid
+                          ? "font-semibold text-red-600"
+                          : "text-slate-500"
+                      }`}
+                    >
+                      Tổng suất đi tiếp từ các track vòng loại: {" "}
+                      {finalCapacityRequirement.loading
+                        ? "đang tải..."
+                        : (finalCapacityRequirement.slots ?? "không xác định")}
+                      . Số đội tối đa của Final Track phải bằng chính xác con số
+                      này.
+                    </p>
+                  )}
                 </div>
                 {!isFinalTrack(selectedTrack) && (
                   <div>
@@ -1889,21 +2076,28 @@ export function CompetitionSetup() {
                 onChange={(e) => handleRoundFormChange("name", e.target.value)}
               />
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
-                Suất đi tiếp <span className="text-orange-500">*</span>
-              </label>
-              <input
-                type="number"
-                min="1"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-                placeholder="10"
-                value={roundForm.advancingSlots}
-                onChange={(e) =>
-                  handleRoundFormChange("advancingSlots", e.target.value)
-                }
-              />
-            </div>
+            {!editingFinalRound ? (
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
+                  Suất đi tiếp <span className="text-orange-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+                  placeholder="10"
+                  value={roundForm.advancingSlots}
+                  onChange={(e) =>
+                    handleRoundFormChange("advancingSlots", e.target.value)
+                  }
+                />
+              </div>
+            ) : (
+              <p className="rounded-xl border border-orange-100 bg-orange-50 px-3 py-2 text-xs text-orange-700">
+                Final Round không có suất đi tiếp; kết quả vòng này dùng để xác
+                định Top 3 chung cuộc.
+              </p>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
