@@ -22,6 +22,7 @@ import {
   getApiMessage,
   pickDefaultEvent,
   pickDefaultResultRound,
+  sortEventsByPriority,
   validateRoundSelection,
 } from "../coordinatorHelpers";
 
@@ -246,7 +247,7 @@ export function ResultsManagement() {
     eventService
       .getAll()
       .then((res) => {
-        const list = res.data?.data || [];
+        const list = sortEventsByPriority(res.data?.data || []);
         setEvents(list);
         const preferredEvent = pickDefaultEvent(list);
         if (preferredEvent) setSelectedEventId(String(preferredEvent.id));

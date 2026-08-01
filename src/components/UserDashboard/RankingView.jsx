@@ -3,7 +3,6 @@ import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import rankingService from "../../services/rankingService";
 import {
-  EventTop3Podium,
   RankingBoard,
   extractEventRankingSections,
 } from "../shared/RankingBoard";
@@ -58,7 +57,6 @@ export function RankingView() {
   const myTeam = useSelector((state) => state.team.myTeam);
   const activeEvent = useSelector((state) => state.event.activeEvent);
   const activeEventId = useSelector((state) => state.event.activeEventId);
-  const [eventRanking, setEventRanking] = useState(null);
   const [eventSections, setEventSections] = useState([]);
   const [fallbackEvent, setFallbackEvent] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -66,10 +64,6 @@ export function RankingView() {
   const rankingEvent = activeEventId ? activeEvent : fallbackEvent;
   const rankingEventId = activeEventId || getEventId(fallbackEvent);
   const rankingEventName = getEventName(rankingEvent);
-  const eventTop3 = Array.isArray(eventRanking?.eventTop3)
-    ? eventRanking.eventTop3
-    : [];
-
   const loadFallbackEvent = useCallback(async () => {
     if (activeEventId) {
       setFallbackEvent(null);
@@ -95,7 +89,6 @@ export function RankingView() {
     }
 
     if (!eventId) {
-      setEventRanking(null);
       setEventSections([]);
       setError("Chưa có sự kiện nào đã công bố kết quả.");
       return;
@@ -108,10 +101,8 @@ export function RankingView() {
         ? await rankingService.getPublicEventResults(eventId)
         : await rankingService.getEventLeaderboard(eventId);
       const payload = response.data?.data || null;
-      setEventRanking(payload);
       setEventSections(extractEventRankingSections(payload));
     } catch (requestError) {
-      setEventRanking(null);
       setEventSections([]);
       setError(getEventRankingMessage(requestError));
     } finally {
@@ -162,7 +153,7 @@ export function RankingView() {
       {loading || error ? (
         <RankingBoard
           title={rankingEventName || "Bảng xếp hạng toàn sự kiện"}
-          subtitle="Top 3 và bảng đầy đủ của Final Round"
+          subtitle="Bảng đầy đủ của Final Round"
           rows={[]}
           loading={loading}
           error={error}
@@ -171,7 +162,6 @@ export function RankingView() {
         />
       ) : (
         <div className="space-y-6">
-          <EventTop3Podium rows={eventTop3} />
           {eventSections.length === 0 ? (
             <RankingBoard
               title={rankingEventName || "Bảng xếp hạng toàn sự kiện"}

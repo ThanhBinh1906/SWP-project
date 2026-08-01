@@ -63,8 +63,32 @@ function pickByStatus(items, statuses) {
   );
 }
 
+const EVENT_STATUS_PRIORITY = {
+  active: 0,
+  registration: 1,
+  upcoming: 2,
+  completed: 3,
+};
+
+function getEventId(event) {
+  const value = Number(event?.eventId ?? event?.id);
+  return Number.isFinite(value) ? value : 0;
+}
+
+export function sortEventsByPriority(events = []) {
+  return [...events].sort((left, right) => {
+    const leftPriority =
+      EVENT_STATUS_PRIORITY[normalizeStatus(left?.status)] ?? 99;
+    const rightPriority =
+      EVENT_STATUS_PRIORITY[normalizeStatus(right?.status)] ?? 99;
+
+    if (leftPriority !== rightPriority) return leftPriority - rightPriority;
+    return getEventId(right) - getEventId(left);
+  });
+}
+
 export function pickDefaultEvent(events = []) {
-  return pickByStatus(events, ["Active", "Registration", "Upcoming", "Completed"]);
+  return sortEventsByPriority(events)[0] || null;
 }
 
 export function pickDefaultSetupRound(rounds = []) {

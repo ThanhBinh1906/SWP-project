@@ -57,6 +57,7 @@ export default function UserDashboard() {
     activeEventId,
     loading: eventLoading,
     error: eventError,
+    fetched: eventFetched,
   } = useSelector((s) => s.event);
   const { myTeam, fetched: teamFetched, loading: teamLoading } = useSelector(
     (s) => s.team,
@@ -105,10 +106,10 @@ export default function UserDashboard() {
 
   // Step 1: fetch active event
   useEffect(() => {
-    if (activeEventId === null) {
+    if (!eventFetched && !eventLoading) {
       dispatch(fetchActiveEvent());
     }
-  }, [dispatch, activeEventId]);
+  }, [dispatch, eventFetched, eventLoading]);
 
   // Refresh the event lifecycle before showing Team management. The event can
   // move from Registration to Active while the Leader dashboard is still open.
@@ -118,15 +119,17 @@ export default function UserDashboard() {
     }
   }, [activeNav, dispatch]);
 
-  // Step 2: fetch my-team independently so completed events can still show ranking/team info.
+  // Step 2: only fetch team data while there is a current Registration/Active event.
   useEffect(() => {
-    const eventKey = activeEventId ?? "no-active-event";
+    if (!eventFetched || !activeEventId) return;
+
+    const eventKey = activeEventId;
 
     if (!teamFetched || lastTeamFetchEventRef.current !== eventKey) {
       lastTeamFetchEventRef.current = eventKey;
       dispatch(fetchMyTeam());
     }
-  }, [activeEventId, dispatch, teamFetched]);
+  }, [activeEventId, dispatch, eventFetched, teamFetched]);
 
   const loading =
     notificationsLoading ||
@@ -134,14 +137,21 @@ export default function UserDashboard() {
     (teamLoading && !teamFetched);
 
   const isEliminated = Boolean(eliminationNotice);
+  const eventEnded =
+    eventFetched && !eventLoading && !eventError && !activeEventId;
   const eventStatus = String(activeEvent?.status || "").trim();
   const isRegistrationOpen =
     !eventError && eventStatus.toLowerCase() === "registration";
+  const isEventActive =
+    !eventError && eventStatus.toLowerCase() === "active";
   const teamReadOnly = isEliminated || !isRegistrationOpen;
+  const allowGithubEdit = !isEliminated && isEventActive;
   const teamLockMessage = isEliminated
     ? eliminationNotice?.message
     : eventError
       ? "Không thể xác nhận trạng thái sự kiện. Chức năng quản lý đội tạm thời bị khóa."
+      : isEventActive
+        ? "Đội hình đã được khóa khi sự kiện Active. Leader vẫn có thể cập nhật GitHub Repo để nộp bài."
       : eventStatus
         ? `Sự kiện đang ở trạng thái ${eventStatus}. Chỉ được tạo hoặc thay đổi đội trong giai đoạn Registration.`
         : "Hiện không có sự kiện ở giai đoạn Registration. Thông tin đội chỉ được xem.";
@@ -244,6 +254,8 @@ export default function UserDashboard() {
               <TeamView
                 readOnly={teamReadOnly}
                 lockMessage={teamLockMessage}
+                eventEnded={eventEnded}
+                allowGithubEdit={allowGithubEdit}
               />
             )}
             {activeNav === "ranking" && <RankingView />}

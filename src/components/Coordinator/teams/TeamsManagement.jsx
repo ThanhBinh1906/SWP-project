@@ -8,7 +8,11 @@ import {
   icons,
 } from "../CoordinatorUI";
 import { Loader2 } from "lucide-react";
-import { FormError } from "../coordinatorHelpers";
+import {
+  FormError,
+  pickDefaultEvent,
+  sortEventsByPriority,
+} from "../coordinatorHelpers";
 import teamService from "../../../services/teamService";
 import eventService from "../../../services/eventService";
 import trackService from "../../../services/trackService";
@@ -152,9 +156,10 @@ export function TeamsManagement() {
 
   useEffect(() => {
     eventService.getAll().then((response) => {
-      const list = response.data?.data || [];
+      const list = sortEventsByPriority(response.data?.data || []);
       setEvents(list);
-      setSelectedEventId(list[0]?.id ? String(list[0].id) : "");
+      const preferredEvent = pickDefaultEvent(list);
+      setSelectedEventId(preferredEvent?.id ? String(preferredEvent.id) : "");
     }).catch(() => setEvents([]));
   }, []);
 

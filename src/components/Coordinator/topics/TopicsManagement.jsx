@@ -27,6 +27,7 @@ import {
   ModalHintBanner,
   pickDefaultEvent,
   pickDefaultSetupRound,
+  sortEventsByPriority,
 } from "../coordinatorHelpers";
 import LoadingActionText from "../../shared/LoadingActionText";
 
@@ -63,7 +64,7 @@ export function TopicsManagement() {
     eventService
       .getAll()
       .then((res) => {
-        const list = res.data?.data || [];
+        const list = sortEventsByPriority(res.data?.data || []);
         setEvents(list);
         const preferredEvent = pickDefaultEvent(list);
         if (preferredEvent) setSelectedEventId(String(preferredEvent.id));

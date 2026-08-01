@@ -22,6 +22,7 @@ import {
   CoordinatorStatCard,
   icons,
 } from "../CoordinatorUI";
+import { sortEventsByPriority } from "../coordinatorHelpers";
 
 /* ─────────────────────────────────────────────
    Constants
@@ -112,7 +113,7 @@ function normalizeDashboardData(data) {
       ...EMPTY_DASHBOARD.highlight,
       ...safeObject(data?.highlight),
     },
-    events: safeArray(data?.events),
+    events: sortEventsByPriority(safeArray(data?.events)),
     charts: {
       teamCountByEvent: safeArray(charts.teamCountByEvent),
       teamCountByTrack: safeArray(charts.teamCountByTrack),

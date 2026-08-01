@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useDispatch } from "react-redux";
 import {
   CoordinatorActionButton,
   CoordinatorBadge,
@@ -31,7 +32,8 @@ import { CompetitionExcelImportModal } from "./competition/CompetitionExcelImpor
 import { CompetitionTemplateModal } from "./competition/CompetitionTemplateModal";
 import { DemoDataImportModal } from "./competition/DemoDataImportModal";
 import RichTextEditor from "../shared/RichTextEditor";
-import { FormError } from "./coordinatorHelpers";
+import { FormError, sortEventsByPriority } from "./coordinatorHelpers";
+import { fetchActiveEvent } from "../../store/eventSlice";
 
 // ---------------------------------------------------------------------------
 // Constants & helpers for the unified event, track, and round setup view
@@ -295,6 +297,7 @@ function getCreatedEntityId(response) {
 // CompetitionSetup — unified 3-level accordion: Event → Track → Round
 // ---------------------------------------------------------------------------
 export function CompetitionSetup() {
+  const dispatch = useDispatch();
   const [cloneSourceEvent, setCloneSourceEvent] = useState(null);
   const [structureModalOpen, setStructureModalOpen] = useState(false);
   const [excelImportOpen, setExcelImportOpen] = useState(false);
@@ -350,7 +353,7 @@ export function CompetitionSetup() {
     setEventsError("");
     try {
       const res = await eventService.getAll();
-      setEvents(res.data?.data || []);
+      setEvents(sortEventsByPriority(res.data?.data || []));
     } catch (err) {
       setEventsError(
         err?.response?.data?.message || "Không thể tải danh sách sự kiện.",
@@ -360,13 +363,17 @@ export function CompetitionSetup() {
     }
   }, []);
 
+  const refreshEventState = useCallback(async () => {
+    await Promise.all([fetchEvents(), dispatch(fetchActiveEvent())]);
+  }, [dispatch, fetchEvents]);
+
   const closeCloneModal = async () => {
     setCloneSourceEvent(null);
     await fetchEvents();
   };
 
   const completeClone = async () => {
-    await fetchEvents();
+    await refreshEventState();
   };
 
   const fetchTracksForEvent = useCallback(async (eventId) => {
@@ -603,7 +610,7 @@ export function CompetitionSetup() {
         endDate: eventForm.endDate,
         status: eventForm.status,
       });
-      await fetchEvents();
+      await refreshEventState();
       closeEventModal();
     } catch (err) {
       setEventFormError(err?.response?.data?.message || "Cập nhật thất bại.");
@@ -617,7 +624,7 @@ export function CompetitionSetup() {
     setEventSaving(true);
     try {
       await eventService.remove(selectedEvent.id);
-      await fetchEvents();
+      await refreshEventState();
       closeEventModal();
     } catch (err) {
       setEventFormError(err?.response?.data?.message || "Xóa thất bại.");
@@ -643,7 +650,7 @@ export function CompetitionSetup() {
       name: track.name,
       description: track.description || "",
       maxTeams: String(track.maxTeams),
-      minMembers: String(track.minMembers ?? 3),
+      minMembers: isFinalTrack(track) ? "" : String(track.minMembers ?? 3),
       maxMembers: isFinalTrack(track) ? "" : String(track.maxMembers ?? 5),
       eventId: String(track.eventId),
     });
@@ -673,7 +680,7 @@ export function CompetitionSetup() {
     const finalTrack = trackModal === "edit" && isFinalTrack(selectedTrack);
     const minMembers = Number(trackForm.minMembers);
     const maxMembers = Number(trackForm.maxMembers);
-    if (!Number.isInteger(minMembers) || minMembers < 2)
+    if (!finalTrack && (!Number.isInteger(minMembers) || minMembers < 2))
       return "Số thành viên tối thiểu phải là số nguyên từ 2 trở lên.";
     if (!finalTrack && (!Number.isInteger(maxMembers) || maxMembers < 2))
       return "Số thành viên tối đa phải là số nguyên từ 2 trở lên.";
@@ -713,9 +720,7 @@ export function CompetitionSetup() {
         description: trackForm.description.trim(),
         maxTeams: Number(trackForm.maxTeams),
         minMembers: Number(trackForm.minMembers),
-        maxMembers: isFinalTrack(selectedTrack)
-          ? null
-          : Number(trackForm.maxMembers),
+        maxMembers: Number(trackForm.maxMembers),
         eventId: Number(trackForm.eventId),
         isFinal: false,
       });
@@ -758,8 +763,12 @@ export function CompetitionSetup() {
         name: trackForm.name.trim(),
         description: trackForm.description.trim(),
         maxTeams: Number(trackForm.maxTeams),
-        minMembers: Number(trackForm.minMembers),
-        maxMembers: Number(trackForm.maxMembers),
+        minMembers: isFinalTrack(selectedTrack)
+          ? null
+          : Number(trackForm.minMembers),
+        maxMembers: isFinalTrack(selectedTrack)
+          ? null
+          : Number(trackForm.maxMembers),
         eventId: Number(trackForm.eventId),
         isFinal: isFinalTrack(selectedTrack),
       });
@@ -1410,7 +1419,7 @@ export function CompetitionSetup() {
           onClose={() => setStructureModalOpen(false)}
           onCompleted={async () => {
             setStructureModalOpen(false);
-            await fetchEvents();
+            await refreshEventState();
           }}
         />
       )}
@@ -1420,7 +1429,7 @@ export function CompetitionSetup() {
           onClose={() => setExcelImportOpen(false)}
           onCompleted={async () => {
             setExcelImportOpen(false);
-            await fetchEvents();
+            await refreshEventState();
           }}
         />
       )}
@@ -1706,22 +1715,24 @@ export function CompetitionSetup() {
                     }
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
-                    Thành viên tối thiểu <span className="text-orange-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    min="2"
-                    step="1"
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
-                    placeholder="VD: 3"
-                    value={trackForm.minMembers}
-                    onChange={(e) =>
-                      handleTrackFormChange("minMembers", e.target.value)
-                    }
-                  />
-                </div>
+                {!isFinalTrack(selectedTrack) && (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">
+                      Thành viên tối thiểu <span className="text-orange-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="2"
+                      step="1"
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"
+                      placeholder="VD: 3"
+                      value={trackForm.minMembers}
+                      onChange={(e) =>
+                        handleTrackFormChange("minMembers", e.target.value)
+                      }
+                    />
+                  </div>
+                )}
                 {!isFinalTrack(selectedTrack) && (
                   <div>
                     <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">

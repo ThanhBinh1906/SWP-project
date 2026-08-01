@@ -70,6 +70,12 @@ export default function CoordinatorDashboard() {
     dispatch(fetchActiveEvent());
   }, [dispatch]);
 
+  useEffect(() => {
+    if (activeNav === "accounts") {
+      dispatch(fetchActiveEvent());
+    }
+  }, [activeNav, dispatch]);
+
   return (
     <div
       className="flex min-h-screen overflow-x-hidden"

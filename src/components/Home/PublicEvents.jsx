@@ -61,8 +61,8 @@ function EventCard({ event, onOpenDetail }) {
   const summary = getSummary(description);
 
   return (
-    <article className="group overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.035] shadow-[0_18px_60px_rgba(0,0,0,0.22)] transition duration-300 hover:-translate-y-1 hover:border-orange-400/35 hover:bg-white/[0.055]">
-      <div className="relative h-52 overflow-hidden bg-[#111827]">
+    <article className="group grid w-full overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.035] shadow-[0_18px_60px_rgba(0,0,0,0.22)] transition duration-300 hover:border-orange-400/35 hover:bg-white/[0.055] lg:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
+      <div className="relative min-h-[260px] overflow-hidden bg-[#111827] sm:min-h-[340px] lg:min-h-[440px]">
         {event.bannerUrl ? (
           <img
             src={event.bannerUrl}
@@ -87,32 +87,34 @@ function EventCard({ event, onOpenDetail }) {
         </div>
       </div>
 
-      <div className="space-y-4 p-5">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-300">
-            {formatDate(event.startDate)} - {formatDate(event.endDate)}
+      <div className="flex min-w-0 flex-col justify-between gap-8 p-6 sm:p-8 lg:p-10">
+        <div className="space-y-6">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-300">
+              {formatDate(event.startDate)} - {formatDate(event.endDate)}
+            </p>
+            <h3 className="mt-3 text-3xl font-black leading-tight text-white sm:text-4xl">
+              {event.name}
+            </h3>
+          </div>
+
+          <div className="flex flex-wrap gap-2 text-sm text-slate-300">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1.5">
+              {event.isOnline ? (
+                <Monitor className="h-4 w-4 text-orange-300" />
+              ) : (
+                <MapPin className="h-4 w-4 text-orange-300" />
+              )}
+              {event.isOnline ? "Online" : event.location || "Địa điểm sẽ cập nhật"}
+            </span>
+          </div>
+
+          <p className="max-w-2xl text-base leading-7 text-slate-400">
+            {summary || "Thông tin sự kiện sẽ được cập nhật sớm."}
           </p>
-          <h3 className="mt-2 text-2xl font-black leading-tight text-white">
-            {event.name}
-          </h3>
         </div>
 
-        <div className="flex flex-wrap gap-2 text-sm text-slate-300">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1">
-            {event.isOnline ? (
-              <Monitor className="h-4 w-4 text-orange-300" />
-            ) : (
-              <MapPin className="h-4 w-4 text-orange-300" />
-            )}
-            {event.isOnline ? "Online" : event.location || "Địa điểm sẽ cập nhật"}
-          </span>
-        </div>
-
-        <p className="min-h-[72px] text-sm leading-6 text-slate-400">
-          {summary || "Thông tin sự kiện sẽ được cập nhật sớm."}
-        </p>
-
-        <div className="flex items-center justify-between border-t border-white/[0.08] pt-4">
+        <div className="flex flex-col gap-3 border-t border-white/[0.08] pt-5 sm:flex-row sm:items-center sm:justify-between">
           <button
             type="button"
             onClick={() => onOpenDetail(event)}
@@ -230,8 +232,8 @@ export default function PublicEvents() {
     try {
       const response = await rankingService.getLandingEvents({
         pageNumber: 1,
-        pageSize: 6,
-        status: "Registration|Active|Upcoming",
+        pageSize: 1,
+        status: "Registration|Active",
         search: keyword || undefined,
       });
       setEvents(unwrapPublicEvents(response));
@@ -250,7 +252,7 @@ export default function PublicEvents() {
     loadEvents();
   }, [loadEvents]);
 
-  const featured = useMemo(() => events.slice(0, 6), [events]);
+  const featured = useMemo(() => events.slice(0, 1), [events]);
 
   const submitSearch = (event) => {
     event.preventDefault();
@@ -307,7 +309,7 @@ export default function PublicEvents() {
             {error}
           </div>
         ) : featured.length ? (
-          <div className="grid gap-5 lg:grid-cols-3">
+          <div className="w-full">
             {featured.map((event) => (
               <EventCard
                 key={event.id}

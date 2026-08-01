@@ -55,6 +55,7 @@ const newFinalTrack = () =>
   newTrack({
     name: "Final Track",
     description: "Track chung kết nhận các đội đi tiếp từ các track vòng loại.",
+    minMembers: null,
     maxMembers: null,
     isFinal: true,
     isFinalTrack: true,
@@ -134,12 +135,12 @@ function validate(form) {
     if (!track.name.trim()) return `${trackLabel} chưa có tên.`;
 
     const maxTeams = Number(track.maxTeams);
-    const minMembers = Number(track.minMembers);
+    const minMembers = finalTrack ? null : Number(track.minMembers);
     const maxMembers = finalTrack ? null : Number(track.maxMembers);
     if (!Number.isInteger(maxTeams) || maxTeams < 1) {
       return `Team tối đa của ${trackLabel} phải là số nguyên dương.`;
     }
-    if (!Number.isInteger(minMembers) || minMembers < 2) {
+    if (!finalTrack && (!Number.isInteger(minMembers) || minMembers < 2)) {
       return `Thành viên tối thiểu của ${trackLabel} phải là số nguyên từ 2 trở lên.`;
     }
     if (!finalTrack && (!Number.isInteger(maxMembers) || maxMembers < 2)) {
@@ -286,7 +287,7 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
       name: track.name.trim(),
       description: track.description.trim() || null,
       maxTeams: Number(track.maxTeams),
-      minMembers: Number(track.minMembers),
+      minMembers: isFinalTrack(track) ? null : Number(track.minMembers),
       maxMembers: isFinalTrack(track) ? null : Number(track.maxMembers),
       isFinal: isFinalTrack(track),
       rounds: track.rounds.slice(0, 1).map((round) => ({
@@ -584,65 +585,81 @@ export function CompetitionTemplateModal({ onClose, onCompleted }) {
                     )}
                   </div>
 
-                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
-                    <Field label="Tên Track" required>
-                      <input
-                        className={inputClass}
-                        value={track.name}
-                        onChange={(event) =>
-                          updateTrack(ti, "name", event.target.value)
-                        }
-                      />
-                    </Field>
-                    <Field label="Mô tả">
-                      <input
-                        className={inputClass}
-                        value={track.description}
-                        onChange={(event) =>
-                          updateTrack(ti, "description", event.target.value)
-                        }
-                      />
-                    </Field>
-                    <Field label="Team tối đa" required>
-                      <input
-                        required
-                        type="number"
-                        min="1"
-                        step="1"
-                        className={inputClass}
-                        value={track.maxTeams}
-                        onChange={(event) =>
-                          updateTrack(ti, "maxTeams", event.target.value)
-                        }
-                      />
-                    </Field>
-                    <Field label="Thành viên tối thiểu" required>
-                      <input
-                        required
-                        type="number"
-                        min="2"
-                        step="1"
-                        className={inputClass}
-                        value={track.minMembers}
-                        onChange={(event) =>
-                          updateTrack(ti, "minMembers", event.target.value)
-                        }
-                      />
-                    </Field>
-                    {!finalTrack && (
-                      <Field label="Thành viên tối đa" required>
+                  <div
+                    className={`grid gap-x-4 gap-y-5 md:grid-cols-2 ${
+                      finalTrack ? "lg:grid-cols-3" : "xl:grid-cols-6"
+                    }`}
+                  >
+                    <div className={finalTrack ? "" : "xl:col-span-2"}>
+                      <Field label="Tên Track" required>
                         <input
-                          required
-                          type="number"
-                          min="2"
-                          step="1"
                           className={inputClass}
-                          value={track.maxMembers}
+                          value={track.name}
                           onChange={(event) =>
-                            updateTrack(ti, "maxMembers", event.target.value)
+                            updateTrack(ti, "name", event.target.value)
                           }
                         />
                       </Field>
+                    </div>
+                    <div className={finalTrack ? "" : "xl:col-span-4"}>
+                      <Field label="Mô tả">
+                        <input
+                          className={inputClass}
+                          value={track.description}
+                          onChange={(event) =>
+                            updateTrack(ti, "description", event.target.value)
+                          }
+                        />
+                      </Field>
+                    </div>
+                    <div className={finalTrack ? "" : "xl:col-span-2"}>
+                      <Field label="Team tối đa" required>
+                        <input
+                          required
+                          type="number"
+                          min="1"
+                          step="1"
+                          className={inputClass}
+                          value={track.maxTeams}
+                          onChange={(event) =>
+                            updateTrack(ti, "maxTeams", event.target.value)
+                          }
+                        />
+                      </Field>
+                    </div>
+                    {!finalTrack && (
+                      <div className="xl:col-span-2">
+                        <Field label="Thành viên tối thiểu" required>
+                          <input
+                            required
+                            type="number"
+                            min="2"
+                            step="1"
+                            className={inputClass}
+                            value={track.minMembers}
+                            onChange={(event) =>
+                              updateTrack(ti, "minMembers", event.target.value)
+                            }
+                          />
+                        </Field>
+                      </div>
+                    )}
+                    {!finalTrack && (
+                      <div className="xl:col-span-2">
+                        <Field label="Thành viên tối đa" required>
+                          <input
+                            required
+                            type="number"
+                            min="2"
+                            step="1"
+                            className={inputClass}
+                            value={track.maxMembers}
+                            onChange={(event) =>
+                              updateTrack(ti, "maxMembers", event.target.value)
+                            }
+                          />
+                        </Field>
+                      </div>
                     )}
                   </div>
 

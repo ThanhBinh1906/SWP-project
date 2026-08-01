@@ -50,7 +50,7 @@ const TEMPLATE = {
     ["WEB", "Web & Cloud Solutions", "Xây dựng sản phẩm web có kiến trúc rõ ràng, triển khai ổn định và giải quyết nhu cầu thực tế.", 12, 3, 5, false],
     ["AI", "AI & Data Innovation", "Ứng dụng AI và dữ liệu để tạo ra giải pháp có thể kiểm chứng, minh bạch và hữu ích.", 12, 3, 5, false],
     ["IOT", "Smart Campus & IoT", "Tạo giải pháp số hoặc IoT giúp khuôn viên trường an toàn, tiết kiệm và thuận tiện hơn.", 12, 3, 5, false],
-    ["FINAL", "Final Track", "Track chung kết nhận các đội đi tiếp từ các track vòng loại.", 15, 3, "", true],
+    ["FINAL", "Final Track", "Track chung kết nhận các đội đi tiếp từ các track vòng loại.", 15, "", "", true],
   ],
   rounds: [
     ["trackCode", "roundName", "startTime", "endTime", "advancingSlots"],
@@ -221,15 +221,22 @@ function validateWorkbookData(data) {
     trackCodes.add(code);
     if (!requireText(track, "trackname")) errors.push(`${label}: trackName không được để trống.`);
     const maxTeams = getNumber(track.maxteams);
-    const minMembers = getNumber(track.minmembers);
     const finalTrack = normalizeBool(track.isfinal);
+    const hasMinMembers =
+      track.minmembers !== undefined &&
+      track.minmembers !== null &&
+      String(track.minmembers).trim() !== "";
     const hasMaxMembers =
       track.maxmembers !== undefined &&
       track.maxmembers !== null &&
       String(track.maxmembers).trim() !== "";
+    const minMembers = finalTrack ? null : getNumber(track.minmembers);
     const maxMembers = finalTrack ? null : getNumber(track.maxmembers);
     if (!Number.isInteger(maxTeams) || maxTeams < 1) errors.push(`${label}: maxTeams phải là số nguyên dương.`);
-    if (!Number.isInteger(minMembers) || minMembers < 2) errors.push(`${label}: minMembers phải là số nguyên từ 2 trở lên.`);
+    if (finalTrack && hasMinMembers) {
+      errors.push(`${label}: Final Track phải để trống minMembers.`);
+    }
+    if (!finalTrack && (!Number.isInteger(minMembers) || minMembers < 2)) errors.push(`${label}: minMembers phải là số nguyên từ 2 trở lên.`);
     if (finalTrack && hasMaxMembers) {
       errors.push(`${label}: Final Track phải để trống maxMembers.`);
     }
@@ -312,7 +319,7 @@ function buildImportPayload(data) {
         name: requireText(track, "trackname"),
         description: requireText(track, "description") || null,
         maxTeams: Number(track.maxteams),
-        minMembers: Number(track.minmembers),
+        minMembers: isFinal ? null : Number(track.minmembers),
         maxMembers: isFinal ? null : Number(track.maxmembers),
         isFinal,
         rounds: [
@@ -596,7 +603,9 @@ export function CompetitionExcelImportModal({ onClose, onCompleted }) {
                             {normalizeBool(track.isfinal) ? "Yes" : "No"}
                           </td>
                           <td className="px-3 py-2">{track.maxteams}</td>
-                          <td className="px-3 py-2">{track.minmembers}</td>
+                          <td className="px-3 py-2">
+                            {normalizeBool(track.isfinal) ? "Không áp dụng" : track.minmembers}
+                          </td>
                           <td className="px-3 py-2">
                             {normalizeBool(track.isfinal) ? "Không áp dụng" : track.maxmembers}
                           </td>

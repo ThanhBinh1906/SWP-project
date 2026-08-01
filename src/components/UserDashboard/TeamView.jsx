@@ -816,13 +816,13 @@ function TeamCreateForm({
           <SectionTitle
             number="3"
             title="Thành viên khác"
-            subtitle={`(${members.length}/${maxAdditionalMembers}) — cần ít nhất ${minAdditionalMembers}, chưa tính Leader`}
+            subtitle={`(${members.length}/${maxAdditionalMembers})`}
           />
-          <div className="flex flex-wrap gap-2">
+          <div className="flex shrink-0 flex-wrap gap-2 sm:flex-nowrap">
             <button
               type="button"
               onClick={downloadMemberTemplate}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150"
+              className="flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150"
               style={{
                 background: "#FFFFFF",
                 border: "1px solid #CBD5E1",
@@ -834,7 +834,7 @@ function TeamCreateForm({
             <button
               type="button"
               onClick={() => memberImportInputRef.current?.click()}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150"
+              className="flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150"
               style={{
                 background: "rgba(242,111,33,0.08)",
                 border: "1px solid rgba(242,111,33,0.2)",
@@ -850,34 +850,30 @@ function TeamCreateForm({
               className="hidden"
               onChange={handleImportMembers}
             />
-          {members.length < maxAdditionalMembers && (
-            <button
-              type="button"
-              onClick={addMember}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150"
-              style={{
-                background: "rgba(242,111,33,0.08)",
-                border: "1px solid rgba(242,111,33,0.2)",
-                color: "#F26F21",
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.background = "rgba(242,111,33,0.15)")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.background = "rgba(242,111,33,0.08)")
-              }
-            >
-              <UserPlus className="w-3.5 h-3.5" /> Thêm thành viên
-            </button>
-          )}
-        </div>
+            {members.length < maxAdditionalMembers && (
+              <button
+                type="button"
+                onClick={addMember}
+                className="flex items-center gap-1.5 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150"
+                style={{
+                  background: "rgba(242,111,33,0.08)",
+                  border: "1px solid rgba(242,111,33,0.2)",
+                  color: "#F26F21",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = "rgba(242,111,33,0.15)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "rgba(242,111,33,0.08)")
+                }
+              >
+                <UserPlus className="w-3.5 h-3.5" /> Thêm thành viên
+              </button>
+            )}
+          </div>
         </div>
 
-        {members.length === 0 ? (
-          <p className="text-xs text-center py-4 text-slate-600">
-            Chưa có thành viên nào. Nhấn "Thêm thành viên" để thêm.
-          </p>
-        ) : (
+        {members.length > 0 && (
           <div className="space-y-3">
             {members.map((m, i) => (
               <MemberCard
@@ -892,15 +888,12 @@ function TeamCreateForm({
           </div>
         )}
 
-        {members.length >= maxAdditionalMembers && (
-          <p className="text-xs text-center text-slate-600">
-            Đã đạt tối đa {maxTeamMembers} thành viên trong đội, bao gồm Leader.
-          </p>
-        )}
-
-        <p className="text-xs text-center text-slate-600">
-          Track yêu cầu tổng số thành viên từ {minTeamMembers} đến {maxTeamMembers},
-          bao gồm Leader.
+        <p className="py-3 text-center text-xs leading-5 text-slate-600">
+          {members.length === 0
+            ? `Chưa có thành viên nào. Track yêu cầu tổng từ ${minTeamMembers} đến ${maxTeamMembers} thành viên, bao gồm Leader; nhấn "Thêm thành viên" để bắt đầu.`
+            : members.length >= maxAdditionalMembers
+              ? `Đã đạt tối đa ${maxTeamMembers} thành viên trong đội, bao gồm Leader.`
+              : `Đã thêm ${members.length}/${maxAdditionalMembers} thành viên khác. Track yêu cầu tổng từ ${minTeamMembers} đến ${maxTeamMembers} thành viên, bao gồm Leader.`}
         </p>
 
         {teamErrors.members && (
@@ -1341,9 +1334,9 @@ function MemberModal({ teamId, member, onClose, onSaved }) {
 }
 
 // ---------------------------------------------------------------------------
-// EditTeamModal — chỉ khi status === Pending
+// EditTeamModal — sửa đầy đủ trong Registration, chỉ sửa GitHub khi Active
 // ---------------------------------------------------------------------------
-function EditTeamModal({ team, onClose, onSaved }) {
+function EditTeamModal({ team, onClose, onSaved, githubOnly = false }) {
   const [form, setForm] = useState({
     teamName: team.teamName,
     university: team.university,
@@ -1368,8 +1361,12 @@ function EditTeamModal({ team, onClose, onSaved }) {
 
   const validate = () => {
     const e = {};
-    if (!form.teamName.trim()) e.teamName = "Tên team không được để trống.";
-    if (!form.university.trim()) e.university = "Trường không được để trống.";
+    if (!githubOnly && !form.teamName.trim()) {
+      e.teamName = "Tên team không được để trống.";
+    }
+    if (!githubOnly && !form.university.trim()) {
+      e.university = "Trường không được để trống.";
+    }
     if (!form.githubRepoLink.trim()) {
       e.githubRepoLink = "GitHub Repo là bắt buộc để nộp bài.";
     } else if (!isValidGithubUrl(form.githubRepoLink)) {
@@ -1401,7 +1398,7 @@ function EditTeamModal({ team, onClose, onSaved }) {
       <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4 animate-modal-scale">
         <div className="flex items-center justify-between">
           <h3 className="text-base font-bold text-slate-900">
-            Sửa thông tin Team
+            {githubOnly ? "Cập nhật GitHub Repo" : "Sửa thông tin Team"}
           </h3>
           <button
             onClick={onClose}
@@ -1426,23 +1423,27 @@ function EditTeamModal({ team, onClose, onSaved }) {
         )}
 
         <div className="space-y-3">
-          <InputField
-            label="Tên Team"
-            required
-            placeholder="VD: Alpha Team"
-            value={form.teamName}
-            onChange={(e) => handleChange("teamName", e.target.value)}
-            error={errors.teamName}
-          />
-          <InputField
-            label="Trường"
-            required
-            icon={School}
-            placeholder="VD: FPT University"
-            value={form.university}
-            onChange={(e) => handleChange("university", e.target.value)}
-            error={errors.university}
-          />
+          {!githubOnly && (
+            <>
+              <InputField
+                label="Tên Team"
+                required
+                placeholder="VD: Alpha Team"
+                value={form.teamName}
+                onChange={(e) => handleChange("teamName", e.target.value)}
+                error={errors.teamName}
+              />
+              <InputField
+                label="Trường"
+                required
+                icon={School}
+                placeholder="VD: FPT University"
+                value={form.university}
+                onChange={(e) => handleChange("university", e.target.value)}
+                error={errors.university}
+              />
+            </>
+          )}
           <InputField
             label="GitHub Repo"
             required
@@ -1488,7 +1489,13 @@ function EditTeamModal({ team, onClose, onSaved }) {
               cursor: saving ? "not-allowed" : "pointer",
             }}
           >
-            {saving ? <LoadingActionText>Đang lưu</LoadingActionText> : "Lưu thay đổi"}
+            {saving ? (
+              <LoadingActionText>Đang lưu</LoadingActionText>
+            ) : githubOnly ? (
+              "Lưu GitHub Repo"
+            ) : (
+              "Lưu thay đổi"
+            )}
           </button>
         </div>
       </div>
@@ -1505,6 +1512,7 @@ function TeamInfoView({
   onRefresh,
   readOnly = false,
   lockMessage = "",
+  allowGithubEdit = false,
   tracks = [],
 }) {
   const [team, setTeam] = useState(initialTeam);
@@ -1600,9 +1608,9 @@ function TeamInfoView({
     if (readOnly) {
       setMemberModal(null);
       setDeleteTarget(null);
-      setEditTeamModal(false);
+      if (!allowGithubEdit) setEditTeamModal(false);
     }
-  }, [readOnly]);
+  }, [allowGithubEdit, readOnly]);
 
   return (
     <div className="max-w-2xl mx-auto mt-6 space-y-4">
@@ -1610,7 +1618,7 @@ function TeamInfoView({
         <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-900">
           <Lock className="mt-0.5 h-5 w-5 shrink-0" />
           <div>
-            <p className="font-bold">Thông tin đội đang ở chế độ chỉ xem</p>
+            <p className="font-bold">Đội hình đang ở chế độ chỉ xem</p>
             <p className="mt-1 text-sm leading-6 text-red-800">
               {lockMessage ||
                 "Team đã dừng tại vòng trước nên không thể chỉnh sửa đội hoặc thành viên."}
@@ -1653,7 +1661,7 @@ function TeamInfoView({
           <h4 className="text-xs font-bold text-[#374151] uppercase tracking-widest">
             Thông tin Team
           </h4>
-          {!readOnly && (
+          {(!readOnly || allowGithubEdit) && (
             <button
               onClick={() => setEditTeamModal(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150"
@@ -1669,7 +1677,8 @@ function TeamInfoView({
                 (e.currentTarget.style.background = "rgba(242,111,33,0.08)")
               }
             >
-              <Edit2 className="w-3.5 h-3.5" /> Sửa thông tin
+              <Edit2 className="w-3.5 h-3.5" />
+              {readOnly ? "Cập nhật GitHub" : "Sửa thông tin"}
             </button>
           )}
           </div>
@@ -1799,9 +1808,9 @@ function TeamInfoView({
                         : "none",
                   }}
                 >
-                  <td className="px-3 py-3 text-slate-600">{i + 1}</td>
-                  <td className="px-3 py-3 font-semibold text-[#111827]">
-                    <div className="flex items-center gap-1.5 flex-wrap">
+                  <td className="px-3 py-3 align-top text-slate-600">{i + 1}</td>
+                  <td className="px-3 py-3 align-top font-semibold leading-5 text-[#111827]">
+                    <div className="flex min-w-0 flex-wrap items-center gap-1.5 break-words">
                       {m.fullName}
                       {m.isLeader && (
                         <span
@@ -1817,19 +1826,23 @@ function TeamInfoView({
                       )}
                     </div>
                   </td>
-                  <td className="px-3 py-3 text-slate-700">{m.studentCode}</td>
-                  <td className="px-3 py-3 text-slate-700 truncate max-w-0">
+                  <td className="break-all px-3 py-3 align-top leading-5 text-slate-700">
+                    {m.studentCode}
+                  </td>
+                  <td className="break-all px-3 py-3 align-top leading-5 text-slate-700">
                     {m.email}
                   </td>
-                  <td className="px-3 py-3 text-slate-700">{m.phone}</td>
-                  <td className="px-3 py-3">
+                  <td className="break-all px-3 py-3 align-top leading-5 text-slate-700">
+                    {m.phone}
+                  </td>
+                  <td className="px-3 py-3 align-top">
                     {m.isFPTStudent ? (
                       <span className="text-emerald-600 font-bold">✓</span>
                     ) : (
                       <span className="text-slate-300">—</span>
                     )}
                   </td>
-                  <td className="px-3 py-3 whitespace-nowrap">
+                  <td className="px-3 py-3 align-top whitespace-nowrap">
                     {!m.isLeader && !readOnly && (
                       <div className="flex gap-1.5">
                         <button
@@ -1909,9 +1922,10 @@ function TeamInfoView({
       )}
 
       {/* Edit Team Modal */}
-      {editTeamModal && !readOnly && (
+      {editTeamModal && (!readOnly || allowGithubEdit) && (
         <EditTeamModal
           team={team}
+          githubOnly={readOnly && allowGithubEdit}
           onClose={() => setEditTeamModal(false)}
           onSaved={async (updated) => {
             setEditTeamModal(false);
@@ -1964,7 +1978,12 @@ function TeamInfoView({
 }
 
 // ---------------------------------------------------------------------------
-export function TeamView({ readOnly = false, lockMessage = "" }) {
+export function TeamView({
+  readOnly = false,
+  lockMessage = "",
+  eventEnded = false,
+  allowGithubEdit = false,
+}) {
   const dispatch = useDispatch();
   const eventId = useSelector((s) => s.event.activeEventId);
   const { myTeam, loading: teamLoading, fetched } = useSelector((s) => s.team);
@@ -1975,7 +1994,12 @@ export function TeamView({ readOnly = false, lockMessage = "" }) {
   const [tracksError, setTracksError] = useState("");
 
   useEffect(() => {
-    if (!eventId) return;
+    if (!eventId) {
+      setTracks([]);
+      setTracksError("");
+      setTracksLoading(false);
+      return;
+    }
     setTracksLoading(true);
     setTracksError("");
     trackService
@@ -1998,6 +2022,24 @@ export function TeamView({ readOnly = false, lockMessage = "" }) {
   const handleRefresh = () => {
     dispatch(fetchMyTeam());
   };
+
+  if (eventEnded) {
+    return (
+      <div className="mx-auto mt-10 max-w-2xl rounded-3xl border border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-8 text-center shadow-sm">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-orange-100 text-orange-600">
+          <CheckCircle className="h-7 w-7" />
+        </div>
+        <h3 className="mt-4 text-xl font-bold text-slate-900">
+          Sự kiện đã kết thúc
+        </h3>
+        <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-600">
+          Cảm ơn bạn và đội thi đã đồng hành cùng chương trình.
+          Hiện không còn sự kiện nào đang mở đăng ký hoặc diễn ra.
+          Hy vọng sẽ gặp lại bạn trong sự kiện tiếp theo!
+        </p>
+      </div>
+    );
+  }
 
   if (tracksLoading || (teamLoading && !fetched))
     return (
@@ -2044,6 +2086,7 @@ export function TeamView({ readOnly = false, lockMessage = "" }) {
       onRefresh={handleRefresh}
       readOnly={readOnly}
       lockMessage={lockMessage}
+      allowGithubEdit={allowGithubEdit}
       tracks={tracks}
     />
   );
