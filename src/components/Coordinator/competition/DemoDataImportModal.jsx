@@ -305,6 +305,11 @@ function getTrackMaxMembers(track) {
   return Number.isFinite(value) && value > 0 ? value : 5;
 }
 
+function getTrackMinMembers(track) {
+  const value = Number(track?.minMembers || 3);
+  return Number.isFinite(value) && value >= 2 ? value : 3;
+}
+
 function getTeamTrackId(team) {
   return team?.trackId ?? team?.track?.id;
 }
@@ -343,6 +348,7 @@ function buildTeamTemplateFromTracks({ eventId, tracks }) {
     ["Cot", "Ghi chu"],
     ["trackName", "Duoc tao tu event dang chon, khong nen doi neu khong can."],
     ["teamName", "Moi team co leader o sheet Teams va thanh vien o sheet Members."],
+    ["memberCount", "So thanh vien mau duoc tao theo minMembers/maxMembers cua Track."],
     ["studentCode/email/username", `Da kem ma import ${batchCodeUpper} de tranh trung voi event cu.`],
     ["Final Track", "File mau khong tao team vao Final Track de giu dung flow vao vong trong."],
   ];
@@ -353,7 +359,12 @@ function buildTeamTemplateFromTracks({ eventId, tracks }) {
     const maxTeams = getTrackMaxTeams(track);
     const currentTeams = getTrackCurrentTeamCount(track);
     const remainingTeams = Math.max(maxTeams - currentTeams, 0);
-    const memberCount = Math.max(2, Math.min(getTrackMaxMembers(track) - 1, 4));
+    const minAdditionalMembers = Math.max(getTrackMinMembers(track) - 1, 1);
+    const maxAdditionalMembers = Math.max(getTrackMaxMembers(track) - 1, 0);
+    const memberCount = Math.min(
+      maxAdditionalMembers,
+      Math.max(minAdditionalMembers, 2),
+    );
     const slug = slugify(trackName);
     const accountSlug = slug.replace(/-/g, "_");
 

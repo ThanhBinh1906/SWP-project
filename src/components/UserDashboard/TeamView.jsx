@@ -28,9 +28,8 @@ import {
 import teamService from "../../services/teamService";
 import LoadingActionText from "../shared/LoadingActionText";
 
-const MIN_MEMBERS = 2; // BE yêu cầu tối thiểu 3 người, gồm leader
-const MAX_TEAM_MEMBERS = 5; // tổng số thành viên gồm leader
-const MAX_MEMBERS = MAX_TEAM_MEMBERS - 1; // số member thêm vào ngoài leader
+const DEFAULT_MIN_TEAM_MEMBERS = 3;
+const DEFAULT_MAX_TEAM_MEMBERS = 5;
 
 const EMPTY_MEMBER = {
   fullName: "",
@@ -43,7 +42,16 @@ const EMPTY_MEMBER = {
 
 function getTrackMaxMembers(track) {
   const value = Number(track?.maxMembers ?? track?.MaxMembers);
-  return Number.isFinite(value) && value > 0 ? value : MAX_TEAM_MEMBERS;
+  return Number.isFinite(value) && value >= 2
+    ? value
+    : DEFAULT_MAX_TEAM_MEMBERS;
+}
+
+function getTrackMinMembers(track) {
+  const value = Number(track?.minMembers ?? track?.MinMembers);
+  return Number.isFinite(value) && value >= 2
+    ? value
+    : DEFAULT_MIN_TEAM_MEMBERS;
 }
 
 const MEMBER_IMPORT_HEADERS = [
@@ -317,7 +325,9 @@ function TeamCreateForm({
   const selectedTrack = availableTracks.find(
     (track) => String(track.id) === String(teamForm.trackId),
   );
+  const minTeamMembers = getTrackMinMembers(selectedTrack);
   const maxTeamMembers = getTrackMaxMembers(selectedTrack);
+  const minAdditionalMembers = Math.max(minTeamMembers - 1, 0);
   const maxAdditionalMembers = Math.max(maxTeamMembers - 1, 0);
 
   const handleTeamChange = (field, value) => {
@@ -421,8 +431,10 @@ function TeamCreateForm({
       nextMembers.push(member);
     });
 
-    if (!errors.length && nextMembers.length < MIN_MEMBERS) {
-      errors.push(`File cần ít nhất ${MIN_MEMBERS} thành viên ngoài leader.`);
+    if (!errors.length && nextMembers.length < minAdditionalMembers) {
+      errors.push(
+        `File cần ít nhất ${minAdditionalMembers} thành viên ngoài leader theo cấu hình Track.`,
+      );
     }
 
     if (errors.length) return errors;
@@ -471,8 +483,8 @@ function TeamCreateForm({
       te.trackId = "Vui lòng chọn track";
       valid = false;
     }
-    if (members.length < MIN_MEMBERS) {
-      te.members = `Cần ít nhất ${MIN_MEMBERS} thành viên khác để team có tối thiểu ${MIN_MEMBERS + 1} người gồm Leader.`;
+    if (members.length < minAdditionalMembers) {
+      te.members = `Cần ít nhất ${minAdditionalMembers} thành viên khác để team có tối thiểu ${minTeamMembers} người gồm Leader theo cấu hình Track.`;
       valid = false;
     }
     if (members.length > maxAdditionalMembers) {
@@ -804,7 +816,7 @@ function TeamCreateForm({
           <SectionTitle
             number="3"
             title="Thành viên khác"
-            subtitle={`(${members.length}/${maxAdditionalMembers}) — chưa tính leader`}
+            subtitle={`(${members.length}/${maxAdditionalMembers}) — cần ít nhất ${minAdditionalMembers}, chưa tính Leader`}
           />
           <div className="flex flex-wrap gap-2">
             <button
@@ -885,6 +897,11 @@ function TeamCreateForm({
             Đã đạt tối đa {maxTeamMembers} thành viên trong đội, bao gồm Leader.
           </p>
         )}
+
+        <p className="text-xs text-center text-slate-600">
+          Track yêu cầu tổng số thành viên từ {minTeamMembers} đến {maxTeamMembers},
+          bao gồm Leader.
+        </p>
 
         {teamErrors.members && (
           <p className="flex items-center justify-center gap-1 text-xs text-red-500">
@@ -1522,6 +1539,17 @@ function TeamInfoView({
 
   const handleDelete = async () => {
     if (!deleteTarget || readOnly) return;
+    const minTeamMembers = getTrackMinMembers(
+      tracks.find((track) => String(track.id) === String(team.trackId)) ?? team,
+    );
+    const totalMembers = team.members?.length || 0;
+    if (totalMembers - 1 < minTeamMembers) {
+      setActionError(
+        `Không thể xóa thành viên. Track yêu cầu đội duy trì ít nhất ${minTeamMembers} thành viên, bao gồm Leader.`,
+      );
+      setDeleteTarget(null);
+      return;
+    }
     setDeleting(true);
     setActionError("");
     try {
@@ -1560,10 +1588,13 @@ function TeamInfoView({
   const currentTrack = tracks.find(
     (track) => String(track.id) === String(team.trackId),
   );
+  const minTeamMembers = getTrackMinMembers(currentTrack ?? team);
   const maxTeamMembers = getTrackMaxMembers(currentTrack ?? team);
   const maxAdditionalMembers = Math.max(maxTeamMembers - 1, 0);
   const nonLeaderCount = team.members?.filter((m) => !m.isLeader).length || 0;
+  const totalMemberCount = team.members?.length || 0;
   const canAddMember = !readOnly && nonLeaderCount < maxAdditionalMembers;
+  const canDeleteMember = !readOnly && totalMemberCount > minTeamMembers;
 
   useEffect(() => {
     if (readOnly) {
@@ -1821,13 +1852,27 @@ function TeamInfoView({
                         </button>
                         <button
                           onClick={() => {
+                            if (!canDeleteMember) {
+                              setActionError(
+                                `Không thể xóa thành viên. Track yêu cầu đội duy trì ít nhất ${minTeamMembers} thành viên, bao gồm Leader.`,
+                              );
+                              return;
+                            }
                             setDeleteTarget(m);
                             setActionError("");
                           }}
+                          disabled={!canDeleteMember}
+                          title={
+                            canDeleteMember
+                              ? "Xóa thành viên"
+                              : `Đội phải duy trì ít nhất ${minTeamMembers} thành viên`
+                          }
                           className="w-6 h-6 rounded-lg flex items-center justify-center transition-all"
                           style={{
                             background: "rgba(239,68,68,0.06)",
                             color: "#ef4444",
+                            cursor: canDeleteMember ? "pointer" : "not-allowed",
+                            opacity: canDeleteMember ? 1 : 0.4,
                           }}
                           onMouseEnter={(e) =>
                             (e.currentTarget.style.background =

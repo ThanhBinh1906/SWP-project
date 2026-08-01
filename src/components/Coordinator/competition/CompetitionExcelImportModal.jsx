@@ -46,11 +46,11 @@ const TEMPLATE = {
     ],
   ],
   tracks: [
-    ["trackCode", "trackName", "description", "maxTeams", "maxMembers", "isFinal"],
-    ["WEB", "Web & Cloud Solutions", "Xây dựng sản phẩm web có kiến trúc rõ ràng, triển khai ổn định và giải quyết nhu cầu thực tế.", 12, 5, false],
-    ["AI", "AI & Data Innovation", "Ứng dụng AI và dữ liệu để tạo ra giải pháp có thể kiểm chứng, minh bạch và hữu ích.", 12, 5, false],
-    ["IOT", "Smart Campus & IoT", "Tạo giải pháp số hoặc IoT giúp khuôn viên trường an toàn, tiết kiệm và thuận tiện hơn.", 12, 5, false],
-    ["FINAL", "Final Track", "Track chung kết nhận các đội đi tiếp từ các track vòng loại.", 15, 5, true],
+    ["trackCode", "trackName", "description", "maxTeams", "minMembers", "maxMembers", "isFinal"],
+    ["WEB", "Web & Cloud Solutions", "Xây dựng sản phẩm web có kiến trúc rõ ràng, triển khai ổn định và giải quyết nhu cầu thực tế.", 12, 3, 5, false],
+    ["AI", "AI & Data Innovation", "Ứng dụng AI và dữ liệu để tạo ra giải pháp có thể kiểm chứng, minh bạch và hữu ích.", 12, 3, 5, false],
+    ["IOT", "Smart Campus & IoT", "Tạo giải pháp số hoặc IoT giúp khuôn viên trường an toàn, tiết kiệm và thuận tiện hơn.", 12, 3, 5, false],
+    ["FINAL", "Final Track", "Track chung kết nhận các đội đi tiếp từ các track vòng loại.", 15, 3, "", true],
   ],
   rounds: [
     ["trackCode", "roundName", "startTime", "endTime", "advancingSlots"],
@@ -192,6 +192,14 @@ function createSheet(rows) {
   return sheet;
 }
 
+function getLargestNormalTrackMaxMembers(tracks) {
+  const values = tracks
+    .filter((track) => !normalizeBool(track.isfinal))
+    .map((track) => getNumber(track.maxmembers))
+    .filter((value) => Number.isInteger(value) && value >= 2);
+  return values.length ? Math.max(...values) : null;
+}
+
 function extractCreatedEventId(response) {
   const data = response?.data?.data;
   return data?.id ?? data?.eventId ?? response?.data?.id ?? null;
@@ -213,6 +221,7 @@ function validateWorkbookData(data) {
 
   if (!data.tracks.length) errors.push("Sheet Tracks phải có dữ liệu.");
   const trackCodes = new Set();
+  const finalTrackMaxMembers = getLargestNormalTrackMaxMembers(data.tracks);
   data.tracks.forEach((track) => {
     const label = `Tracks dòng ${track.__rowNumber}`;
     const code = requireText(track, "trackcode");
@@ -221,9 +230,23 @@ function validateWorkbookData(data) {
     trackCodes.add(code);
     if (!requireText(track, "trackname")) errors.push(`${label}: trackName không được để trống.`);
     const maxTeams = getNumber(track.maxteams);
-    const maxMembers = getNumber(track.maxmembers);
+    const minMembers = getNumber(track.minmembers);
+    const finalTrack = normalizeBool(track.isfinal);
+    const maxMembers = finalTrack
+      ? finalTrackMaxMembers
+      : getNumber(track.maxmembers);
     if (!Number.isInteger(maxTeams) || maxTeams < 1) errors.push(`${label}: maxTeams phải là số nguyên dương.`);
-    if (!Number.isInteger(maxMembers) || maxMembers < 1) errors.push(`${label}: maxMembers phải là số nguyên dương.`);
+    if (!Number.isInteger(minMembers) || minMembers < 2) errors.push(`${label}: minMembers phải là số nguyên từ 2 trở lên.`);
+    if (!Number.isInteger(maxMembers) || maxMembers < 2) {
+      errors.push(
+        finalTrack
+          ? `${label}: không thể tự xác định maxMembers vì các Track thường chưa có giá trị hợp lệ.`
+          : `${label}: maxMembers phải là số nguyên từ 2 trở lên.`,
+      );
+    }
+    if (Number.isInteger(minMembers) && Number.isInteger(maxMembers) && minMembers > maxMembers) {
+      errors.push(`${label}: minMembers không được lớn hơn maxMembers.`);
+    }
   });
 
   const finalTracks = data.tracks.filter((track) => normalizeBool(track.isfinal));
@@ -288,6 +311,7 @@ function validateWorkbookData(data) {
 function buildImportPayload(data) {
   const event = data.event[0];
   const firstTopic = data.topics[0];
+  const finalTrackMaxMembers = getLargestNormalTrackMaxMembers(data.tracks);
   const tracks = data.tracks
     .map((track) => {
       const code = requireText(track, "trackcode");
@@ -297,7 +321,10 @@ function buildImportPayload(data) {
         name: requireText(track, "trackname"),
         description: requireText(track, "description") || null,
         maxTeams: Number(track.maxteams),
-        maxMembers: Number(track.maxmembers),
+        minMembers: Number(track.minmembers),
+        maxMembers: isFinal
+          ? finalTrackMaxMembers
+          : Number(track.maxmembers),
         isFinal,
         rounds: [
           {
@@ -557,6 +584,8 @@ export function CompetitionExcelImportModal({ onClose, onCompleted }) {
                       <th className="px-3 py-2">Round</th>
                       <th className="px-3 py-2">Final</th>
                       <th className="px-3 py-2">Max teams</th>
+                      <th className="px-3 py-2">Min members</th>
+                      <th className="px-3 py-2">Max members</th>
                       <th className="px-3 py-2">Slots</th>
                     </tr>
                   </thead>
@@ -578,6 +607,12 @@ export function CompetitionExcelImportModal({ onClose, onCompleted }) {
                             {normalizeBool(track.isfinal) ? "Yes" : "No"}
                           </td>
                           <td className="px-3 py-2">{track.maxteams}</td>
+                          <td className="px-3 py-2">{track.minmembers}</td>
+                          <td className="px-3 py-2">
+                            {normalizeBool(track.isfinal)
+                              ? getLargestNormalTrackMaxMembers(parsedData.tracks)
+                              : track.maxmembers}
+                          </td>
                           <td className="px-3 py-2">
                             {round?.advancingslots || "Final"}
                           </td>
