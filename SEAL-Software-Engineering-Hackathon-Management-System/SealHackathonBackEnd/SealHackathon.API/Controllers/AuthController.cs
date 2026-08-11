@@ -1,0 +1,131 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using SealHackathon.Application.Common.Responses;
+using SealHackathon.Application.DTOs.Auth;
+using SealHackathon.Application.Services.Interfaces;
+using SealHackathon.Domain.Constants;
+
+namespace SealHackathon.API.Controllers
+{
+    [ApiController]
+    [Route("api/auth")]
+    public class AuthController : BaseController
+    {
+        private readonly IAuthService _authService;
+
+        public AuthController(IAuthService authService) => _authService = authService;
+
+
+        // POST api/auth/register
+        [HttpPost("register")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+        {
+            await _authService.RegisterAsync(request);
+            return Ok(ApiResponse<object>.SuccessResult(
+                null!, "Đăng ký thành công. Vui lòng xác nhận email."
+            ));
+        }
+        // GET api/auth/verify-email — FE gọi API này (link email mở trang FE, FE gọi BE)
+        [HttpGet("verify-email")]
+        [AllowAnonymous]
+        public async Task<IActionResult> VerifyEmail([FromQuery] string token)
+        {
+            await _authService.VerifyEmailAsync(token);
+            return Ok(ApiResponse<object>.SuccessResult(null!, "Xác nhận email thành công. Bạn đã có thể đăng nhập."));
+        }       
+        // POST api/auth/login
+        [HttpPost("login")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Login([FromBody] LoginRequest request)
+        {
+            var result = await _authService.LoginAsync(request);
+            return Ok(ApiResponse<LoginResponse>.SuccessResult(result, "Đăng nhập thành công."));
+        }
+
+        // POST api/auth/forgot-password
+        [HttpPost("forgot-password")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+        {
+            await _authService.ForgotPasswordAsync(request);
+            return Ok(ApiResponse<object>.SuccessResult(null!, "Yêu cầu khôi phục mật khẩu đã được tiếp nhận. Vui lòng kiểm tra email của bạn để nhận mã xác nhận (OTP)."));
+        }
+
+        // POST api/auth/reset-password
+        [HttpPost("reset-password")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        {
+            await _authService.ResetPasswordAsync(request);
+            return Ok(ApiResponse<object>.SuccessResult(null!, "Đặt lại mật khẩu thành công. Vui lòng đăng nhập bằng mật khẩu mới."));
+        }
+
+        // POST api/auth/logout
+        [HttpPost("logout")]
+        [Authorize]
+        public async Task<IActionResult> Logout()
+        {
+            var token = HttpContext.Request.Headers["Authorization"]
+                .ToString()["Bearer ".Length..]
+                .Trim();
+
+            await _authService.LogoutAsync(token);
+            return Ok(ApiResponse<object>.SuccessResult(null!, "Đăng xuất thành công."));
+        }
+
+        [HttpPost("/api/events/{eventId:int}/staff")]
+        [Authorize(Roles = RoleConstants.Coordinator)]
+        public async Task<IActionResult> CreateEventStaff(int eventId, [FromBody] CreateEventStaffRequest request)
+        {
+            var coordinatorId = GetCurrentAccountId();
+
+            var result = await _authService.CreateEventStaffAsync(eventId, request, coordinatorId);
+
+            return Ok(ApiResponse<EventStaffResponse>.SuccessResult(
+                result,
+                $"Đã thêm {request.EventRole} vào sự kiện."
+            ));
+        }
+
+        [HttpPut("/api/events/{eventId:int}/staff/{accountId:guid}/deactivate")]
+        [Authorize(Roles = RoleConstants.Coordinator)]
+        public async Task<IActionResult> DeactivateEventStaff(int eventId, Guid accountId, [FromQuery] string eventRole)
+        {
+            var coordinatorId = GetCurrentAccountId();
+
+            await _authService.DeactivateEventStaffAsync(eventId, accountId, eventRole, coordinatorId);
+
+            return Ok(ApiResponse<object>.SuccessResult(
+                null!,
+                "Đã ẩn staff khỏi sự kiện."
+            ));
+        }
+
+        [HttpPut("/api/events/{eventId:int}/staff/{accountId:guid}/activate")]
+        [Authorize(Roles = RoleConstants.Coordinator)]
+        public async Task<IActionResult> ActivateEventStaff(int eventId, Guid accountId, [FromQuery] string eventRole)
+        {
+            var coordinatorId = GetCurrentAccountId();
+
+            await _authService.ActivateEventRoleAsync(eventId, accountId, eventRole, coordinatorId);
+
+            return Ok(ApiResponse<object>.SuccessResult(
+                null!,
+                "Đã mở lại quyền cho staff trong sự kiện."
+            ));
+        }
+
+        [HttpGet("/api/events/{eventId:int}/staff")]
+        [Authorize(Roles = RoleConstants.Coordinator)]
+        public async Task<IActionResult> GetEventStaff(int eventId)
+        {
+            var result = await _authService.GetEventStaffAsync(eventId);
+
+            return Ok(ApiResponse<List<EventStaffResponse>>.SuccessResult(
+                result,
+                "Lấy danh sách staff thành công."
+            ));
+        }
+    }
+}

@@ -1,0 +1,44 @@
+using SealHackathon.Domain.Interfaces.Repositories;
+using SealHackathon.Infrastructure.Data;
+
+namespace SealHackathon.Infrastructure.Repositories
+{
+    
+    public class UnitOfWork : IUnitOfWork // UnitOfWork: pattern gom nhiều thay đổi database rồi lưu một lần.
+    {
+        private readonly SealDbContext _context;
+        private readonly Dictionary<string, object> _repositories = new();
+
+        public UnitOfWork(SealDbContext context)
+        {
+            _context = context;
+        }
+
+        public IGenericRepository<T> GetRepository<T>() where T : class
+        {
+            var type = typeof(T).Name;
+
+            if (!_repositories.ContainsKey(type))
+            {
+                _repositories[type] = new GenericRepository<T>(_context);
+            }
+
+            return (IGenericRepository<T>)_repositories[type]!;
+        }
+        //Thức
+        public async Task<int> SaveChangesAsync()
+        {
+            return await _context.SaveChangesAsync();
+        }
+
+        public void ClearChangeTracker()
+        {
+            _context.ChangeTracker.Clear();
+        }
+        
+        public void Dispose()
+        {
+            _context.Dispose();
+        }
+    }
+}

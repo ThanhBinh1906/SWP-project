@@ -1,0 +1,220 @@
+namespace SealHackathon.Domain.Constants
+{
+    /// <summary>
+    /// Message lỗi dùng chung
+    /// </summary>
+    public static class ErrorMessages
+    {
+        public static class Team
+        {
+            public const string NotFound = "Không tìm thấy đội thi.";
+            public const string NoUpdatePermission = "Bạn không có quyền chỉnh sửa đội này.";
+            public const string NoAddMemberPermission = "Bạn không có quyền thêm thành viên vào đội này.";
+            public const string NoUpdateMemberPermission = "Bạn không có quyền chỉnh sửa thành viên của đội này.";
+            public const string NoDeleteMemberPermission = "Bạn không có quyền xóa thành viên của đội này.";
+            public const string AlreadyHasTeamInEvent = "Bạn đã có đội trong Event này.";
+            public const string TrackFull = "Track này đã đạt số lượng đội tối đa.";
+            public const string ApprovedOnlyGithubCanChange = "Đội thi đã được duyệt. Bạn chỉ được phép cập nhật Link Github.";
+            public const string NameAlreadyUsed = "Tên đội này đã có người đăng ký. Vui lòng chọn tên khác.";
+            public const string OnlyPendingCanApprove = "Chỉ có thể duyệt team đang ở trạng thái Pending.";
+            public const string OnlyPendingCanReject = "Chỉ có thể từ chối team đang ở trạng thái Pending.";
+            public const string RejectedCannotModify = "Đội đã bị từ chối và không thể chỉnh sửa trong Event này.";
+            public const string AlreadyDisqualified = "Đội thi này đã bị loại trước đó.";
+            public const string MentorNotInEvent = "Tài khoản được chọn chưa được phân quyền Mentor trong Event này.";
+            public const string MentorNotAssignedToTrack = "Mentor này chưa được phân công vào Track của đội thi.";
+            public const string TeamIdsRequired = "Cần chọn ít nhất một đội để phân công Mentor.";
+            public const string TeamNotInTrack = "Một hoặc nhiều đội được chọn không thuộc Track này.";
+            public const string OnlyApprovedCanAssignMentor = "Chỉ có thể phân Mentor cho đội đã được duyệt.";
+            public const string NoViewPermission = "Bạn không có quyền xem thông tin đội này.";
+            public const string CannotRemoveGithubAfterSubmission = "Không thể xóa link GitHub vì đội đã có bài nộp.";
+            public const string OnlyApprovedCanDisqualify = "Chỉ có thể loại đội đã được duyệt.";
+            public const string EventCompletedCannotModify = "Sự kiện đã kết thúc, không thể chỉnh sửa thông tin đội.";
+        }
+
+        public static class TeamMember
+        {
+            public const string NotFound = "Không tìm thấy thành viên đội.";
+            public const string CannotDeleteLeader = "Không thể xóa Đội trưởng. Bạn không đủ quyền hạn.";
+            public const string MaxMembersReached = "Đội đã đạt giới hạn số lượng thành viên.";
+            public const string MinMembersRequired = "Đội cần đủ số lượng thành viên tối thiểu.";
+            public const string ApprovedTeamMinMembersRequired = "Đội đã được duyệt. Cần giữ đủ số lượng thành viên tối thiểu.";
+            public const string StudentCodeAlreadyUsedInEvent = "Mã sinh viên đã tồn tại trong một đội khác cùng Event.";
+            public const string EmailAlreadyUsedInEvent = "Email này đã được đăng ký trong một đội khác cùng Event.";
+            public const string DuplicateStudentCodeInRequest = "Danh sách đăng ký có mã sinh viên bị trùng.";
+            public const string DuplicateEmailInRequest = "Danh sách đăng ký có email bị trùng.";
+        }
+
+        public static class Submission
+        {
+            public const string NotFound = "Không tìm thấy bài nộp.";
+            public const string TeamNotFound = "Không tìm thấy đội thi của bài nộp này.";
+            public const string NoUpdatePermission = "Bạn không có quyền cập nhật bài nộp này.";
+            public const string NoViewPermission = "Bạn không có quyền xem bài nộp này.";
+            public const string NoTeamInRoundTrack = "Bạn không có team thuộc Track của Round này.";
+            public const string TeamNotApproved = "Chỉ team đã được duyệt mới được nộp bài.";
+            public const string AlreadySubmitted = "Team này đã nộp bài cho Round này rồi.";
+            public const string DeadlinePassed = "Đã hết thời gian nộp bài của Round này.";
+            public const string UpdateDeadlinePassed = "Đã quá hạn cập nhật bài nộp của Round này.";
+            public const string CannotUpdateDisqualified = "Bài nộp đã bị loại, không thể cập nhật.";
+            public const string AlreadyDisqualified = "Bài nộp này đã bị loại trước đó.";
+            public const string JudgeNotAssignedToRound = "Bạn không được phân công chấm Round này.";
+            public const string TeamGithubRepoRequired = "Vui lòng cập nhật link GitHub của đội trước khi nộp bài.";
+            public const string RoundNotActive = "Vòng thi hiện không ở trạng thái nhận bài.";
+            public const string RoundNotStarted = "Vòng thi chưa bắt đầu.";
+            public const string TeamNotQualifiedForRound = "Đội thi này chưa đủ điều kiện tham gia Round này.";
+            public const string PresentationUrlRequired = "Link bài thuyết trình không được để trống.";
+            public const string CanEditRoundNotActive = "Vòng thi đã chuyển sang trạng thái chấm điểm hoặc đã đóng, không thể cập nhật bài nộp.";
+            public const string RoundClosedCannotDisqualify = "Vòng thi đã đóng, không thể loại bài nộp. Vui lòng liên hệ quản trị viên nếu cần xử lý.";
+        }
+
+        public static class Common
+        {
+            public const string InvalidStatus = "Status không hợp lệ.";
+            public const string InvalidPageNumber = "PageNumber phải lớn hơn hoặc bằng 1.";
+            public const string InvalidPageSize = "PageSize không hợp lệ.";
+            public const string InvalidAccount = "Tài khoản của bạn không tồn tại hoặc đã bị vô hiệu hóa.";
+            public const string InvalidRoundId = "RoundId không hợp lệ.";
+            public const string InvalidTeamId = "TeamId không hợp lệ.";
+            public const string InvalidSubmissionId = "SubmissionId không hợp lệ.";
+            public const string InvalidMentorId = "MentorId không hợp lệ.";
+            public const string RoundNotFound = "Không tìm thấy vòng thi.";
+            public const string TrackNotFound = "Không tìm thấy hạng mục.";
+            public const string MentorNotFound = "Không tìm thấy Mentor.";
+            public const string InvalidEventId = "EventId không hợp lệ.";
+            public const string InvalidJudgeId = "JudgeId không hợp lệ.";
+            public const string JudgeNotFound = "Không tìm thấy Judge.";
+            public const string JudgeNotInEvent = "Tài khoản này chưa được phân quyền Judge trong Event của Round này.";
+        }
+
+        public static class Round
+        {
+            public const string JudgeAlreadyAssigned = "Judge này đã được phân công vào Round này.";
+            public const string NoTopicToAssign = "Không có Topic nào trong Round này để gán cho các nhóm.";
+            public const string NotEnoughTopics = "Không đủ Topic để gán đề cho Round này.";
+            public const string EventMustBeActiveToStartRound = "Chỉ được bắt đầu Round khi Event đang Active.";
+            public const string PreviousRoundRankingRequired = "Chưa có kết quả xếp hạng vòng trước để xác định đội đi tiếp.";
+            public const string NoTeamQualifiedForRound = "Không có đội đủ điều kiện tham gia Round này.";
+            public const string PreviousRoundMustBeClosed = "Vòng thi trước phải được đóng (Closed) trước khi có thể lấy danh sách đội đi tiếp.";
+        }
+
+        public static class Event
+        {
+            public const string CannotReturnToRegistration = "Event đã Active thì không thể chuyển lại Registration.";
+            public const string OnlyOneCurrentEventAllowed = "Chỉ được có một Event đang Registration hoặc Active tại một thời điểm.";
+            public const string CurrentEventNotFound = "Hiện tại không có Event nào đang mở đăng ký hoặc đang diễn ra.";
+            public const string TrackEventNotFound = "Không tìm thấy Event của Track.";
+            public const string TeamRegistrationNotOpen = "Chỉ được tạo đội khi Event đang mở đăng ký.";
+            public const string MultipleCurrentEvents = "Hệ thống đang có nhiều hơn một Event đang mở hoặc đang diễn ra.";
+            public const string MultipleActiveEvents = "Hệ thống đang có nhiều hơn một Event đang diễn ra.";
+        }
+
+        public static class Criterion
+        {
+            public const string NotFound = "Không tìm thấy tiêu chí chấm điểm.";
+            public const string NameRequired = "Tên tiêu chí không được để trống.";
+            public const string MaxScoreInvalid = "Điểm tối đa phải lớn hơn 0.";
+            public const string WeightInvalid = "Trọng số phải nằm trong khoảng 1 đến 100.";
+            public const string WeightTotalExceeded = "Tổng trọng số của Round không được vượt quá 100.";
+            public const string NameDuplicatedInRound = "Tên tiêu chí đã tồn tại trong Round này.";
+            public const string AlreadyUsedByScore = "Tiêu chí đã được dùng để chấm điểm, không thể chỉnh sửa hoặc xóa.";
+            public const string NotBelongToRound = "Tiêu chí không thuộc Round này.";
+            public const string TemplateHasNoCriteria = "Template này chưa có tiêu chí để import.";
+            public const string TemplateImportDuplicatedName = "Một hoặc nhiều tiêu chí trong template đã tồn tại trong Round này.";
+        }
+
+        public static class Score
+        {
+            public const string NotFound = "Không tìm thấy điểm chấm.";
+            public const string SubmissionNotFound = "Không tìm thấy bài nộp.";
+            public const string CriterionNotFound = "Không tìm thấy tiêu chí chấm điểm.";
+            public const string RoundNotFound = "Không tìm thấy vòng thi.";
+            public const string TrackNotFound = "Không tìm thấy hạng mục.";
+            public const string SubmissionDisqualified = "Bài nộp đã bị loại, không thể chấm điểm.";
+            public const string SubmissionDisqualifiedCannotUpdate = "Bài nộp đã bị loại, không thể cập nhật điểm.";
+            public const string CriterionNotInSubmissionRound = "Tiêu chí không thuộc vòng thi của bài nộp này.";
+            public const string RoundNotInScoring = "Chỉ được chấm điểm khi vòng thi đang ở trạng thái Scoring.";
+            public const string JudgeNotActiveInEvent = "Tài khoản Judge không còn hoạt động trong Event của vòng thi này.";
+            public const string JudgeNotAssignedToRound = "Bạn không được phân công chấm vòng thi này.";
+            public const string JudgeNoUpdatePermission = "Bạn chỉ được chỉnh sửa điểm do chính bạn đã chấm.";
+            public const string AlreadyScored = "Bạn đã chấm tiêu chí này cho bài nộp này.";
+            public const string InvalidScoreRange = "Điểm chấm không hợp lệ.";
+            public const string TeamDisqualified = "Đội thi đã bị loại, không thể chấm điểm.";
+            public const string TeamDisqualifiedCannotUpdate = "Đội thi đã bị loại, không thể cập nhật điểm.";
+            public const string RankingAlreadyCalculated = "Ranking đã được tính, không thể chấm hoặc cập nhật điểm.";
+        }
+
+        public static class Ranking
+        {
+            public const string NotFound = "Không tìm thấy kết quả xếp hạng.";
+            public const string RoundStatusInvalidForCalculation = "Chỉ được tính ranking khi Round đang ở trạng thái Scoring .";
+            public const string RoundHasNoCriteria = "Round này chưa có tiêu chí chấm điểm. Vui lòng tạo tiêu chí trước khi tính xếp hạng.";
+            public const string CriteriaWeightTotalInvalid = "Tổng trọng số của các tiêu chí phải bằng 100% trước khi tính ranking.";
+            public const string RoundHasNoValidSubmissions = "Round này không có bài nộp hợp lệ hoặc tất cả bài nộp đã bị loại.";
+            public const string RoundHasNoAssignedTeams = "Round này chưa có đội được phân công tham gia, không thể tính ranking.";
+            public const string CriterionConfigNotFound = "Không tìm thấy cấu hình tiêu chí chấm điểm khi tính xếp hạng.";
+            public const string CriterionMaxScoreInvalid = Criterion.MaxScoreInvalid;
+            public const string NoAssignedJudges = "Round này chưa có giám khảo hợp lệ được phân công để tính xếp hạng.";
+            public const string ScoresNotCompleted = "Chưa đủ điểm chấm cho tất cả giám khảo, tiêu chí và bài nộp hợp lệ. Không thể tính xếp hạng.";
+            public const string TieBreakRequiresMultipleTeams = "Phải có ít nhất hai đội để xử lý đồng hạng.";
+            public const string TieBreakTeamDuplicated = "Danh sách xử lý đồng hạng chứa TeamId bị trùng.";
+            public const string TieBreakTeamNotInRanking = "Có đội không thuộc bảng xếp hạng của Round.";
+            public const string TieBreakTeamsNotSameRank = "Các đội được chọn không thuộc cùng một nhóm đồng hạng.";
+            public const string TieBreakGroupIncomplete = "Phải gửi đầy đủ tất cả đội trong cùng nhóm đồng hạng.";
+            public const string EventNotFound = "Không tìm thấy Event.";
+            public const string EventNotCompleted = "Chỉ được xem Ranking toàn Event khi Event đã hoàn thành.";
+            public const string EventHasNoTracks = "Event chưa có Track để tổng hợp Ranking.";
+            public const string EventFinalTrackNotFound = "Event chưa có Track Final để xác định Ranking chung cuộc.";
+            public const string EventFinalTrackDuplicated = "Event chỉ được có một Track Final để xác định Ranking chung cuộc.";
+            public const string TrackHasNoRounds = "Track chưa cấu hình Round.";
+            public const string FinalRoundConfigurationInvalid = "Track phải có đúng một Round chung kết ở OrderIndex cuối cùng.";
+            public const string FinalRoundNotClosed = "Vòng chung kết phải được đóng trước khi công bố Ranking.";
+            public const string FinalRoundRankingNotFound = "Vòng chung kết chưa có kết quả Ranking.";
+            public const string RoundNotClosedForExport = "Chỉ được xuất báo cáo Ranking sau khi Round đã đóng.";
+            public const string RankingReportNotFound = "Round chưa có dữ liệu Ranking để xuất báo cáo.";
+        }
+
+        public static class Track
+        {
+            public const string OnlyOneFinalTrackAllowed = "Event chỉ được có một Track Final.";
+            public const string FinalTrackMaxTeamsRequired = "Track Chung Kết phải cấu hình số đội tối đa lớn hơn 0.";
+            public const string FinalTrackCapacityExceeded = "Số đội đi tiếp vào Track Chung Kết vượt quá số đội tối đa đã cấu hình.";
+        }
+
+        public static class TieBreak
+        {
+            public const string SessionNotFound = "Không tìm thấy phiên tie-break.";
+            public const string SessionAlreadyExists = "Đã có phiên tie-break đang mở cho nhóm đồng hạng này.";
+            public const string SessionNotPending = "Phiên tie-break không còn ở trạng thái chờ chấm.";
+            public const string SubmissionNotInSession = "Bài nộp không thuộc phiên tie-break này.";
+            public const string AlreadyScored = "Bạn đã chấm tiêu chí này trong phiên tie-break.";
+            public const string InvalidScoreRange = "Điểm chấm tie-break không hợp lệ.";
+            public const string ScoresNotCompleted = "Chưa đủ điểm tie-break cho tất cả giám khảo, tiêu chí và bài nộp.";
+            public const string ResultStillTied = "Kết quả tie-break vẫn còn đồng hạng. Cần chấm lại hoặc xử lý thủ công.";
+            public const string ScoreRecordNotFound = "Không tìm thấy điểm chấm tie-break.";
+            public const string JudgeNoUpdatePermission = "Bạn chỉ được chỉnh sửa điểm tie-break do chính bạn đã chấm.";
+            public const string CriterionNotInSessionRound = "Tiêu chí không thuộc Round của phiên tie-break.";
+
+            public const string InvalidRankPosition = "Hạng cần xử lý tie-break không hợp lệ.";
+            public const string TieBreakGroupNotFound = "Không tìm thấy nhóm đội đồng hạng ở hạng này.";
+            public const string TieBreakSubmissionMissing = "Không tìm thấy đủ bài nộp hợp lệ của các đội đồng hạng.";
+            public const string JudgeNotAssignedToSession = "Bạn không được phân công chấm phiên tie-break này.";
+            public const string RoundNotInScoring = "Chỉ được tạo phiên tie-break khi Round đang ở trạng thái Scoring.";
+        }
+
+        public static class Prize
+        {
+            public const string NotFound = "Không tìm thấy cấu hình giải thưởng.";
+            public const string NameRequired = "Tên giải thưởng không được để trống.";
+            public const string RankPositionInvalid = "Hạng giải thưởng chỉ được là 1, 2 hoặc 3.";
+            public const string AmountInvalid = "Giá trị giải thưởng không được âm.";
+            public const string RankPositionDuplicated = "Hạng giải thưởng này đã được cấu hình trong Event.";
+            public const string PrizeConfigNotFound = "Event chưa cấu hình giải thưởng.";
+            public const string RequiredRanksNotConfigured = "Event phải cấu hình đủ giải hạng 1, 2 và 3.";
+            public const string RoundRankingNotFound = "Round chưa có kết quả ranking để xác định giải thưởng.";
+            public const string PrizeRankWinnerMissing = "Ranking chưa có đủ hạng 1, 2 và 3 để xác định giải thưởng.";
+            public const string PrizeRankTieExists = "Ranking còn đồng hạng trong nhóm giải thưởng. Vui lòng xử lý tie-break trước khi xuất giải.";
+            public const string RoundNotFinal = "Chỉ được xác định giải thưởng từ vòng chung kết.";
+            public const string RoundNotClosed = "Chỉ được xác định giải thưởng sau khi vòng chung kết đã đóng.";
+        }
+    }
+}

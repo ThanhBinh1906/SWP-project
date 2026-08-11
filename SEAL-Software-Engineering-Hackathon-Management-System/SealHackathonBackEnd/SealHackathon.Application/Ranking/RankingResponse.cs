@@ -1,0 +1,50 @@
+namespace SealHackathon.Application.DTOs.Ranking
+{
+    /// <summary>
+    /// Dữ liệu ranking của 1 team trong 1 round — trả về cho client
+    /// </summary> 
+    public class RankingResponse
+    {
+        /// <summary>ID của bản ghi ranking</summary>
+        public Guid Id { get; set; }
+
+        /// <summary>ID của team</summary>
+        public Guid TeamId { get; set; }
+
+        /// <summary>Tên team</summary>
+        public string TeamName { get; set; } = string.Empty;
+
+        /// <summary>Trường đại học của team</summary>
+        public string University { get; set; } = string.Empty;
+
+        /// <summary>ID vòng thi</summary>
+        public int RoundId { get; set; }
+
+        /// <summary>Tên vòng thi</summary>
+        public string RoundName { get; set; } = string.Empty;
+
+        /// <summary>Tổng điểm (weighted average)</summary>
+        public double TotalScore { get; set; }
+
+        /// <summary>Thứ hạng (1-indexed, hỗ trợ tie)</summary>
+        public int RankPosition { get; set; }
+
+        /// <summary>Có được vào vòng tiếp không</summary>
+        public bool IsAdvancing { get; set; }
+
+        /// <summary>Thời điểm ranking được tính</summary>
+        public DateTime CalculatedAt { get; set; }
+
+        /// <summary>ID của phiên tie-break nếu nhóm hạng này đang có tie-break cần chốt</summary>
+        public Guid? TieBreakSessionId { get; set; }
+
+        /// <summary>Tên giải thưởng đạt được (nếu là vòng chung kết và có cấu hình giải)</summary>
+        public string? PrizeName { get; set; }
+
+        /// <summary>Tổng điểm chấm lại (nếu có tham gia tie-break)</summary>
+        public double? TieBreakScore { get; set; }
+
+        /// <summary>Tin nhắn thông báo kết quả (Vào vòng trong, Không vào vòng trong, Giải thưởng...)</summary>
+        public string ResultMessage { get; set; } = string.Empty;
+    }
+}
